@@ -28,9 +28,9 @@ function onButtonClick() {
 
 <template>
   <IconButton
-    :icon-html="minimalist ? icons.minimalistView : icons.sidebar"
-    :active="minimalist || showSidebar"
-    :pressed="minimalist || showSidebar"
+    :icon-html="minimalist ? icons.leaveMinimalistView : icons.sidebar"
+    :active="!minimalist && showSidebar"
+    :pressed="!minimalist && showSidebar"
     :title="minimalist ? '退出极简视图' : '切换侧边栏'"
     :aria-label="minimalist ? '退出极简视图' : '切换侧边栏'"
     @click="onButtonClick"

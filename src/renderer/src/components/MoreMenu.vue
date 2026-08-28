@@ -305,12 +305,20 @@ function onQuit() {
       <div class="moreMenuItems" @scroll="onMoreMenuItemsScroll">
       <button
         class="appShellMenuItem"
-        :class="{ 'is-active': inMinimalist }"
         role="menuitem"
         @click="onToggleMinimalist"
       >
-        <span class="appShellMenuIconSlot" v-html="icons.minimalistView"></span>
-        <span class="appShellMenuLabel">极简视图</span>
+        <span
+          class="appShellMenuIconSlot"
+          v-html="
+            inMinimalist
+              ? icons.leaveMinimalistView
+              : icons.enterMinimalistView
+          "
+        ></span>
+        <span class="appShellMenuLabel">{{
+          inMinimalist ? "退出极简视图" : "极简视图"
+        }}</span>
         <span class="appShellMenuShortcut">{{ minimalistShortcutLabel }}</span>
       </button>
       <div class="appShellMenuDivider" role="separator"></div>
