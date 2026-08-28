@@ -57,6 +57,7 @@
 | <img src="./src/renderer/src/assets/line_height_up.svg" width="18" height="18" alt=""> | 排版 | 可设置字间距 / 行间距 / 段间距 / 左右边距 |
 | <img src="./src/renderer/src/assets/dark.svg" width="18" height="18" alt=""> | 主题切换 | 内置明亮 / 暗黑两种主题 |
 | <img src="./src/renderer/src/assets/enter_fullscreen.svg" width="18" height="18" alt=""> | 全屏阅读 | **沉浸式阅读体验**，阅读区域宽度可自由调整 |
+| <img src="./src/renderer/src/assets/minimalist_view.svg" width="18" height="18" alt=""> | 极简视图 | 阅读区撑满窗口，**专注阅读** |
 | <img src="./src/renderer/src/assets/minimalist_view.svg" width="18" height="18" alt=""> | 极简视图 | 隐藏顶栏 / 侧栏 / 底栏，阅读区撑满窗口；移到窗口边缘唤出面板 |
 |  | 粘性标题栏 | 章节标题会常驻顶部，看到哪里一目了然 |
 |  | 阅读进度恢复 | 自动记录阅读进度，下次打开可以继续阅读 |

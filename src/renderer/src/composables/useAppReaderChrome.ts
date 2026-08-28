@@ -44,7 +44,7 @@ function nodeIsUnderFullscreenPanel(panel: HTMLElement, start: Node | null) {
 
 /**
  * 全屏 / 极简浮动 UI 统一模型（`chromeAutoHide`）：
- * - `document` mousemove：仅在对应边缘「感应区」且面板未显示时唤起；
+ * - `document` mousemove：仅在对应边缘「感应区」且面板未显示、且未按下鼠标按键时唤起；
  * - 面板根节点 `@mouseleave`：自动隐藏 chrome 且已显示时收起（与真实命中区域一致）；
  * - `.layout` `mousedown`：收起顶栏/底栏/侧栏（点击落在已展开侧栏内除外）。
  */
@@ -271,6 +271,11 @@ export function useAppReaderChrome(deps: {
     return !showFullscreenHeader.value && !showFullscreenSidebar.value;
   }
 
+  /** 选区 / 拖动滚动时按住指针移到边缘不唤起浮动层 */
+  function pointerButtonsHeld(ev: MouseEvent): boolean {
+    return ev.buttons !== 0;
+  }
+
   /** 左缘感应：仅负责唤起。收起由侧栏容器 @mouseleave 处理。 */
   function recordFullscreenPointer(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
@@ -280,6 +285,7 @@ export function useAppReaderChrome(deps: {
 
   function updateFullscreenSidebarHover(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
+    if (pointerButtonsHeld(ev)) return;
     if (deps.suppressFullscreenSidebarHover?.value) return;
     if (showFullscreenSidebar.value) return;
     const x = ev.clientX;
@@ -356,6 +362,7 @@ export function useAppReaderChrome(deps: {
   /** 顶缘感应区：仅负责唤起。收起由顶栏容器 @mouseleave 处理（与真实命中区域一致）。 */
   function updateFullscreenHeaderHover(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
+    if (pointerButtonsHeld(ev)) return;
     if (deps.readerRef.value?.isFindWidgetRevealed?.()) {
       collapseFullscreenHeaderAndCloseFindIfRevealed();
       return;
@@ -386,6 +393,7 @@ export function useAppReaderChrome(deps: {
   /** 底缘感应：仅负责唤起。收起由底栏容器 @mouseleave 处理。 */
   function updateFullscreenFooterHover(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
+    if (pointerButtonsHeld(ev)) return;
     if (showFullscreenFooter.value) return;
     const vh = window.innerHeight;
     const y = ev.clientY;
