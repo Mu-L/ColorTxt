@@ -256,6 +256,7 @@ watch(
         class="fontMenu fontMenu--teleport"
         :class="{ 'fontMenu--other': showOtherFontsPanel }"
         data-header-float-panel
+        data-fullscreen-header-float
         :style="{
           position: 'fixed',
           left: fontMenuPanelStyle.left,

@@ -11,6 +11,10 @@ import {
 } from "../constants/appUi";
 import { nodeIsUnderFullscreenHeaderFloat } from "../utils/fullscreenHeaderFloat";
 import { nodeIsUnderFullscreenSidebarFloat } from "../utils/fullscreenSidebarFloat";
+import {
+  dismissibleOverlayDepth,
+  hasDismissibleOverlay,
+} from "../utils/dismissibleOverlayStack";
 
 /** 全屏下鼠标静止超过该时间后隐藏光标 */
 const FULLSCREEN_CURSOR_HIDE_IDLE_MS = 2000;
@@ -46,6 +50,7 @@ function nodeIsUnderFullscreenPanel(panel: HTMLElement, start: Node | null) {
  * 全屏 / 极简浮动 UI 统一模型（`chromeAutoHide`）：
  * - `document` mousemove：仅在对应边缘「感应区」且面板未显示、且未按下鼠标按键时唤起；
  * - 面板根节点 `@mouseleave`：自动隐藏 chrome 且已显示时收起（与真实命中区域一致）；
+ * - 有可点外关闭的弹出菜单时：移出面板不收起；菜单关掉后若指针已不在面板上再收起；
  * - `.layout` `mousedown`：收起顶栏/底栏/侧栏（点击落在已展开侧栏内除外）。
  */
 export function useAppReaderChrome(deps: {
@@ -243,6 +248,11 @@ export function useAppReaderChrome(deps: {
         maxW,
         Math.max(minW, sidebarWidth.value),
       );
+      showFullscreenHeader.value = false;
+      showFullscreenFooter.value = false;
+      showFullscreenSidebar.value = false;
+      suppressChromeEdgeRevealUntilPointerLeaves = true;
+      deps.readerRef.value?.closeFindWidgetIfRevealed?.();
     } else {
       fullscreenSidebarWidth.value = null;
     }
@@ -276,6 +286,37 @@ export function useAppReaderChrome(deps: {
     return ev.buttons !== 0;
   }
 
+  /**
+   * 进入全屏、或按住指针拖入边缘后：在离开各边缘感应区前不再唤起，
+   * 避免松手 / 全屏后同位置的 mousemove 立刻把面板拉回来。
+   */
+  let suppressChromeEdgeRevealUntilPointerLeaves = false;
+
+  function pointerInChromeEdgeZone(ev: MouseEvent): boolean {
+    const x = ev.clientX;
+    const y = ev.clientY;
+    if (x <= FULLSCREEN_LEFT_EDGE_PX) return true;
+    if (y <= FULLSCREEN_TOP_EDGE_PX) return true;
+    if (y >= window.innerHeight - FULLSCREEN_BOTTOM_EDGE_PX) return true;
+    return false;
+  }
+
+  function skipChromeEdgeReveal(ev: MouseEvent): boolean {
+    if (!suppressChromeEdgeRevealUntilPointerLeaves) return false;
+    if (pointerInChromeEdgeZone(ev)) return true;
+    suppressChromeEdgeRevealUntilPointerLeaves = false;
+    return false;
+  }
+
+  /** 按住时不唤出；拖入边缘则记下抑制，松手后仍须先离开感应区。 */
+  function blockChromeEdgeReveal(ev: MouseEvent): boolean {
+    if (pointerButtonsHeld(ev)) {
+      suppressChromeEdgeRevealUntilPointerLeaves = pointerInChromeEdgeZone(ev);
+      return true;
+    }
+    return skipChromeEdgeReveal(ev);
+  }
+
   /** 左缘感应：仅负责唤起。收起由侧栏容器 @mouseleave 处理。 */
   function recordFullscreenPointer(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
@@ -285,7 +326,7 @@ export function useAppReaderChrome(deps: {
 
   function updateFullscreenSidebarHover(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
-    if (pointerButtonsHeld(ev)) return;
+    if (blockChromeEdgeReveal(ev)) return;
     if (deps.suppressFullscreenSidebarHover?.value) return;
     if (showFullscreenSidebar.value) return;
     const x = ev.clientX;
@@ -312,12 +353,14 @@ export function useAppReaderChrome(deps: {
   function onFullscreenSidebarMouseLeave(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
     if (resizingSidebar.value) return;
+    if (hasDismissibleOverlay()) return;
     if (deps.fullscreenSidebarPopoversSuppressCollapse.value) return;
     const rt = ev.relatedTarget;
     if (rt instanceof Node && nodeIsUnderFullscreenSidebarFloat(rt)) return;
     const { clientX, clientY } = ev;
     requestAnimationFrame(() => {
       if (!chromeAutoHide.value || !showFullscreenSidebar.value) return;
+      if (hasDismissibleOverlay()) return;
       if (deps.fullscreenSidebarPopoversSuppressCollapse.value) return;
       tryCollapseFullscreenSidebarFromPointer(clientX, clientY);
     });
@@ -362,7 +405,7 @@ export function useAppReaderChrome(deps: {
   /** 顶缘感应区：仅负责唤起。收起由顶栏容器 @mouseleave 处理（与真实命中区域一致）。 */
   function updateFullscreenHeaderHover(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
-    if (pointerButtonsHeld(ev)) return;
+    if (blockChromeEdgeReveal(ev)) return;
     if (deps.readerRef.value?.isFindWidgetRevealed?.()) {
       collapseFullscreenHeaderAndCloseFindIfRevealed();
       return;
@@ -381,11 +424,13 @@ export function useAppReaderChrome(deps: {
 
   function onFullscreenHeaderMouseLeave(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
+    if (hasDismissibleOverlay()) return;
     const rt = ev.relatedTarget;
     if (rt instanceof Node && nodeIsUnderFullscreenHeaderFloat(rt)) return;
     const { clientX, clientY } = ev;
     requestAnimationFrame(() => {
       if (!chromeAutoHide.value || !showFullscreenHeader.value) return;
+      if (hasDismissibleOverlay()) return;
       tryCollapseFullscreenHeaderFromPointer(clientX, clientY);
     });
   }
@@ -393,7 +438,7 @@ export function useAppReaderChrome(deps: {
   /** 底缘感应：仅负责唤起。收起由底栏容器 @mouseleave 处理。 */
   function updateFullscreenFooterHover(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
-    if (pointerButtonsHeld(ev)) return;
+    if (blockChromeEdgeReveal(ev)) return;
     if (showFullscreenFooter.value) return;
     const vh = window.innerHeight;
     const y = ev.clientY;
@@ -405,8 +450,37 @@ export function useAppReaderChrome(deps: {
     }
   }
 
+  function tryCollapseFullscreenFooterFromPointer(
+    clientX: number,
+    clientY: number,
+  ) {
+    if (!chromeAutoHide.value || !showFullscreenFooter.value) return;
+    const top = document.elementFromPoint(clientX, clientY);
+    const footer = fullscreenFooterOverlayRef.value;
+    if (footer && top && nodeIsUnderFullscreenPanel(footer, top)) return;
+    showFullscreenFooter.value = false;
+  }
+
+  function tryCollapseAllChromeFromLastPointer() {
+    const x = lastFullscreenPointerClientX.value;
+    const y = lastFullscreenPointerClientY.value;
+    tryCollapseFullscreenHeaderFromPointer(x, y);
+    tryCollapseFullscreenSidebarFromPointer(x, y);
+    tryCollapseFullscreenFooterFromPointer(x, y);
+  }
+
+  watch(dismissibleOverlayDepth, (n, prev) => {
+    if ((prev ?? 0) <= 0 || n > 0) return;
+    if (!chromeAutoHide.value) return;
+    requestAnimationFrame(() => {
+      if (hasDismissibleOverlay()) return;
+      tryCollapseAllChromeFromLastPointer();
+    });
+  });
+
   function onFullscreenFooterMouseLeave() {
     if (!chromeAutoHide.value) return;
+    if (hasDismissibleOverlay()) return;
     showFullscreenFooter.value = false;
   }
 

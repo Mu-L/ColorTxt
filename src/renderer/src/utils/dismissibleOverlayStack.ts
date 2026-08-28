@@ -1,18 +1,22 @@
-import { onBeforeUnmount, unref, watch, type MaybeRef } from "vue";
+import { onBeforeUnmount, ref, unref, watch, type MaybeRef } from "vue";
 
-let depth = 0;
+/** 当前打开的可点外关闭菜单/下拉数量（供 chrome 监听） */
+export const dismissibleOverlayDepth = ref(0);
 
 export function hasDismissibleOverlay(): boolean {
-  return depth > 0;
+  return dismissibleOverlayDepth.value > 0;
 }
 
 export function registerDismissibleOverlay(): () => void {
-  depth += 1;
+  dismissibleOverlayDepth.value += 1;
   let released = false;
   return () => {
     if (released) return;
     released = true;
-    depth = Math.max(0, depth - 1);
+    dismissibleOverlayDepth.value = Math.max(
+      0,
+      dismissibleOverlayDepth.value - 1,
+    );
   };
 }
 
