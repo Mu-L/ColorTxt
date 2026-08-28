@@ -23,6 +23,7 @@ export type ShortcutActionId =
   | "openChapterRules"
   | "toggleBookmark"
   | "toggleSidebar"
+  | "toggleMinimalistView"
   | "toggleFullscreen"
   | "openSettings"
   | "openColorScheme"
@@ -148,6 +149,12 @@ export const SHORTCUT_ACTIONS: ShortcutActionDef[] = [
     handlerKey: "toggleSidebar",
   },
   {
+    id: "toggleMinimalistView",
+    scope: "window",
+    desc: "进入/退出极简视图",
+    handlerKey: "toggleMinimalistView",
+  },
+  {
     id: "toggleFullscreen",
     scope: "window",
     desc: "进入/退出全屏阅读",
@@ -224,6 +231,7 @@ export function createDefaultShortcutBindings(isMac: boolean): ShortcutBindingMa
     openChapterRules: `${accel}+R`,
     toggleBookmark: `${accel}+D`,
     toggleSidebar: `${accel}+B`,
+    toggleMinimalistView: `${accel}+1`,
     toggleFullscreen: "F11",
     openSettings: "F5",
     openColorScheme: "F6",

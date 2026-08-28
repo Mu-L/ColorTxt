@@ -9,6 +9,7 @@ export type AppShortcutActions = {
   increaseLineHeight: () => void | Promise<void>;
   decreaseLineHeight: () => void | Promise<void>;
   toggleSidebar: () => void | Promise<void>;
+  toggleMinimalistView: () => void | Promise<void>;
   openNewWindow: () => void | Promise<void>;
   openFile: () => void | Promise<void>;
   pickTxtDirectory: () => void | Promise<void>;
@@ -51,6 +52,7 @@ const ACTION_BY_ID: Record<string, ActionKey> = {
   openChapterRules: "openChapterRules",
   toggleBookmark: "toggleBookmark",
   toggleSidebar: "toggleSidebar",
+  toggleMinimalistView: "toggleMinimalistView",
   toggleFullscreen: "toggleFullscreen",
   openSettings: "openSettings",
   openColorScheme: "openColorScheme",

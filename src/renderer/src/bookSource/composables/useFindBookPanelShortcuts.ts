@@ -113,6 +113,7 @@ export function useFindBookPanelShortcuts(deps: {
         increaseLineHeight: () => {},
         decreaseLineHeight: () => {},
         toggleSidebar: () => {},
+        toggleMinimalistView: () => {},
         openNewWindow: () => {
           deps.openNewWindow();
         },

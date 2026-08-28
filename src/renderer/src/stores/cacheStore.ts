@@ -79,6 +79,8 @@ export type PersistedSettingsData = {
   sidebarWidth?: number;
   /** 侧边栏是否打开（非全屏时） */
   showSidebar?: boolean;
+  /** 极简视图（顶/侧/底栏默认隐藏） */
+  isMinimalistView?: boolean;
   fontSize?: number;
   /** Monaco 行间距倍数（UI「行间距」），实际 lineHeight = round(fontSize * lineHeightMultiple) */
   lineHeightMultiple?: number;
@@ -331,6 +333,9 @@ export function loadPersistedSettingsData(
   }
   if (typeof obj.showSidebar === "boolean") {
     data.showSidebar = obj.showSidebar;
+  }
+  if (typeof obj.isMinimalistView === "boolean") {
+    data.isMinimalistView = obj.isMinimalistView;
   }
   if (typeof obj.fontSize === "number" && Number.isFinite(obj.fontSize)) {
     data.fontSize = obj.fontSize;

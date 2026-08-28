@@ -7,6 +7,7 @@ import {
   FULLSCREEN_TOP_EDGE_PX,
   SIDEBAR_MIN_READER_WIDTH,
   SIDEBAR_MIN_WIDTH,
+  defaultIsMinimalistView,
 } from "../constants/appUi";
 import { nodeIsUnderFullscreenHeaderFloat } from "../utils/fullscreenHeaderFloat";
 import { nodeIsUnderFullscreenSidebarFloat } from "../utils/fullscreenSidebarFloat";
@@ -42,10 +43,10 @@ function nodeIsUnderFullscreenPanel(panel: HTMLElement, start: Node | null) {
 }
 
 /**
- * 全屏浮动 UI 统一模型：
+ * 全屏 / 极简浮动 UI 统一模型（`chromeAutoHide`）：
  * - `document` mousemove：仅在对应边缘「感应区」且面板未显示时唤起；
- * - 面板根节点 `@mouseleave`：全屏且已显示时收起（与真实命中区域一致）；
- * - `.layout` `mousedown`：全屏时收起顶栏/底栏/侧栏（点击落在已展开侧栏内除外）。
+ * - 面板根节点 `@mouseleave`：自动隐藏 chrome 且已显示时收起（与真实命中区域一致）；
+ * - `.layout` `mousedown`：收起顶栏/底栏/侧栏（点击落在已展开侧栏内除外）。
  */
 export function useAppReaderChrome(deps: {
   readerRef: ReaderRef;
@@ -55,6 +56,10 @@ export function useAppReaderChrome(deps: {
   suppressFullscreenSidebarHover?: Ref<boolean>;
 }) {
   const isFullscreenView = ref(false);
+  const isMinimalistView = ref(defaultIsMinimalistView);
+  const chromeAutoHide = computed(
+    () => isFullscreenView.value || isMinimalistView.value,
+  );
   const showFullscreenTip = ref(false);
   const fullscreenTipFading = ref(false);
   let tipFadeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -106,7 +111,7 @@ export function useAppReaderChrome(deps: {
   function armFullscreenCursorHideTimer() {
     clearFullscreenCursorHideTimer();
     if (
-      !isFullscreenView.value ||
+      !chromeAutoHide.value ||
       resizingSidebar.value ||
       anyFullscreenBarVisible()
     ) {
@@ -118,9 +123,9 @@ export function useAppReaderChrome(deps: {
     }, FULLSCREEN_CURSOR_HIDE_IDLE_MS);
   }
 
-  /** 全屏下指针移动时调用：显示光标并重新开始空闲计时 */
+  /** 全屏 / 极简下指针移动时调用：显示光标并重新开始空闲计时 */
   function bumpFullscreenCursorIdle() {
-    if (!isFullscreenView.value || resizingSidebar.value) return;
+    if (!chromeAutoHide.value || resizingSidebar.value) return;
     fullscreenCursorHidden.value = false;
     armFullscreenCursorHideTimer();
   }
@@ -128,14 +133,14 @@ export function useAppReaderChrome(deps: {
   watch(
     () =>
       [
-        isFullscreenView.value,
+        chromeAutoHide.value,
         resizingSidebar.value,
         showFullscreenHeader.value,
         showFullscreenFooter.value,
         showFullscreenSidebar.value,
       ] as const,
-    ([fs, rs, header, footer, sidebar]) => {
-      if (!fs) {
+    ([hidden, rs, header, footer, sidebar]) => {
+      if (!hidden) {
         clearFullscreenCursorHideTimer();
         fullscreenCursorHidden.value = false;
         return;
@@ -200,6 +205,18 @@ export function useAppReaderChrome(deps: {
     }
   }
 
+  function toggleMinimalistView() {
+    isMinimalistView.value = !isMinimalistView.value;
+  }
+
+  watch(isMinimalistView, (on) => {
+    if (on && !isFullscreenView.value) {
+      showFullscreenHeader.value = false;
+      showFullscreenFooter.value = false;
+      showFullscreenSidebar.value = false;
+    }
+  });
+
   function getSidebarMaxWidth(): number {
     return Math.max(0, window.innerWidth - SIDEBAR_MIN_READER_WIDTH);
   }
@@ -254,15 +271,15 @@ export function useAppReaderChrome(deps: {
     return !showFullscreenHeader.value && !showFullscreenSidebar.value;
   }
 
-  /** 全屏左缘感应：仅负责唤起。收起由侧栏容器 @mouseleave 处理。 */
+  /** 左缘感应：仅负责唤起。收起由侧栏容器 @mouseleave 处理。 */
   function recordFullscreenPointer(ev: MouseEvent) {
-    if (!isFullscreenView.value) return;
+    if (!chromeAutoHide.value) return;
     lastFullscreenPointerClientX.value = ev.clientX;
     lastFullscreenPointerClientY.value = ev.clientY;
   }
 
   function updateFullscreenSidebarHover(ev: MouseEvent) {
-    if (!isFullscreenView.value) return;
+    if (!chromeAutoHide.value) return;
     if (deps.suppressFullscreenSidebarHover?.value) return;
     if (showFullscreenSidebar.value) return;
     const x = ev.clientX;
@@ -271,12 +288,12 @@ export function useAppReaderChrome(deps: {
     }
   }
 
-  /** 指针既不在侧栏子树也不在侧栏 Teleport 白名单上时收起全屏浮动侧栏 */
+  /** 指针既不在侧栏子树也不在侧栏 Teleport 白名单上时收起浮动侧栏 */
   function tryCollapseFullscreenSidebarFromPointer(
     clientX: number,
     clientY: number,
   ) {
-    if (!isFullscreenView.value || !showFullscreenSidebar.value) return;
+    if (!chromeAutoHide.value || !showFullscreenSidebar.value) return;
     if (resizingSidebar.value) return;
     if (deps.fullscreenSidebarPopoversSuppressCollapse.value) return;
     const top = document.elementFromPoint(clientX, clientY);
@@ -287,14 +304,14 @@ export function useAppReaderChrome(deps: {
   }
 
   function onFullscreenSidebarMouseLeave(ev: MouseEvent) {
-    if (!isFullscreenView.value) return;
+    if (!chromeAutoHide.value) return;
     if (resizingSidebar.value) return;
     if (deps.fullscreenSidebarPopoversSuppressCollapse.value) return;
     const rt = ev.relatedTarget;
     if (rt instanceof Node && nodeIsUnderFullscreenSidebarFloat(rt)) return;
     const { clientX, clientY } = ev;
     requestAnimationFrame(() => {
-      if (!isFullscreenView.value || !showFullscreenSidebar.value) return;
+      if (!chromeAutoHide.value || !showFullscreenSidebar.value) return;
       if (deps.fullscreenSidebarPopoversSuppressCollapse.value) return;
       tryCollapseFullscreenSidebarFromPointer(clientX, clientY);
     });
@@ -304,7 +321,7 @@ export function useAppReaderChrome(deps: {
     () => deps.fullscreenSidebarPopoversSuppressCollapse.value,
     (open, wasOpen) => {
       if (wasOpen !== true || open !== false) return;
-      if (!isFullscreenView.value || !showFullscreenSidebar.value) return;
+      if (!chromeAutoHide.value || !showFullscreenSidebar.value) return;
       requestAnimationFrame(() => {
         if (deps.fullscreenSidebarPopoversSuppressCollapse.value) return;
         tryCollapseFullscreenSidebarFromPointer(
@@ -315,20 +332,20 @@ export function useAppReaderChrome(deps: {
     },
   );
 
-  /** 收起全屏顶栏并关闭已显示的 Monaco 查找栏（不经过 `watch`，避免与 `onToggleFind` 同 tick 竞态） */
+  /** 收起浮动顶栏并关闭已显示的 Monaco 查找栏（不经过 `watch`，避免与 `onToggleFind` 同 tick 竞态） */
   function collapseFullscreenHeaderAndCloseFindIfRevealed() {
-    if (!isFullscreenView.value) return;
+    if (!chromeAutoHide.value) return;
     if (!showFullscreenHeader.value) return;
     showFullscreenHeader.value = false;
     deps.readerRef.value?.closeFindWidgetIfRevealed?.();
   }
 
-  /** 指针既不在顶栏子树也不在顶栏相关 AppModal 蒙层上时收起全屏浮动顶栏 */
+  /** 指针既不在顶栏子树也不在顶栏相关 AppModal 蒙层上时收起浮动顶栏 */
   function tryCollapseFullscreenHeaderFromPointer(
     clientX: number,
     clientY: number,
   ) {
-    if (!isFullscreenView.value || !showFullscreenHeader.value) return;
+    if (!chromeAutoHide.value || !showFullscreenHeader.value) return;
     const top = document.elementFromPoint(clientX, clientY);
     if (top && nodeIsUnderFullscreenHeaderFloat(top)) return;
     const header = fullscreenHeaderOverlayRef.value;
@@ -336,9 +353,9 @@ export function useAppReaderChrome(deps: {
     collapseFullscreenHeaderAndCloseFindIfRevealed();
   }
 
-  /** 全屏顶缘感应区：仅负责唤起。收起由顶栏容器 @mouseleave 处理（与真实命中区域一致）。 */
+  /** 顶缘感应区：仅负责唤起。收起由顶栏容器 @mouseleave 处理（与真实命中区域一致）。 */
   function updateFullscreenHeaderHover(ev: MouseEvent) {
-    if (!isFullscreenView.value) return;
+    if (!chromeAutoHide.value) return;
     if (deps.readerRef.value?.isFindWidgetRevealed?.()) {
       collapseFullscreenHeaderAndCloseFindIfRevealed();
       return;
@@ -356,19 +373,19 @@ export function useAppReaderChrome(deps: {
   }
 
   function onFullscreenHeaderMouseLeave(ev: MouseEvent) {
-    if (!isFullscreenView.value) return;
+    if (!chromeAutoHide.value) return;
     const rt = ev.relatedTarget;
     if (rt instanceof Node && nodeIsUnderFullscreenHeaderFloat(rt)) return;
     const { clientX, clientY } = ev;
     requestAnimationFrame(() => {
-      if (!isFullscreenView.value || !showFullscreenHeader.value) return;
+      if (!chromeAutoHide.value || !showFullscreenHeader.value) return;
       tryCollapseFullscreenHeaderFromPointer(clientX, clientY);
     });
   }
 
-  /** 全屏底缘感应：仅负责唤起。收起由底栏容器 @mouseleave 处理。 */
+  /** 底缘感应：仅负责唤起。收起由底栏容器 @mouseleave 处理。 */
   function updateFullscreenFooterHover(ev: MouseEvent) {
-    if (!isFullscreenView.value) return;
+    if (!chromeAutoHide.value) return;
     if (showFullscreenFooter.value) return;
     const vh = window.innerHeight;
     const y = ev.clientY;
@@ -381,17 +398,17 @@ export function useAppReaderChrome(deps: {
   }
 
   function onFullscreenFooterMouseLeave() {
-    if (!isFullscreenView.value) return;
+    if (!chromeAutoHide.value) return;
     showFullscreenFooter.value = false;
   }
 
   /**
-   * 全屏下在 `.layout` 上按下指针时收起浮动顶栏/底栏/侧栏。
+   * chrome 自动隐藏时在 `.layout` 上按下指针时收起浮动顶栏/底栏/侧栏。
    * 顶栏、底栏不在 layout 子树内，能收到该事件即表示未点在栏上；
    * 侧栏在 layout 内，若当前侧栏展开且点在侧栏面板上则不收起（避免误关）。
    */
   function dismissFullscreenPanelsOnLayoutPointerDown(ev: MouseEvent) {
-    if (!isFullscreenView.value) return;
+    if (!chromeAutoHide.value) return;
     const raw = ev.target;
     if (!(raw instanceof Node)) return;
     const sidebar = fullscreenSidebarOverlayRef.value;
@@ -429,6 +446,9 @@ export function useAppReaderChrome(deps: {
 
   return {
     isFullscreenView,
+    isMinimalistView,
+    chromeAutoHide,
+    toggleMinimalistView,
     showFullscreenTip,
     fullscreenTipFading,
     showFullscreenHeader,

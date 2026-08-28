@@ -66,6 +66,7 @@ function createFindBookSettingsStore() {
   const fullscreenReaderWidthPercent = ref(initial.fullscreenReaderWidthPercent);
   const fullscreenShowSystemTime = ref(initial.fullscreenShowSystemTime);
   const showSidebar = ref(initial.showSidebar);
+  const isMinimalistView = ref(initial.isMinimalistView);
   const sidebarWidth = ref(initial.sidebarWidth);
   const showChapterTag = ref(initial.showChapterTag);
   const timedScrollSettings = ref(initial.timedScrollSettings);
@@ -158,6 +159,7 @@ function createFindBookSettingsStore() {
         downloadDefaultCategory: downloadDefaultCategory.value,
         proxy: proxy.value,
         showSidebar: showSidebar.value,
+        isMinimalistView: isMinimalistView.value,
         sidebarWidth: sidebarWidth.value,
         showChapterTag: showChapterTag.value,
       }),
@@ -295,6 +297,7 @@ function createFindBookSettingsStore() {
     fullscreenReaderWidthPercent,
     fullscreenShowSystemTime,
     showSidebar,
+    isMinimalistView,
     sidebarWidth,
     showChapterTag,
     timedScrollSettings,

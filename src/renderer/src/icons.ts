@@ -1,6 +1,7 @@
 import darkIcon from "./assets/dark.svg?raw";
 import lightIcon from "./assets/light.svg?raw";
 import sidebarIcon from "./assets/sidebar.svg?raw";
+import minimalistViewIcon from "./assets/minimalist_view.svg?raw";
 import enterFullscreenIcon from "./assets/enter_fullscreen.svg?raw";
 import leaveFullscreenIcon from "./assets/leave_fullscreen.svg?raw";
 import paletteIcon from "./assets/palette.svg?raw";
@@ -137,6 +138,8 @@ export const icons = {
   dark: darkIcon,
   light: lightIcon,
   sidebar: sidebarIcon,
+  /** 极简视图（隐藏顶/侧/底栏，阅读区撑满） */
+  minimalistView: minimalistViewIcon,
   enterFullscreen: enterFullscreenIcon,
   leaveFullscreen: leaveFullscreenIcon,
   palette: paletteIcon,

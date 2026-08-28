@@ -7,6 +7,7 @@ import {
   defaultFullscreenReaderWidthPercent,
   defaultFullscreenShowSystemTime,
   defaultShowSidebar,
+  defaultIsMinimalistView,
   defaultLeadIndentFullWidth,
   defaultMonacoAdvancedWrapping,
   defaultMonacoCjkWrapOptimize,
@@ -165,6 +166,7 @@ export function snapshotFindBookOnlySettingsFromStore(state: {
   downloadDefaultCategory: string;
   proxy: FindBookProxySettings;
   showSidebar: boolean;
+  isMinimalistView: boolean;
   sidebarWidth: number;
   showChapterTag: boolean;
 }): PersistedFindBookSettings {
@@ -176,6 +178,7 @@ export function snapshotFindBookOnlySettingsFromStore(state: {
     downloadDefaultCategory: state.downloadDefaultCategory.trim(),
     proxy: normalizeFindBookProxySettings(state.proxy),
     showSidebar: state.showSidebar,
+    isMinimalistView: state.isMinimalistView,
     sidebarWidth: state.sidebarWidth,
     showChapterTag: state.showChapterTag,
   };
@@ -418,6 +421,10 @@ export function createInitialFindBookSettingsState() {
       typeof data.showSidebar === "boolean"
         ? data.showSidebar
         : defaultShowSidebar,
+    isMinimalistView:
+      typeof data.isMinimalistView === "boolean"
+        ? data.isMinimalistView
+        : defaultIsMinimalistView,
     sidebarWidth:
       typeof data.sidebarWidth === "number" && Number.isFinite(data.sidebarWidth)
         ? Math.max(

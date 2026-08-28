@@ -64,6 +64,7 @@ export const WINDOW_LOCAL_MAIN_SETTING_KEYS: ReadonlySet<string> = new Set([
   "voiceRead",
   "sidebarWidth",
   "showSidebar",
+  "isMinimalistView",
 ]);
 
 export function readPersistedMainSettingsObject(): Record<string, unknown> {

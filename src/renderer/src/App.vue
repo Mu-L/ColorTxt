@@ -287,6 +287,9 @@ const chrome = useAppReaderChrome({
 });
 const {
   isFullscreenView,
+  isMinimalistView,
+  chromeAutoHide,
+  toggleMinimalistView,
   showFullscreenTip,
   fullscreenTipFading,
   showFullscreenHeader,
@@ -579,13 +582,13 @@ const showReaderEmptyHint = computed(
     !readerEditMode.value &&
     totalCharCount.value === 0,
 );
-/** 非全屏：侧栏壳（含活动栏）始终占位；全屏：仅浮动展开时显示整块 */
+/** 非自动隐藏：侧栏壳（含活动栏）始终占位；全屏 / 极简：仅浮动展开时显示整块 */
 const sidebarShellVisible = computed(
-  () => !isFullscreenView.value || showFullscreenSidebar.value,
+  () => !chromeAutoHide.value || showFullscreenSidebar.value,
 );
-/** 非全屏且收起面板时仅活动栏宽度；其余与 `sidebarWidthForLayout` 一致 */
+/** 自动隐藏时用完整侧栏宽；窗口态收起面板时仅活动栏宽度 */
 const sidebarPaneLayoutWidth = computed(() => {
-  if (isFullscreenView.value) return sidebarWidthForLayout.value;
+  if (chromeAutoHide.value) return sidebarWidthForLayout.value;
   if (!showSidebar.value) return SIDEBAR_ACTIVITY_BAR_WIDTH;
   return sidebarWidthForLayout.value;
 });
@@ -1117,6 +1120,7 @@ const persistence = useAppPersistence({
   readingProgressSynced,
   sidebarWidth,
   showSidebar,
+  isMinimalistView,
   currentTheme,
   monacoCustomHighlight,
   compressBlankLines,
@@ -1230,6 +1234,7 @@ watch(fileListEditing, (editing, wasEditing) => {
 });
 
 watch(showSidebar, () => persistSettings());
+watch(isMinimalistView, () => persistSettings());
 watch(aiAssistantDeepThinking, () => persistSettings());
 watch(aiAssistantSpoilerSafe, () => persistSettings());
 watch(wordcloudAngleMode, () => persistSettings());
@@ -2373,7 +2378,7 @@ const readerChapterNavUiVisible = computed(
 const readerChapterNavVisible = computed(
   () =>
     readerChapterNavUiVisible.value &&
-    (!isFullscreenView.value || showFullscreenFooter.value),
+    (!chromeAutoHide.value || showFullscreenFooter.value),
 );
 
 const readerChapterNavBusy = computed(
@@ -3264,7 +3269,7 @@ function openSidebarSearch() {
   const sel = readerRef.value?.getSelectedText?.()?.trim() ?? "";
   sidebarTab.value = "search";
   showSidebar.value = true;
-  if (isFullscreenView.value) showFullscreenSidebar.value = true;
+  if (chromeAutoHide.value) showFullscreenSidebar.value = true;
   if (sel) searchQuery.value = sel;
   void nextTick(() => {
     readerSidebarRef.value?.focusSidebarSearchInput?.();
@@ -3472,6 +3477,7 @@ useAppWindowBindings({
   persistFileListCache,
   persistSidebarWidth,
   isFullscreenView,
+  chromeAutoHide,
   showSidebar,
   sidebarWidth,
   fullscreenSidebarWidth,
@@ -3487,6 +3493,7 @@ useAppWindowBindings({
   bumpFullscreenCursorIdle,
   recordFullscreenPointer,
   enterOrExitFullscreenView,
+  toggleMinimalistView,
   pulseChapterListCenter,
   syncChaptersAfterViewportSettled,
   currentTheme,
@@ -3567,7 +3574,7 @@ useAppShellThemeWatch({
   currentFile,
   readerEditMode,
   readerEditorDirty,
-  isFullscreenView,
+  isFullscreenView: chromeAutoHide,
   showFullscreenSidebar,
   pulseChapterListCenter,
 });
@@ -3579,17 +3586,19 @@ useAppShellThemeWatch({
     class="app"
     :class="{
       fullscreen: isFullscreenView,
-      'fullscreen--cursorHidden': isFullscreenView && fullscreenCursorHidden,
+      chromeHidden: chromeAutoHide,
+      'fullscreen--cursorHidden': chromeAutoHide && fullscreenCursorHidden,
     }"
   >
     <div
       :ref="setFullscreenHeaderOverlayEl"
       class="appHeaderWrap"
-      v-show="!isFullscreenView || showFullscreenHeader"
+      v-show="!chromeAutoHide || showFullscreenHeader"
       @mouseleave="onFullscreenHeaderMouseLeave"
     >
       <AppHeader
         :in-fullscreen="isFullscreenView"
+        :in-minimalist="isMinimalistView"
         :recent-files="recentFilesForMenu"
         :pin-active="pinActive"
         :can-pin="canPin"
@@ -3632,6 +3641,7 @@ useAppShellThemeWatch({
         @go-back-from-pin="onGoBackFromPin"
         @change-theme="currentTheme = $event"
         @toggle-sidebar="showSidebar = !showSidebar"
+        @toggle-minimalist="toggleMinimalistView"
         @toggle-fullscreen="enterOrExitFullscreenView"
         @set-monaco-font="setMonacoFontFamily"
         @toggle-pin-other-font="togglePinnedOtherFont"
@@ -3692,7 +3702,7 @@ useAppShellThemeWatch({
       <div
         ref="fullscreenSidebarOverlayRef"
         class="sidebarPaneWrap"
-        :class="{ 'sidebarPaneWrap--fullscreen': isFullscreenView }"
+        :class="{ 'sidebarPaneWrap--fullscreen': chromeAutoHide }"
         v-show="sidebarShellVisible"
         :style="{ width: `${sidebarPaneLayoutWidth}px` }"
         @mouseleave="onFullscreenSidebarMouseLeave"
@@ -3700,11 +3710,11 @@ useAppShellThemeWatch({
         <ReaderSidebar
           ref="readerSidebarRef"
           active-scroll-mode="center"
-          :panel-expanded="isFullscreenView || showSidebar"
+          :panel-expanded="chromeAutoHide || showSidebar"
           :activity-icons-on-dark="currentTheme === 'vs-dark'"
-          :in-fullscreen="isFullscreenView"
+          :in-fullscreen="chromeAutoHide"
           :show-fullscreen-sidebar="
-            isFullscreenView ? showFullscreenSidebar : undefined
+            chromeAutoHide ? showFullscreenSidebar : undefined
           "
           :chapter-list-scroll-smooth="chapterListScrollSmooth"
           :should-center-chapter-list="shouldCenterChapterList"
@@ -3842,14 +3852,14 @@ useAppShellThemeWatch({
         />
         <!-- 放在侧栏容器内，避免移到拖条时触发 @mouseleave 导致全屏侧栏收起 -->
         <div
-          v-show="isFullscreenView"
+          v-show="chromeAutoHide"
           class="resizer resizer--fullscreenSidebar"
           :class="{ 'resizer--active': resizingSidebar }"
           @mousedown="startResizeSidebar"
         ></div>
       </div>
       <div
-        v-show="showSidebar && !isFullscreenView"
+        v-show="showSidebar && !chromeAutoHide"
         class="resizer"
         :class="{ 'resizer--active': resizingSidebar }"
         :style="{ left: `calc(${sidebarWidthForLayout}px - var(--app-sash-size, 4px) / 2)` }"
@@ -3977,7 +3987,7 @@ useAppShellThemeWatch({
           @open-speak-settings="showVoiceReadSpeakSettingsPanel = true"
         />
         <ReaderChapterNavBar
-          v-if="readerChapterNavUiVisible && !isFullscreenView"
+          v-if="readerChapterNavUiVisible && !chromeAutoHide"
           :visible="readerChapterNavVisible"
           :can-go-prev="readerChapterNavCanPrev"
           :can-go-next="readerChapterNavCanNext"
@@ -4020,7 +4030,7 @@ useAppShellThemeWatch({
     </div>
     <FullscreenSystemClock
       :visible="isFullscreenView && fullscreenShowSystemTime"
-      :pomodoro-visible="isFullscreenView && pomodoroPhase !== 'idle'"
+      :pomodoro-visible="chromeAutoHide && pomodoroPhase !== 'idle'"
       :pomodoro-progress="pomodoroProgress"
       :pomodoro-paused="pomodoroPaused"
     />
@@ -4028,11 +4038,11 @@ useAppShellThemeWatch({
     <div
       :ref="setFullscreenFooterOverlayEl"
       class="appFooterWrap"
-      v-show="!isFullscreenView || showFullscreenFooter"
+      v-show="!chromeAutoHide || showFullscreenFooter"
       @mouseleave="onFullscreenFooterMouseLeave"
     >
       <ReaderChapterNavBar
-        v-if="readerChapterNavUiVisible && isFullscreenView"
+        v-if="readerChapterNavUiVisible && chromeAutoHide"
         :visible="readerChapterNavVisible"
         :can-go-prev="readerChapterNavCanPrev"
         :can-go-next="readerChapterNavCanNext"

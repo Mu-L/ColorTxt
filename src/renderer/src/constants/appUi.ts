@@ -63,7 +63,7 @@ export const FULLSCREEN_RIGHT_SCROLLBAR_GUTTER_PX = 20;
 
 /**
  * 侧栏文件列表等 Teleport 到 `body` 的浮层根节点应带对应 `data-*` 属性，
- * 全屏浮动侧栏的 `mouseleave`、`.layout` 按下收起、空白区滚轮等逻辑据此白名单识别。
+ * 全屏 / 极简浮动侧栏的 `mouseleave`、`.layout` 按下收起、空白区滚轮等逻辑据此白名单识别。
  */
 export const FULLSCREEN_SIDEBAR_FLOAT_SELECTOR =
   "[data-fullscreen-sidebar-float]";
@@ -106,6 +106,8 @@ export const skipSettingsPersistenceSessionKey = "colorTxt.skipSettingsPersisten
  */
 export const defaultReaderTheme = "vs";
 export const defaultShowSidebar = true;
+/** 极简视图：顶/侧/底栏默认隐藏，阅读区撑满窗口 */
+export const defaultIsMinimalistView = false;
 export const defaultMonacoCustomHighlight = true;
 /**
  * 为 true 且开启「内容上色」时，Monarch 成对引号/括号可跨行（includeLF: false）。

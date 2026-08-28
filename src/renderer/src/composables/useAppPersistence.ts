@@ -229,6 +229,7 @@ export function useAppPersistence(deps: {
   readingProgressSynced: Ref<boolean>;
   sidebarWidth: Ref<number>;
   showSidebar: Ref<boolean>;
+  isMinimalistView: Ref<boolean>;
   currentTheme: Ref<string>;
   monacoCustomHighlight: Ref<boolean>;
   compressBlankLines: Ref<boolean>;
@@ -377,6 +378,7 @@ export function useAppPersistence(deps: {
       theme: deps.currentTheme.value === "vs" ? "vs" : "vs-dark",
       sidebarWidth: deps.sidebarWidth.value,
       showSidebar: deps.showSidebar.value,
+      isMinimalistView: deps.isMinimalistView.value,
       fontSize: deps.readerFontSize.value,
       lineHeightMultiple: deps.readerLineHeightMultiple.value,
       lineSpacingPx: deps.readerLineSpacingPx.value,
@@ -769,6 +771,7 @@ export function useAppPersistence(deps: {
       loadPersistedSettings({
         applySidebarWidth: false,
         applyShowSidebar: false,
+        applyMinimalistView: false,
         applyReaderUiPrefs: false,
       });
     }
@@ -1115,6 +1118,8 @@ export function useAppPersistence(deps: {
     applySidebarWidth?: boolean;
     /** 为 false 时不覆盖本窗口侧栏开关（多窗口 storage 同步） */
     applyShowSidebar?: boolean;
+    /** 为 false 时不覆盖本窗口极简视图（多窗口 storage 同步） */
+    applyMinimalistView?: boolean;
     /**
      * 为 false 时不覆盖本窗口阅读/编辑/语音朗读相关 UI。
      * 多窗口 storage 同步时使用，避免「界面仍是本窗值、打开设置却是别窗刚存的值」。
@@ -1127,6 +1132,7 @@ export function useAppPersistence(deps: {
   } {
     const applySidebarWidth = options?.applySidebarWidth !== false;
     const applyShowSidebar = options?.applyShowSidebar !== false;
+    const applyMinimalistView = options?.applyMinimalistView !== false;
     const applyReaderUiPrefs = options?.applyReaderUiPrefs !== false;
     const loaded = loadPersistedSettingsData(
       typeof window !== "undefined" ? window.localStorage : undefined,
@@ -1158,6 +1164,10 @@ export function useAppPersistence(deps: {
 
     if (applyShowSidebar && typeof data.showSidebar === "boolean") {
       deps.showSidebar.value = data.showSidebar;
+    }
+
+    if (applyMinimalistView && typeof data.isMinimalistView === "boolean") {
+      deps.isMinimalistView.value = data.isMinimalistView;
     }
 
     if (applyReaderUiPrefs) {
@@ -1542,6 +1552,10 @@ export function useAppPersistence(deps: {
       }
       if (applyShowSidebar) {
         settingsPersistBaseline.showSidebar = deps.showSidebar.value;
+      }
+      if (applyMinimalistView) {
+        settingsPersistBaseline.isMinimalistView =
+          deps.isMinimalistView.value;
       }
     }
 

@@ -54,6 +54,8 @@ export function useAppWindowBindings(deps: {
   persistFileListCache: () => void;
   persistSidebarWidth: () => void;
   isFullscreenView: Ref<boolean>;
+  /** 全屏或极简：边缘感应 / 光标隐藏 / 指针记录 */
+  chromeAutoHide: Ref<boolean>;
   showSidebar: Ref<boolean>;
   sidebarWidth: Ref<number>;
   /** 全屏时非 null，与 sidebarWidth 分离；拖拽只改此值 */
@@ -67,11 +69,12 @@ export function useAppWindowBindings(deps: {
   updateFullscreenSidebarHover: (ev: MouseEvent) => void;
   endSidebarResize: () => void;
   dismissFullscreenChromeForNativeExit: () => void;
-  /** 全屏下鼠标移动时重置「空闲隐藏光标」计时 */
+  /** chrome 自动隐藏时鼠标移动重置「空闲隐藏光标」计时 */
   bumpFullscreenCursorIdle: () => void;
-  /** 全屏下记录指针坐标，供侧栏浮层关闭后判断是否应收起 */
+  /** chrome 自动隐藏时记录指针坐标，供侧栏浮层关闭后判断是否应收起 */
   recordFullscreenPointer?: (ev: MouseEvent) => void;
   enterOrExitFullscreenView: () => Promise<void>;
+  toggleMinimalistView: () => void;
   pulseChapterListCenter: (smooth: boolean) => void;
   syncChaptersAfterViewportSettled: () => void | Promise<void>;
   currentTheme: Ref<string>;
@@ -249,6 +252,7 @@ export function useAppWindowBindings(deps: {
           toggleSidebar: () => {
             deps.showSidebar.value = !deps.showSidebar.value;
           },
+          toggleMinimalistView: deps.toggleMinimalistView,
           openNewWindow: deps.openNewWindow,
           openFile: deps.openFileViaDialog,
           pickTxtDirectory: deps.pickTxtDirectory,
@@ -674,10 +678,10 @@ export function useAppWindowBindings(deps: {
       deps.updateFullscreenHeaderHover(ev);
       deps.updateFullscreenFooterHover(ev);
       deps.updateFullscreenSidebarHover(ev);
-      if (deps.isFullscreenView.value) {
+      if (deps.chromeAutoHide.value) {
         deps.recordFullscreenPointer?.(ev);
       }
-      if (deps.isFullscreenView.value && !deps.resizingSidebar.value) {
+      if (deps.chromeAutoHide.value && !deps.resizingSidebar.value) {
         deps.bumpFullscreenCursorIdle();
       }
     };

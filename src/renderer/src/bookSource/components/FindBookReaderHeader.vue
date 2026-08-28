@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import IconButton from "../../components/IconButton.vue";
+import SidebarViewButton from "../../components/SidebarViewButton.vue";
 import HeaderFontToolbar from "../../components/HeaderFontToolbar.vue";
 import HeaderFormatToolbar from "../../components/HeaderFormatToolbar.vue";
 import AppShellMenuTeleport from "../../components/AppShellMenuTeleport.vue";
@@ -25,6 +26,7 @@ const props = withDefaults(
     currentTheme: string;
     showSidebar: boolean;
     inFullscreen?: boolean;
+    inMinimalist?: boolean;
     canIncreaseFont: boolean;
     canDecreaseFont: boolean;
     canIncreaseLineHeight: boolean;
@@ -50,6 +52,8 @@ const props = withDefaults(
     colorSchemeShortcutLabel?: string;
     /** 查找菜单项右侧快捷键文案 */
     findShortcutLabel?: string;
+    /** 极简视图菜单项右侧快捷键文案 */
+    minimalistShortcutLabel?: string;
     readerEditMode?: boolean;
     /** 阅读器点击翻页模式（false = 可选模式）；传入生效值（含按住 Alt 的临时反转） */
     readerClickMode?: boolean;
@@ -63,6 +67,7 @@ const props = withDefaults(
   }>(),
   {
     inFullscreen: false,
+    inMinimalist: false,
     pinnedOtherFonts: () => [],
     textConvertZh: "off",
     textConvertLetter: "off",
@@ -76,6 +81,7 @@ const props = withDefaults(
     settingsShortcutLabel: "",
     colorSchemeShortcutLabel: "",
     findShortcutLabel: "",
+    minimalistShortcutLabel: "",
     readerEditMode: false,
     readerClickMode: false,
     readerClickModeAltHeld: false,
@@ -88,6 +94,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   changeTheme: [theme: string];
   toggleSidebar: [];
+  toggleMinimalist: [];
   toggleFullscreen: [];
   setMonacoFont: [fontFamily: string];
   togglePinOtherFont: [fontName: string];
@@ -158,6 +165,7 @@ const {
   toggleMenu: toggleMoreMenu,
   closeMenu: closeMoreMenu,
   panelRef: moreMenuPanelRef,
+  availableMaxHeight: moreMenuMaxHeight,
 } = moreMenu;
 
 function bindMoreMenuPanel(el: HTMLElement | null) {
@@ -177,6 +185,11 @@ function onOpenColorSchemeFromToolbar() {
 function onToggleFindFromToolbar() {
   closeMoreMenu();
   emit("toggleFind");
+}
+
+function onToggleMinimalistFromToolbar() {
+  closeMoreMenu();
+  emit("toggleMinimalist");
 }
 
 function onOpenTextReplace() {
@@ -320,13 +333,12 @@ function onOpenTextReplace() {
           :title="currentTheme === 'vs' ? '当前亮色，点击切换暗色' : '当前暗色，点击切换亮色'"
           @click="emit('changeTheme', currentTheme === 'vs' ? 'vs-dark' : 'vs')"
         />
-        <IconButton
+        <SidebarViewButton
           v-if="!inFullscreen"
-          :icon-html="icons.sidebar"
-          :active="showSidebar"
-          :pressed="showSidebar"
-          title="切换侧边栏"
-          @click="emit('toggleSidebar')"
+          :show-sidebar="showSidebar"
+          :minimalist="inMinimalist"
+          @toggle-sidebar="emit('toggleSidebar')"
+          @toggle-minimalist="emit('toggleMinimalist')"
         />
         <IconButton
           :icon-html="inFullscreen ? icons.leaveFullscreen : icons.enterFullscreen"
@@ -353,9 +365,24 @@ function onOpenTextReplace() {
       :left="moreMenuLeft"
       :top="moreMenuTop"
       caret="end"
-      :fullscreen-header-float="inFullscreen"
+      :fullscreen-header-float="inFullscreen || inMinimalist"
+      :max-height="moreMenuMaxHeight"
       :on-panel-mount="bindMoreMenuPanel"
     >
+      <button
+        type="button"
+        class="appShellMenuItem"
+        :class="{ 'is-active': inMinimalist }"
+        role="menuitem"
+        @click="onToggleMinimalistFromToolbar"
+      >
+        <span class="appShellMenuIconSlot" v-html="icons.minimalistView" />
+        <span class="appShellMenuLabel">极简视图</span>
+        <span v-if="minimalistShortcutLabel" class="appShellMenuShortcut">{{
+          minimalistShortcutLabel
+        }}</span>
+      </button>
+      <div class="appShellMenuDivider" role="separator" />
       <button
         type="button"
         class="appShellMenuItem"

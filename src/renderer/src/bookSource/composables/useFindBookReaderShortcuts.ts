@@ -46,6 +46,7 @@ export function useFindBookReaderShortcuts(deps: {
   jumpToPrevChapter: () => void;
   jumpToNextChapter: () => void;
   toggleSidebar: () => void;
+  toggleMinimalistView: () => void;
   toggleFullscreen: () => void | Promise<void>;
   isVoiceReadScrollLocked?: Ref<boolean>;
   isVoiceReadBlocksFind?: Ref<boolean>;
@@ -98,6 +99,7 @@ export function useFindBookReaderShortcuts(deps: {
         increaseLineHeight: deps.increaseLineHeight,
         decreaseLineHeight: deps.decreaseLineHeight,
         toggleSidebar: deps.toggleSidebar,
+        toggleMinimalistView: deps.toggleMinimalistView,
         openNewWindow: () => {},
         openFile: () => {},
         pickTxtDirectory: () => {},

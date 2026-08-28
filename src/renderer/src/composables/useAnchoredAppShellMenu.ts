@@ -41,17 +41,39 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
   const panelRef = ref<HTMLElement | null>(null);
   const left = ref(0);
   const top = ref(0);
+  const availableMaxHeight = ref<number | undefined>(undefined);
 
   syncDismissibleOverlay(open);
+
+  /** `.appShellMenuPanel` 上下 padding 各 6px，内层滚动高度需扣掉，避免面板本身溢出窗口 */
+  const PANEL_PAD_Y = 12;
+
+  function availableHeightForAnchor(rect: DOMRect): number {
+    const gap = opts.gap ?? 4;
+    const margin = opts.margin ?? 8;
+    const placement = opts.placement;
+    if (placement.startsWith("above")) {
+      return Math.max(80, rect.top - gap - margin - PANEL_PAD_Y);
+    }
+    if (placement.startsWith("beside")) {
+      return Math.max(80, window.innerHeight - margin * 2 - PANEL_PAD_Y);
+    }
+    return Math.max(
+      80,
+      window.innerHeight - rect.bottom - gap - margin - PANEL_PAD_Y,
+    );
+  }
 
   async function reposition() {
     const anchor = opts.anchor.value;
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
+    const maxH = opts.panelMaxHeight ?? availableHeightForAnchor(rect);
+    availableMaxHeight.value = maxH;
     await nextTick();
     const panel = panelRef.value;
     const w = panel?.offsetWidth ?? opts.widthPx ?? 160;
-    const h = panel?.offsetHeight ?? 0;
+    const h = Math.min(panel?.offsetHeight ?? 0, maxH);
     const pos = computeAnchoredMenuPosition(
       rect,
       { width: w, height: h },
@@ -87,6 +109,12 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
     if (!target) return false;
     if (opts.anchor.value?.contains(target)) return true;
     if (panelRef.value?.contains(target)) return true;
+    if (
+      target instanceof Element &&
+      target.closest("[data-header-float-panel]")
+    ) {
+      return true;
+    }
     const extra = opts.excludeCloseWithin?.value ?? [];
     for (const el of extra) {
       if (el?.contains(target)) return true;
@@ -144,7 +172,9 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
     ...(opts.widthPx != null ? { width: `${opts.widthPx}px` } : {}),
     ...(opts.panelMaxHeight != null
       ? { maxHeight: `${opts.panelMaxHeight}px` }
-      : {}),
+      : availableMaxHeight.value != null
+        ? { maxHeight: `${availableMaxHeight.value}px` }
+        : {}),
   }));
 
   return {
@@ -152,6 +182,7 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
     panelRef,
     left,
     top,
+    availableMaxHeight,
     panelStyle,
     openMenu,
     closeMenu,

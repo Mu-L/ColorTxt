@@ -377,6 +377,9 @@ const chrome = useAppReaderChrome({
 });
 const {
   isFullscreenView,
+  isMinimalistView,
+  chromeAutoHide,
+  toggleMinimalistView,
   showFullscreenTip,
   fullscreenTipFading,
   showFullscreenHeader,
@@ -402,6 +405,8 @@ const {
   recordFullscreenPointer,
   sidebarWidth: chromeSidebarWidth,
 } = chrome;
+
+isMinimalistView.value = findBookSettings.isMinimalistView.value;
 
 const readerPaneWrapRef = useTemplateRef<HTMLElement>("readerPaneWrapRef");
 const {
@@ -515,7 +520,7 @@ onBeforeUnmount(() => {
 });
 
 const sidebarShellVisible = computed(() =>
-  !isFullscreenView.value ? showSidebar.value : showFullscreenSidebar.value,
+  !chromeAutoHide.value ? showSidebar.value : showFullscreenSidebar.value,
 );
 
 const chapterNavUiVisible = computed(
@@ -528,7 +533,7 @@ const chapterNavUiVisible = computed(
 const chapterNavVisible = computed(
   () =>
     chapterNavUiVisible.value &&
-    (!isFullscreenView.value || showFullscreenFooter.value),
+    (!chromeAutoHide.value || showFullscreenFooter.value),
 );
 
 function setFullscreenHeaderOverlayEl(
@@ -561,7 +566,7 @@ function onLayoutMouseDown(ev: MouseEvent) {
   const raw = ev.target;
   const footer = fullscreenFooterOverlayRef.value;
   if (
-    isFullscreenView.value &&
+    chromeAutoHide.value &&
     raw instanceof Node &&
     footer &&
     (footer === raw || footer.contains(raw))
@@ -844,7 +849,7 @@ function pulseChapterListCenter() {
 }
 
 watch(showFullscreenSidebar, (visible) => {
-  if (visible && isFullscreenView.value) {
+  if (visible && chromeAutoHide.value) {
     pulseChapterListCenter();
   }
 });
@@ -874,7 +879,7 @@ function onWindowMouseMove(ev: MouseEvent) {
   updateFullscreenHeaderHover(ev);
   updateFullscreenFooterHover(ev);
   updateFullscreenSidebarHover(ev);
-  if (isFullscreenView.value) {
+  if (chromeAutoHide.value) {
     recordFullscreenPointer(ev);
     bumpFullscreenCursorIdle();
   }
@@ -1096,6 +1101,7 @@ const { shortcutBindings } = useFindBookReaderShortcuts({
   jumpToPrevChapter: jumpToPrevChapterWithShortcut,
   jumpToNextChapter: jumpToNextChapterWithShortcut,
   toggleSidebar: () => onToggleSidebar(),
+  toggleMinimalistView: () => onToggleMinimalist(),
   toggleFullscreen: () => void toggleFullscreen(),
   isVoiceReadScrollLocked,
   isVoiceReadBlocksFind,
@@ -1119,6 +1125,12 @@ const colorSchemeShortcutLabel = computed(() =>
 );
 const findShortcutLabel = computed(() =>
   acceleratorToDisplayText(shortcutBindings.value.toggleFind, isMacPlatform),
+);
+const minimalistShortcutLabel = computed(() =>
+  acceleratorToDisplayText(
+    shortcutBindings.value.toggleMinimalistView,
+    isMacPlatform,
+  ),
 );
 
 watch(
@@ -1744,6 +1756,12 @@ function onToggleSidebar() {
   sidebarOpenPolicyApplied = true;
 }
 
+function onToggleMinimalist() {
+  toggleMinimalistView();
+  findBookSettings.isMinimalistView.value = isMinimalistView.value;
+  findBookSettings.persistAll();
+}
+
 watch(
   modelValue,
   async (open) => {
@@ -1873,13 +1891,14 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
       class="findBookReaderShell"
       :class="{
         fullscreen: isFullscreenView,
-        'fullscreen--cursorHidden': isFullscreenView && fullscreenCursorHidden,
+        chromeHidden: chromeAutoHide,
+        'fullscreen--cursorHidden': chromeAutoHide && fullscreenCursorHidden,
       }"
     >
       <div
         :ref="setFullscreenHeaderOverlayEl"
         class="findBookReaderHeaderWrap"
-        v-show="!isFullscreenView || showFullscreenHeader"
+        v-show="!chromeAutoHide || showFullscreenHeader"
         @mouseleave="onFullscreenHeaderMouseLeave"
       >
         <div v-show="!isFullscreenView" class="findBookReaderTopBar">
@@ -2004,6 +2023,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
           :current-theme="currentTheme"
           :show-sidebar="showSidebar"
           :in-fullscreen="isFullscreenView"
+          :in-minimalist="isMinimalistView"
           :can-increase-font="canIncreaseFont"
           :can-decrease-font="canDecreaseFont"
           :can-increase-line-height="canIncreaseLineHeight"
@@ -2025,6 +2045,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
           :settings-shortcut-label="settingsShortcutLabel"
           :color-scheme-shortcut-label="colorSchemeShortcutLabel"
           :find-shortcut-label="findShortcutLabel"
+          :minimalist-shortcut-label="minimalistShortcutLabel"
           :reader-edit-mode="readerEditMode"
           :reader-click-mode="effectiveClickMode"
           :reader-click-mode-alt-held="clickModeAltHeld"
@@ -2033,6 +2054,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
           :text-replace-active="textReplaceActive"
           @change-theme="onChangeTheme"
           @toggle-sidebar="onToggleSidebar"
+          @toggle-minimalist="onToggleMinimalist"
           @toggle-fullscreen="toggleFullscreen"
           @set-monaco-font="readerUi.setMonacoFontFamily"
           @toggle-pin-other-font="readerUi.togglePinnedOtherFont"
@@ -2076,7 +2098,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
           ref="fullscreenSidebarOverlayRef"
           class="findBookReaderSidebar"
           data-reader-sidebar-root
-          :class="{ 'sidebarPaneWrap--fullscreen': isFullscreenView }"
+          :class="{ 'sidebarPaneWrap--fullscreen': chromeAutoHide }"
           :style="{ width: `${sidebarPanelWidth}px` }"
           @mouseleave="onFullscreenSidebarMouseLeave"
         >
@@ -2269,7 +2291,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
             @open-speak-settings="emit('openSpeakSettings')"
           />
           <ReaderChapterNavBar
-            v-if="chapterNavUiVisible && !isFullscreenView"
+            v-if="chapterNavUiVisible && !chromeAutoHide"
             :visible="chapterNavVisible"
             :can-go-prev="canGoPrevChapter"
             :can-go-next="canGoNextChapter"
@@ -2283,11 +2305,11 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
       <div
         :ref="setFullscreenFooterOverlayEl"
         class="findBookReaderFooterWrap"
-        v-show="!isFullscreenView || showFullscreenFooter"
+        v-show="!chromeAutoHide || showFullscreenFooter"
         @mouseleave="onFullscreenFooterMouseLeave"
       >
         <ReaderChapterNavBar
-          v-if="chapterNavUiVisible && isFullscreenView"
+          v-if="chapterNavUiVisible && chromeAutoHide"
           :visible="chapterNavVisible"
           :can-go-prev="canGoPrevChapter"
           :can-go-next="canGoNextChapter"
@@ -2327,7 +2349,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
       </div>
       <FullscreenSystemClock
         :visible="isFullscreenView && fullscreenShowSystemTime"
-        :pomodoro-visible="isFullscreenView && pomodoroPhase !== 'idle'"
+        :pomodoro-visible="chromeAutoHide && pomodoroPhase !== 'idle'"
         :pomodoro-progress="pomodoroProgress"
         :pomodoro-paused="pomodoroPaused"
       />
@@ -2373,21 +2395,26 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   flex-direction: column;
 }
 
-.findBookReaderShell.fullscreen {
+.findBookReaderShell.fullscreen,
+.findBookReaderShell.chromeHidden {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
   position: relative;
+}
+
+.findBookReaderShell.fullscreen {
   --txtr-fullscreen-scrollbar-size: 14px;
 }
 
-.findBookReaderShell.fullscreen.fullscreen--cursorHidden,
-.findBookReaderShell.fullscreen.fullscreen--cursorHidden * {
+.findBookReaderShell.chromeHidden.fullscreen--cursorHidden,
+.findBookReaderShell.chromeHidden.fullscreen--cursorHidden * {
   cursor: none !important;
 }
 
-.findBookReaderShell.fullscreen .findBookReaderBody {
+.findBookReaderShell.fullscreen .findBookReaderBody,
+.findBookReaderShell.chromeHidden .findBookReaderBody {
   background: var(--reader-bg);
 }
 
@@ -2395,7 +2422,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   flex: 0 0 auto;
 }
 
-.findBookReaderShell.fullscreen .findBookReaderFooterWrap {
+.findBookReaderShell.chromeHidden .findBookReaderFooterWrap {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -2416,7 +2443,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   }
 }
 
-.findBookReaderShell.fullscreen .findBookReaderHeaderWrap {
+.findBookReaderShell.chromeHidden .findBookReaderHeaderWrap {
   position: fixed;
   top: 0;
   left: 0;
@@ -2427,7 +2454,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   animation: findBookReaderFullscreenHeaderIn 140ms ease-out;
 }
 
-.findBookReaderShell.fullscreen .findBookReaderSidebar.sidebarPaneWrap--fullscreen {
+.findBookReaderShell.chromeHidden .findBookReaderSidebar.sidebarPaneWrap--fullscreen {
   position: fixed;
   left: 0;
   top: 0;
