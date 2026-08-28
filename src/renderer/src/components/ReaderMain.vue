@@ -3124,12 +3124,33 @@ function shouldSuppressClickModeContextMenu(): boolean {
 /**
  * 弹层在 window 捕获阶段仍开着：本轮松开不翻页，仍开始拖动手势。
  * 顶栏「转换/更多」在 document 捕获里关菜单，必须提前记下。
+ * 窗口失焦后点阅读区重新激活：同样当次不翻页。
  */
 let skipClickModePageUntilPointerUp = false;
+let clickModeWindowWasBlurred = false;
+let clickModeLastWindowFocusAt = 0;
+const CLICK_MODE_FOCUS_ACTIVATE_MS = 400;
+
+function onClickModeTrackWindowBlur() {
+  clickModeWindowWasBlurred = true;
+}
+
+function onClickModeTrackWindowFocus() {
+  clickModeLastWindowFocusAt = performance.now();
+}
 
 function armClickModeOverlaySkipIfNeeded(ev: PointerEvent) {
   if (ev.button !== 0 && ev.button !== 2) return;
   if (hasDismissibleOverlay()) skipClickModePageUntilPointerUp = true;
+  if (
+    !document.hasFocus() ||
+    (clickModeWindowWasBlurred &&
+      performance.now() - clickModeLastWindowFocusAt <
+        CLICK_MODE_FOCUS_ACTIVATE_MS)
+  ) {
+    skipClickModePageUntilPointerUp = true;
+  }
+  clickModeWindowWasBlurred = false;
 }
 
 function clearClickModeOverlaySkip(ev: PointerEvent) {
@@ -3191,6 +3212,8 @@ onMounted(() => {
   window.addEventListener("pointerdown", armClickModeOverlaySkipIfNeeded, true);
   window.addEventListener("pointerup", clearClickModeOverlaySkip, true);
   window.addEventListener("pointercancel", clearClickModeOverlaySkip, true);
+  window.addEventListener("blur", onClickModeTrackWindowBlur);
+  window.addEventListener("focus", onClickModeTrackWindowFocus);
 });
 onBeforeUnmount(() => {
   for (const type of TEMP_SELECT_STRIP_ALT_EVENTS) {
@@ -3203,6 +3226,8 @@ onBeforeUnmount(() => {
   );
   window.removeEventListener("pointerup", clearClickModeOverlaySkip, true);
   window.removeEventListener("pointercancel", clearClickModeOverlaySkip, true);
+  window.removeEventListener("blur", onClickModeTrackWindowBlur);
+  window.removeEventListener("focus", onClickModeTrackWindowFocus);
 });
 
 function applyReaderClickModeMouseStyle() {
