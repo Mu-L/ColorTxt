@@ -9,6 +9,7 @@ import {
   useTemplateRef,
 } from "vue";
 import { icons } from "../icons";
+import { syncDismissibleOverlay } from "../utils/dismissibleOverlayStack";
 
 export type CustomSelectItemTagTone =
   | "language"
@@ -107,6 +108,7 @@ const emit = defineEmits<{
 }>();
 
 const open = ref(false);
+syncDismissibleOverlay(open);
 const triggerRef = useTemplateRef<HTMLButtonElement>("triggerRef");
 const panelRef = useTemplateRef<HTMLElement>("panelRef");
 const scrollAreaRef = useTemplateRef<HTMLElement>("scrollAreaRef");

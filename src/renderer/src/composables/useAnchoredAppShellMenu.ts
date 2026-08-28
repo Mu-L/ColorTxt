@@ -11,6 +11,7 @@ import {
   computeAnchoredMenuPosition,
   type AnchoredMenuPlacement,
 } from "../utils/appShellMenuPosition";
+import { syncDismissibleOverlay } from "../utils/dismissibleOverlayStack";
 
 export type UseAnchoredAppShellMenuOptions = {
   /** 未传则 composable 内部管理 */
@@ -40,6 +41,8 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
   const panelRef = ref<HTMLElement | null>(null);
   const left = ref(0);
   const top = ref(0);
+
+  syncDismissibleOverlay(open);
 
   async function reposition() {
     const anchor = opts.anchor.value;

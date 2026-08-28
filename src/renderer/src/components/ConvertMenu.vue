@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import IconButton from "./IconButton.vue";
 import { icons } from "../icons";
+import { syncDismissibleOverlay } from "../utils/dismissibleOverlayStack";
 import {
   TEXT_CONVERT_WIDTH_EDIT_MENU,
   TEXT_CONVERT_WIDTH_READ_MENU,
@@ -49,6 +50,8 @@ const digitSubOpen = ref(false);
 const zhFlyoutSide = ref<"left" | "right">("right");
 const letterFlyoutSide = ref<"left" | "right">("right");
 const digitFlyoutSide = ref<"left" | "right">("right");
+
+syncDismissibleOverlay(menuOpen);
 
 /** 与 `.convertMenuFlyout` 的 min-width 一致，用于打开前估算能否放在右侧 */
 const CONVERT_FLYOUT_ESTIMATE_WIDTH = 160;

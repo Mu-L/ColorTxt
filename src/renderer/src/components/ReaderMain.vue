@@ -172,6 +172,7 @@ import {
   READER_HL_FLOAT_ROOT_Z_INDEX,
   subscribeModalStackChange,
 } from "../utils/modalStack";
+import { hasDismissibleOverlay } from "../utils/dismissibleOverlayStack";
 import { yieldToUi } from "../ebook/yieldToUi";
 import { appAlert } from "../services/appDialog";
 import { appToast } from "../services/appToast";
@@ -3085,6 +3086,7 @@ function onClickModeWindowBlur() {
 function beginClickModePointerGesture(ev: MouseEvent): boolean {
   if (!readerClickTurnPageActive.value) return false;
   if (ev.button !== 0 && ev.button !== 2) return false;
+  if (shouldSkipClickModePageForOverlay()) return false;
   if (clickModeGesture) return true;
   const pointerId = clickModeGesturePointerId(ev);
   let captureEl: Element | null = null;
@@ -3115,6 +3117,26 @@ function beginClickModePointerGesture(ev: MouseEvent): boolean {
 
 function shouldSuppressClickModeContextMenu(): boolean {
   return readerClickTurnPageActive.value;
+}
+
+/**
+ * 弹层在 window 捕获阶段仍开着：本轮指针不翻页，让外点关闭先跑完。
+ * 顶栏「转换/更多」在 document 捕获里关菜单，必须提前记下，不能在阅读区再读 live 状态。
+ */
+let skipClickModePageUntilPointerUp = false;
+
+function armClickModeOverlaySkipIfNeeded(ev: PointerEvent) {
+  if (ev.button !== 0 && ev.button !== 2) return;
+  if (hasDismissibleOverlay()) skipClickModePageUntilPointerUp = true;
+}
+
+function clearClickModeOverlaySkip(ev: PointerEvent) {
+  if (ev.button !== 0 && ev.button !== 2) return;
+  skipClickModePageUntilPointerUp = false;
+}
+
+function shouldSkipClickModePageForOverlay(): boolean {
+  return skipClickModePageUntilPointerUp;
 }
 
 /**
@@ -3164,11 +3186,21 @@ onMounted(() => {
   for (const type of TEMP_SELECT_STRIP_ALT_EVENTS) {
     window.addEventListener(type, onTempSelectStripAltMouse, true);
   }
+  window.addEventListener("pointerdown", armClickModeOverlaySkipIfNeeded, true);
+  window.addEventListener("pointerup", clearClickModeOverlaySkip, true);
+  window.addEventListener("pointercancel", clearClickModeOverlaySkip, true);
 });
 onBeforeUnmount(() => {
   for (const type of TEMP_SELECT_STRIP_ALT_EVENTS) {
     window.removeEventListener(type, onTempSelectStripAltMouse, true);
   }
+  window.removeEventListener(
+    "pointerdown",
+    armClickModeOverlaySkipIfNeeded,
+    true,
+  );
+  window.removeEventListener("pointerup", clearClickModeOverlaySkip, true);
+  window.removeEventListener("pointercancel", clearClickModeOverlaySkip, true);
 });
 
 function applyReaderClickModeMouseStyle() {
@@ -4006,6 +4038,7 @@ onMounted(() => {
     const editorHost = editorEl.value;
     const onReaderPointerDownCapture = (ev: PointerEvent) => {
       if (ev.button === 2) {
+        if (shouldSkipClickModePageForOverlay()) return;
         // 只截断冒泡到 Monaco，勿 preventDefault（否则可能不再触发 contextmenu）
         ev.stopImmediatePropagation();
         if (
@@ -4057,6 +4090,7 @@ onMounted(() => {
         ) {
           return;
         }
+        if (shouldSkipClickModePageForOverlay()) return;
         ev.preventDefault();
         ev.stopImmediatePropagation();
         beginClickModePointerGesture(ev);
@@ -4066,6 +4100,7 @@ onMounted(() => {
     };
     const onReaderMouseDownCapture = (ev: MouseEvent) => {
       if (ev.button !== 2) return;
+      if (shouldSkipClickModePageForOverlay()) return;
       ev.stopImmediatePropagation();
     };
     const onReaderContextMenuCapture = (ev: MouseEvent) => {

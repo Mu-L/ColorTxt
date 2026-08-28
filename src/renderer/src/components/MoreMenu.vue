@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import IconButton from "./IconButton.vue";
 import { icons } from "../icons";
+import { syncDismissibleOverlay } from "../utils/dismissibleOverlayStack";
 import type { ShortcutBindingMap } from "../services/shortcutRegistry";
 import { acceleratorToDisplayText } from "../services/shortcutUtils";
 
@@ -55,6 +56,8 @@ const emit = defineEmits<{
 }>();
 
 const moreMenuOpen = ref(false);
+
+syncDismissibleOverlay(moreMenuOpen);
 const moreMenuRootEl = ref<HTMLElement | null>(null);
 const recentSubOpen = ref(false);
 
