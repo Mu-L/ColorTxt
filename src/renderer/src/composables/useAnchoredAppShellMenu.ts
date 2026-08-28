@@ -114,13 +114,13 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
 
   if (opts.enableDismiss !== false) {
     onMounted(() => {
-      document.addEventListener("pointerdown", onDocPointerDown);
+      document.addEventListener("pointerdown", onDocPointerDown, true);
       document.addEventListener("keydown", onDocKeydown, true);
       window.addEventListener("resize", onWindowResize);
     });
 
     onBeforeUnmount(() => {
-      document.removeEventListener("pointerdown", onDocPointerDown);
+      document.removeEventListener("pointerdown", onDocPointerDown, true);
       document.removeEventListener("keydown", onDocKeydown, true);
       window.removeEventListener("resize", onWindowResize);
     });

@@ -2988,6 +2988,8 @@ type ClickModePointerGesture = {
   startScrollTop: number;
   dragged: boolean;
   captureEl: Element | null;
+  /** 按下时已有弹层：松开不翻页，仍可拖动滚动 */
+  suppressPageOnRelease: boolean;
 };
 
 let clickModeGesture: ClickModePointerGesture | null = null;
@@ -3025,7 +3027,7 @@ function endClickModePointerGesture(commitClick: boolean) {
   unbindClickModeGestureListeners();
   setClickModeDraggingClass(false);
   if (g) releaseClickModePointerCapture(g);
-  if (!g || !commitClick || g.dragged) return;
+  if (!g || !commitClick || g.dragged || g.suppressPageOnRelease) return;
   if (!readerClickTurnPageActive.value) return;
   runClickModePointerAction(g.button === 2 ? -1 : 1);
 }
@@ -3086,7 +3088,6 @@ function onClickModeWindowBlur() {
 function beginClickModePointerGesture(ev: MouseEvent): boolean {
   if (!readerClickTurnPageActive.value) return false;
   if (ev.button !== 0 && ev.button !== 2) return false;
-  if (shouldSkipClickModePageForOverlay()) return false;
   if (clickModeGesture) return true;
   const pointerId = clickModeGesturePointerId(ev);
   let captureEl: Element | null = null;
@@ -3107,6 +3108,7 @@ function beginClickModePointerGesture(ev: MouseEvent): boolean {
     startScrollTop: editor.value?.getScrollTop() ?? 0,
     dragged: false,
     captureEl,
+    suppressPageOnRelease: shouldSkipClickModePageForOverlay(),
   };
   window.addEventListener("pointermove", onClickModePointerMove, true);
   window.addEventListener("pointerup", onClickModePointerUp, true);
@@ -3120,8 +3122,8 @@ function shouldSuppressClickModeContextMenu(): boolean {
 }
 
 /**
- * 弹层在 window 捕获阶段仍开着：本轮指针不翻页，让外点关闭先跑完。
- * 顶栏「转换/更多」在 document 捕获里关菜单，必须提前记下，不能在阅读区再读 live 状态。
+ * 弹层在 window 捕获阶段仍开着：本轮松开不翻页，仍开始拖动手势。
+ * 顶栏「转换/更多」在 document 捕获里关菜单，必须提前记下。
  */
 let skipClickModePageUntilPointerUp = false;
 
@@ -4038,7 +4040,6 @@ onMounted(() => {
     const editorHost = editorEl.value;
     const onReaderPointerDownCapture = (ev: PointerEvent) => {
       if (ev.button === 2) {
-        if (shouldSkipClickModePageForOverlay()) return;
         // 只截断冒泡到 Monaco，勿 preventDefault（否则可能不再触发 contextmenu）
         ev.stopImmediatePropagation();
         if (
@@ -4090,7 +4091,6 @@ onMounted(() => {
         ) {
           return;
         }
-        if (shouldSkipClickModePageForOverlay()) return;
         ev.preventDefault();
         ev.stopImmediatePropagation();
         beginClickModePointerGesture(ev);
@@ -4100,7 +4100,6 @@ onMounted(() => {
     };
     const onReaderMouseDownCapture = (ev: MouseEvent) => {
       if (ev.button !== 2) return;
-      if (shouldSkipClickModePageForOverlay()) return;
       ev.stopImmediatePropagation();
     };
     const onReaderContextMenuCapture = (ev: MouseEvent) => {

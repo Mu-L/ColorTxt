@@ -347,13 +347,13 @@ watch(
 );
 
 onMounted(() => {
-  document.addEventListener("pointerdown", onDocPointerDown);
+  document.addEventListener("pointerdown", onDocPointerDown, true);
   document.addEventListener("keydown", onKey, true);
   window.addEventListener("resize", close);
 });
 onBeforeUnmount(() => {
   unbindScrollAreaResizeObserver();
-  document.removeEventListener("pointerdown", onDocPointerDown);
+  document.removeEventListener("pointerdown", onDocPointerDown, true);
   document.removeEventListener("keydown", onKey, true);
   window.removeEventListener("resize", close);
 });

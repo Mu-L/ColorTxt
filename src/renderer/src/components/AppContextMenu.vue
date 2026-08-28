@@ -203,13 +203,13 @@ function onWindowInvalidate() {
 }
 
 onMounted(() => {
-  document.addEventListener("pointerdown", onDocPointerDown);
+  document.addEventListener("pointerdown", onDocPointerDown, true);
   window.addEventListener("resize", onWindowInvalidate);
   window.addEventListener("blur", onWindowInvalidate);
 });
 
 onBeforeUnmount(() => {
-  document.removeEventListener("pointerdown", onDocPointerDown);
+  document.removeEventListener("pointerdown", onDocPointerDown, true);
   window.removeEventListener("resize", onWindowInvalidate);
   window.removeEventListener("blur", onWindowInvalidate);
 });
