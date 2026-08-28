@@ -28,6 +28,8 @@ const props = withDefaults(
     canDecreaseFont: boolean;
     canIncreaseLineHeight: boolean;
     canDecreaseLineHeight: boolean;
+    readerFontSize: number;
+    readerLineHeightMultiple: number;
     monacoFontFamily: string;
     /** 钉在外层列表的「其他字体」 */
     pinnedOtherFonts?: string[];
@@ -303,6 +305,8 @@ const showFormatToolbarInMore = computed(() => compactFormatToolbar.value);
           :can-decrease-font="canDecreaseFont"
           :can-increase-line-height="canIncreaseLineHeight"
           :can-decrease-line-height="canDecreaseLineHeight"
+          :font-size="readerFontSize"
+          :line-height-multiple="readerLineHeightMultiple"
           @set-monaco-font="(fontFamily) => emit('setMonacoFont', fontFamily)"
           @toggle-pin-other-font="(fontName) => emit('togglePinOtherFont', fontName)"
           @increase-font-size="emit('increaseFontSize')"
@@ -425,6 +429,8 @@ const showFormatToolbarInMore = computed(() => compactFormatToolbar.value);
               :can-decrease-font="canDecreaseFont"
               :can-increase-line-height="canIncreaseLineHeight"
               :can-decrease-line-height="canDecreaseLineHeight"
+              :font-size="readerFontSize"
+              :line-height-multiple="readerLineHeightMultiple"
               @set-monaco-font="(fontFamily) => emit('setMonacoFont', fontFamily)"
               @toggle-pin-other-font="
                 (fontName) => emit('togglePinOtherFont', fontName)

@@ -191,8 +191,8 @@ export const minChapterMinCharCount = 0;
 export const maxChapterMinCharCount = 100000;
 export const defaultReaderFontSize = 24;
 export const defaultReaderLineHeightMultiple = 1.5;
-/** 每个物理行（model line）结束后的额外间距（px）；0 关闭 */
-export const defaultLineSpacingPx = 0;
+/** 段间距：每个物理行（model line）结束后的额外间距（px）；0 关闭 */
+export const defaultLineSpacingPx = 10;
 export const minLineSpacingPx = 0;
 export const maxLineSpacingPx = 100;
 export const lineSpacingPxStep = 1;
@@ -298,7 +298,7 @@ export const defaultFullscreenShowSystemTime = true;
  * 实际应用值会按阅读窗格宽度压缩，保证正文宿主不少于
  * {@link minReaderBodyWidthWithHorizontalInsetPx}。
  */
-export const defaultReaderHorizontalInsetPx = 0;
+export const defaultReaderHorizontalInsetPx = 10;
 export const minReaderHorizontalInsetPx = 0;
 export const maxReaderHorizontalInsetPx = 160;
 export const readerHorizontalInsetPxStep = 1;

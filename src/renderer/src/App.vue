@@ -3620,6 +3620,8 @@ useAppShellThemeWatch({
         :can-decrease-line-height="
           readerLineHeightMultiple > minLineHeightMultiple + 1e-6
         "
+        :reader-font-size="readerFontSize"
+        :reader-line-height-multiple="readerLineHeightMultiple"
         :monaco-font-family="monacoFontFamily"
         :pinned-other-fonts="pinnedOtherFonts"
         :monaco-advanced-wrapping="monacoAdvancedWrapping"

@@ -31,6 +31,8 @@ const props = withDefaults(
     canDecreaseFont: boolean;
     canIncreaseLineHeight: boolean;
     canDecreaseLineHeight: boolean;
+    readerFontSize: number;
+    readerLineHeightMultiple: number;
     monacoFontFamily: string;
     pinnedOtherFonts?: string[];
     monacoAdvancedWrapping: boolean;
@@ -279,6 +281,8 @@ function onOpenTextReplace() {
           :can-decrease-font="canDecreaseFont"
           :can-increase-line-height="canIncreaseLineHeight"
           :can-decrease-line-height="canDecreaseLineHeight"
+          :font-size="readerFontSize"
+          :line-height-multiple="readerLineHeightMultiple"
           @set-monaco-font="(fontFamily) => emit('setMonacoFont', fontFamily)"
           @toggle-pin-other-font="(fontName) => emit('togglePinOtherFont', fontName)"
           @increase-font-size="emit('increaseFontSize')"
@@ -406,6 +410,8 @@ function onOpenTextReplace() {
           :can-decrease-font="canDecreaseFont"
           :can-increase-line-height="canIncreaseLineHeight"
           :can-decrease-line-height="canDecreaseLineHeight"
+          :font-size="readerFontSize"
+          :line-height-multiple="readerLineHeightMultiple"
           @set-monaco-font="(fontFamily) => { emit('setMonacoFont', fontFamily); closeMoreMenu(); }"
           @toggle-pin-other-font="(fontName) => emit('togglePinOtherFont', fontName)"
           @increase-font-size="emit('increaseFontSize')"
