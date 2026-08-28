@@ -955,6 +955,7 @@ onBeforeUnmount(() => {
   background: var(--panel, #f3f3f3);
   color: var(--fg, #333);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  /* 角度 / 配色菜单会溢出面板边缘，不能 overflow:hidden（思维导图无此类菜单故可裁切） */
   overflow: visible;
 }
 
@@ -970,6 +971,9 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 2;
   overflow: visible;
+  /* 面板 overflow:visible 时顶栏实心底不会被圆角裁切，须自身圆上角 */
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
 }
 
 .aiWordcloudFullscreen__titleLead {
@@ -1191,6 +1195,8 @@ onBeforeUnmount(() => {
   font-size: 11px;
   color: var(--muted, #6b6b6b);
   flex-shrink: 0;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
 }
 
 .aiWordcloudFullscreen__stats {

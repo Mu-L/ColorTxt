@@ -253,7 +253,7 @@ cardShellWrap（悬停抬高 z-index）
 | 防剧透 | 与阅读助手共用 **`spoilerSafe`**：统计章节范围不超过当前阅读章节 |
 | 进度 | 工具折叠区展示阶段标题（构建分词缓存、语义抽取/筛选等） |
 | 侧栏预览 | 与思维导图类似：缩略 Canvas、点击打开全屏；标题行 **`icons.wordcloud`** |
-| 全屏交互 | **字体**（`FontPicker`，独立于阅读器字体）、**角度布局**（水平/垂直/混合，`wordcloudAngleMode`）、**配色**（`wordcloudPalettes`）、**重新生成**（递增 **`layoutSeed`** 换布局）、**导出 PNG**；拖动平移、滚轮缩放 |
+| 全屏交互 | **字体**（`FontPicker`，独立于阅读器字体）、**角度布局**（水平/垂直/混合，`wordcloudAngleMode`）、**配色**（`wordcloudPalettes`）、**重新生成**（递增 **`layoutSeed`** 换布局）、**导出 PNG**；拖动平移、滚轮缩放。全屏面板为让角度/配色菜单溢出而 **`overflow: visible`**，顶栏须自带上圆角（与思维导图弹层 `overflow: hidden` 裁切不同） | |
 | 布局 seed | 每条词云独立 **`layoutSeed`**，写入 tool 消息 JSON；**重新生成**后经 **`ai:messageUpdateToolContent`** IPC 持久化，重开会话布局不变 |
 | 统计行 | 左下角：**语义：xxx，词项：xxx**（general 模式仅显示词项数） |
 | 词项上限 | **设置 → AI 阅读助手 → 词云图词项上限**（`AIConfig.wordcloudMaxWords`）；主进程 **`aiWordcloudTool`** 与 Agent 参数 **`maxWords`** 均钳制于此 |
@@ -363,7 +363,7 @@ cardShellWrap（悬停抬高 z-index）
 | `SettingsTabBar.vue` | 页签含 **`voiceRead`** / `ai` / `vectorModel` / `txt2img` / `skills` / `edit` / `general` / `reading`。<br>`showAiExtensionTabs` 为 false 时隐藏向量模型 / 角色卡 / 技能扩展页签 |
 | `SettingsAIPanel.vue` | 「AI 阅读助手」：总开关；服务商含 **MiniMax**；**配置方案**；对话模型 + **测试连接**；Token 与 **`aiDataCacheDir`**；快速提问等 |
 | `AiMindmapView.vue` | 阅读助手思维导图：侧栏预览 + 全屏交互（markmap）；全部收起/展开、章节标题替换、**全展开** SVG 导出 |
-| `AiWordcloudView.vue` | 阅读助手词云：侧栏预览 + 全屏 Canvas（d3-cloud）；字体/角度/配色、重新生成（`layoutSeed`）、PNG 导出 |
+| `AiWordcloudView.vue` | 阅读助手词云：侧栏预览 + 全屏 Canvas（d3-cloud）；字体/角度/配色、重新生成（`layoutSeed`）、PNG 导出。全屏面板 `overflow: visible`（角度/配色菜单），顶栏自带上圆角 |
 | `ApiEndpointInput.vue` | 接口地址手填输入框 |
 | `AiTokenUsageBanner.vue` | Token 消耗与花费展示条（阅读助手、角色检索共用） |
 | `AiIndexProgressBanner.vue` | 向量建索引进度条（阅读助手建索引、角色检索前补索引） |
