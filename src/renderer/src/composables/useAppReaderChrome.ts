@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, ref, watch, type Ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch, type Ref } from "vue";
 import type ReaderMain from "../components/ReaderMain.vue";
 import {
   FULLSCREEN_BOTTOM_EDGE_PX,
@@ -48,8 +48,9 @@ function nodeIsUnderFullscreenPanel(panel: HTMLElement, start: Node | null) {
 
 /**
  * 全屏 / 极简浮动 UI 统一模型（`chromeAutoHide`）：
- * - `document` mousemove：仅在对应边缘「感应区」且面板未显示、且未按下鼠标按键时唤起；
+ * - `document` mousemove：仅在对应边缘「感应区」且面板未显示、且未按下鼠标按键时唤起；已显示时若指针已不在该面板上则收起；
  * - 面板根节点 `@mouseleave`：自动隐藏 chrome 且已显示时收起（与真实命中区域一致）；
+ * - 指针离开窗口（`relatedTarget == null`）：收起浮层（快速擦过边缘移出窗口时可能从未进入面板，不会收到面板 mouseleave）；
  * - 有可点外关闭的弹出菜单时：移出面板不收起；菜单关掉后若指针已不在面板上再收起；
  * - `.layout` `mousedown`：收起顶栏/底栏/侧栏（点击落在已展开侧栏内除外）。
  */
@@ -328,7 +329,12 @@ export function useAppReaderChrome(deps: {
     if (!chromeAutoHide.value) return;
     if (blockChromeEdgeReveal(ev)) return;
     if (deps.suppressFullscreenSidebarHover?.value) return;
-    if (showFullscreenSidebar.value) return;
+    if (showFullscreenSidebar.value) {
+      if (!hasDismissibleOverlay()) {
+        tryCollapseFullscreenSidebarFromPointer(ev.clientX, ev.clientY);
+      }
+      return;
+    }
     const x = ev.clientX;
     if (x <= FULLSCREEN_LEFT_EDGE_PX && canShowFullscreenPanel("sidebar")) {
       showFullscreenSidebar.value = true;
@@ -410,7 +416,12 @@ export function useAppReaderChrome(deps: {
       collapseFullscreenHeaderAndCloseFindIfRevealed();
       return;
     }
-    if (showFullscreenHeader.value) return;
+    if (showFullscreenHeader.value) {
+      if (!hasDismissibleOverlay()) {
+        tryCollapseFullscreenHeaderFromPointer(ev.clientX, ev.clientY);
+      }
+      return;
+    }
 
     const x = ev.clientX;
     const y = ev.clientY;
@@ -439,7 +450,12 @@ export function useAppReaderChrome(deps: {
   function updateFullscreenFooterHover(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
     if (blockChromeEdgeReveal(ev)) return;
-    if (showFullscreenFooter.value) return;
+    if (showFullscreenFooter.value) {
+      if (!hasDismissibleOverlay()) {
+        tryCollapseFullscreenFooterFromPointer(ev.clientX, ev.clientY);
+      }
+      return;
+    }
     const vh = window.innerHeight;
     const y = ev.clientY;
     const inRightScrollbarGutter =
@@ -477,6 +493,19 @@ export function useAppReaderChrome(deps: {
       tryCollapseAllChromeFromLastPointer();
     });
   });
+
+  /** 指针离开网页视口（含快速擦过边缘移出窗口、移到系统标题栏）时收起浮层 */
+  function onDocumentMouseOutWindow(ev: MouseEvent) {
+    if (!chromeAutoHide.value) return;
+    if (hasDismissibleOverlay()) return;
+    if (resizingSidebar.value) return;
+    if (ev.relatedTarget != null) return;
+    if (showFullscreenHeader.value) {
+      collapseFullscreenHeaderAndCloseFindIfRevealed();
+    }
+    showFullscreenFooter.value = false;
+    showFullscreenSidebar.value = false;
+  }
 
   function onFullscreenFooterMouseLeave() {
     if (!chromeAutoHide.value) return;
@@ -521,7 +550,12 @@ export function useAppReaderChrome(deps: {
     clearFullscreenTipTimers();
   }
 
+  onMounted(() => {
+    document.addEventListener("mouseout", onDocumentMouseOutWindow);
+  });
+
   onBeforeUnmount(() => {
+    document.removeEventListener("mouseout", onDocumentMouseOutWindow);
     clearFullscreenTipTimers();
     clearFullscreenCursorHideTimer();
   });
