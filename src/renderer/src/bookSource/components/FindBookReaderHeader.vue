@@ -373,33 +373,6 @@ function onOpenTextReplace() {
       :max-height="moreMenuMaxHeight"
       :on-panel-mount="bindMoreMenuPanel"
     >
-      <button
-        type="button"
-        class="appShellMenuItem"
-        :class="{ 'is-active': inMinimalist }"
-        role="menuitem"
-        @click="onToggleMinimalistFromToolbar"
-      >
-        <span class="appShellMenuIconSlot" v-html="icons.minimalistView" />
-        <span class="appShellMenuLabel">极简视图</span>
-        <span v-if="minimalistShortcutLabel" class="appShellMenuShortcut">{{
-          minimalistShortcutLabel
-        }}</span>
-      </button>
-      <div class="appShellMenuDivider" role="separator" />
-      <button
-        type="button"
-        class="appShellMenuItem"
-        role="menuitem"
-        @click="onToggleFindFromToolbar"
-      >
-        <span class="appShellMenuIconSlot" v-html="icons.find" />
-        <span class="appShellMenuLabel">查找</span>
-        <span v-if="findShortcutLabel" class="appShellMenuShortcut">{{
-          findShortcutLabel
-        }}</span>
-      </button>
-      <div class="appShellMenuDivider" role="separator" />
       <div v-if="showToolbarInMoreMenu" class="findBookReaderMorePanel">
         <HeaderFontToolbar
           v-if="compactFontToolbar"
@@ -450,6 +423,33 @@ function onOpenTextReplace() {
         class="appShellMenuDivider"
         role="separator"
       />
+      <button
+        type="button"
+        class="appShellMenuItem"
+        :class="{ 'is-active': inMinimalist }"
+        role="menuitem"
+        @click="onToggleMinimalistFromToolbar"
+      >
+        <span class="appShellMenuIconSlot" v-html="icons.minimalistView" />
+        <span class="appShellMenuLabel">极简视图</span>
+        <span v-if="minimalistShortcutLabel" class="appShellMenuShortcut">{{
+          minimalistShortcutLabel
+        }}</span>
+      </button>
+      <div class="appShellMenuDivider" role="separator" />
+      <button
+        type="button"
+        class="appShellMenuItem"
+        role="menuitem"
+        @click="onToggleFindFromToolbar"
+      >
+        <span class="appShellMenuIconSlot" v-html="icons.find" />
+        <span class="appShellMenuLabel">查找</span>
+        <span v-if="findShortcutLabel" class="appShellMenuShortcut">{{
+          findShortcutLabel
+        }}</span>
+      </button>
+      <div class="appShellMenuDivider" role="separator" />
       <button
         type="button"
         class="appShellMenuItem"
@@ -546,8 +546,15 @@ function onOpenTextReplace() {
 .findBookReaderMorePanel {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 8px;
-  padding: 8px;
+  padding: 4px 4px 0;
+  overflow: visible;
+  flex-shrink: 0;
+}
+.findBookReaderMorePanel :deep(.headerFontToolbar),
+.findBookReaderMorePanel :deep(.headerFormatToolbar) {
+  justify-content: center;
 }
 .hdrLockable {
   display: inline-flex;
