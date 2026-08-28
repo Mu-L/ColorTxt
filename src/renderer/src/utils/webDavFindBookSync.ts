@@ -59,6 +59,8 @@ const UI_READER_KEYS = [
   "readerPaletteOverridesDark",
   "readerPaletteColorEnabledOverridesLight",
   "readerPaletteColorEnabledOverridesDark",
+  "readerPaletteUserPresets",
+  "readerPaletteSelectedPresetId",
   "highlightColorsLight",
   "highlightColorsDark",
   "lineationColorsLight",

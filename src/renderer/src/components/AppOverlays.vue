@@ -37,6 +37,7 @@ import ShortcutPanel from "./ShortcutPanel.vue";
 import type { ShortcutBindingMap } from "../services/shortcutRegistry";
 import type { ReaderSurfacePalette } from "../constants/appUi";
 import type { ReaderSurfaceColorEnabled } from "../constants/readerPalette";
+import type { ReaderPalettePreset } from "../constants/readerPalettePresets";
 import { readerEbookConvertingHintText, readerBookPackUnpackingHintText } from "../constants/appUi";
 import LoadingDotsBounce from "./LoadingDotsBounce.vue";
 
@@ -104,6 +105,8 @@ const props = defineProps<{
   readerSurfaceDark: ReaderSurfacePalette;
   readerPaletteColorEnabledLight: ReaderSurfaceColorEnabled;
   readerPaletteColorEnabledDark: ReaderSurfaceColorEnabled;
+  readerPaletteUserPresets: ReaderPalettePreset[];
+  readerPaletteSelectedPresetId: string;
   monacoFontFamily: string;
   highlightColorsLight: string[];
   highlightColorsDark: string[];
@@ -141,6 +144,7 @@ const emit = defineEmits<{
   confirmRemoveActiveBookmark: [];
   applyShortcutBindings: [payload: ShortcutBindingMap];
   applyColorScheme: [payload: ColorSchemeApplyPayload];
+  changeTheme: [theme: string];
   applyReplaceRuleFormat: [rules: ReplaceRule[]];
   openReadingData: [];
   clearReadingDataPaths: [paths: string[]];
@@ -358,12 +362,15 @@ const busyOverlayText = computed(() => {
     :reader-surface-dark="readerSurfaceDark"
     :reader-palette-color-enabled-light="readerPaletteColorEnabledLight"
     :reader-palette-color-enabled-dark="readerPaletteColorEnabledDark"
+    :reader-palette-user-presets="readerPaletteUserPresets"
+    :reader-palette-selected-preset-id="readerPaletteSelectedPresetId"
     :monaco-font-family="monacoFontFamily"
     :highlight-colors-light="highlightColorsLight"
     :highlight-colors-dark="highlightColorsDark"
     :lineation-colors-light="lineationColorsLight"
     :lineation-colors-dark="lineationColorsDark"
     @apply="emit('applyColorScheme', $event)"
+    @change-theme="emit('changeTheme', $event)"
   />
 
   <AppModal

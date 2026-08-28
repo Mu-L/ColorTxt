@@ -336,6 +336,8 @@ const {
   readerSurfaceDark: colorSchemeSurfaceDark,
   readerPaletteColorEnabledLight: colorSchemeColorEnabledLight,
   readerPaletteColorEnabledDark: colorSchemeColorEnabledDark,
+  readerPaletteUserPresets: colorSchemeUserPresets,
+  readerPaletteSelectedPresetId: colorSchemeSelectedPresetId,
   monacoFontFamily: colorSchemeFontFamily,
   applyReaderPalettes,
 } = fbReaderSettings;
@@ -1091,15 +1093,23 @@ function syncWebDavEnabledFromStorage() {
   webDavEnabled.value = loaded?.data?.webDavEnabled === true;
 }
 
-function onToggleTheme() {
-  const next: AppShellTheme = currentTheme.value === "vs" ? "vs-dark" : "vs";
+function applyFindBookTheme(next: AppShellTheme) {
   currentTheme.value = next;
+  colorSchemeTheme.value = next;
   applyAppShellTheme(next);
   const loaded = loadPersistedSettingsData(localStorage, persistKey);
   persistSettingsData(localStorage, persistKey, {
     ...(loaded?.data ?? {}),
     theme: next,
   });
+}
+
+function onToggleTheme() {
+  applyFindBookTheme(currentTheme.value === "vs" ? "vs-dark" : "vs");
+}
+
+function onColorSchemeChangeTheme(theme: string) {
+  applyFindBookTheme(theme === "vs-dark" ? "vs-dark" : "vs");
 }
 
 function refreshFindBookAfterWebDavDownload() {
@@ -2081,14 +2091,17 @@ function onBack() {
 
     <ColorSchemePanel
       v-model="showColorSchemePanel"
-      :current-theme="colorSchemeTheme"
+      :current-theme="currentTheme"
       :reader-surface-light="colorSchemeSurfaceLight"
       :reader-surface-dark="colorSchemeSurfaceDark"
       :reader-palette-color-enabled-light="colorSchemeColorEnabledLight"
       :reader-palette-color-enabled-dark="colorSchemeColorEnabledDark"
+      :reader-palette-user-presets="colorSchemeUserPresets"
+      :reader-palette-selected-preset-id="colorSchemeSelectedPresetId"
       :monaco-font-family="colorSchemeFontFamily"
       :visible-tabs="['reader']"
       @apply="onApplyColorScheme"
+      @change-theme="onColorSchemeChangeTheme"
     />
 
     <ShortcutPanel

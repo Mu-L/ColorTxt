@@ -27,6 +27,17 @@ export const READER_SURFACE_KEYS = [
   "txtrEnglish",
 ] as const satisfies readonly (keyof ReaderSurfacePalette)[];
 
+/** 预设卡片第二行色块：除背景色、正文外的 7 色 */
+export const READER_SURFACE_PRESET_CARD_SWATCH_KEYS = [
+  "chapterTitle",
+  "txtrQuoteInner",
+  "txtrBracketInner",
+  "txtrPunctuation",
+  "txtrSpecialMarker",
+  "txtrNumber",
+  "txtrEnglish",
+] as const satisfies readonly (keyof ReaderSurfacePalette)[];
+
 /** 可单独开关的 token 配色（关闭时回退为正文色） */
 export const READER_SURFACE_OPTIONAL_COLOR_KEYS = [
   "txtrQuoteInner",

@@ -16,6 +16,7 @@ defineProps<{
   editingSurface: ReaderSurfacePalette;
   colorEnabled: ReaderSurfaceColorEnabled;
   previewBoxStyle: StyleValue;
+  showPresetList?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -67,8 +68,12 @@ function switchAriaLabel(key: ReaderSurfaceOptionalColorKey): string {
       </p>
     </div>
 
-    <div class="schemePanelTableScroll">
-      <table class="colorSchemeTable">
+    <div
+      class="schemePanelTableScroll"
+      :class="{ 'schemePanelTableScroll--presets': showPresetList }"
+    >
+      <slot v-if="showPresetList" name="presetList" />
+      <table v-else class="colorSchemeTable">
         <colgroup>
           <col class="colorSchemeColLabel" />
           <col class="colorSchemeColValue" />
@@ -274,5 +279,10 @@ function switchAriaLabel(key: ReaderSurfaceOptionalColorKey): string {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
+}
+
+.schemePanelTableScroll--presets {
+  padding: 10px;
+  scroll-padding-block: 10px;
 }
 </style>

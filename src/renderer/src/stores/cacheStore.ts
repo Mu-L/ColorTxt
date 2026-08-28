@@ -40,6 +40,11 @@ import {
   type ReaderSurfaceColorEnabled,
   type ReaderSurfacePalette,
 } from "../constants/readerPalette";
+import {
+  parseReaderPaletteSelectedPresetId,
+  parseReaderPaletteUserPresets,
+  type ReaderPalettePreset,
+} from "../constants/readerPalettePresets";
 import type { ShortcutActionId } from "../services/shortcutRegistry";
 import type { AiCustomSkill, AiSkillUserOverride } from "@shared/aiSkills";
 import {
@@ -172,6 +177,10 @@ export type PersistedSettingsData = {
   readerPaletteColorEnabledOverridesLight?: Partial<ReaderSurfaceColorEnabled>;
   /** 阅读器 token 独立配色开关覆盖（暗色侧，仅持久化 false） */
   readerPaletteColorEnabledOverridesDark?: Partial<ReaderSurfaceColorEnabled>;
+  /** 用户添加的阅读器配色预设 */
+  readerPaletteUserPresets?: ReaderPalettePreset[];
+  /** 最后点选的命名预设 id（内置或用户；不含「当前配色」） */
+  readerPaletteSelectedPresetId?: string;
   /** 自定义高亮色（亮色主题），与默认逐项相同可不写入 */
   highlightColorsLight?: string[];
   /** 自定义高亮色（暗色主题） */
@@ -553,6 +562,17 @@ export function loadPersistedSettingsData(
       obj.readerPaletteColorEnabledOverridesDark,
     );
     if (Object.keys(p).length) data.readerPaletteColorEnabledOverridesDark = p;
+  }
+  const userPresets = parseReaderPaletteUserPresets(
+    obj.readerPaletteUserPresets,
+  );
+  if (userPresets.length) data.readerPaletteUserPresets = userPresets;
+  const selectedPresetId = parseReaderPaletteSelectedPresetId(
+    obj.readerPaletteSelectedPresetId,
+    userPresets,
+  );
+  if (selectedPresetId !== "default" || typeof obj.readerPaletteSelectedPresetId === "string") {
+    data.readerPaletteSelectedPresetId = selectedPresetId;
   }
   if (Array.isArray(obj.highlightColorsLight)) {
     const h = parseHighlightColorsArray(obj.highlightColorsLight);

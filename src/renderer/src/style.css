@@ -281,7 +281,8 @@ body,
   font-size: 14px;
 }
 
-.btn svg path {
+/* 彩色图标（如色盘）保留 SVG 原色，见 `.btnIconColorful` */
+.btn:not(.btnIconColorful) svg path {
   fill: currentColor;
 }
 

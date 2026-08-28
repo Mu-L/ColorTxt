@@ -19,6 +19,12 @@ import {
   type ReaderSurfacePalette,
 } from "../../constants/appUi";
 import {
+  parseReaderPaletteSelectedPresetId,
+  parseReaderPaletteUserPresets,
+  serializeReaderPaletteUserPresets,
+  type ReaderPalettePreset,
+} from "../../constants/readerPalettePresets";
+import {
   DEFAULT_HIGHLIGHT_COLORS_DARK,
   DEFAULT_HIGHLIGHT_COLORS_LIGHT,
   mergeHighlightColors,
@@ -97,6 +103,15 @@ function createFindBookReaderSettingsStore() {
           mainData.readerPaletteColorEnabledOverridesDark,
         )
       : {},
+  );
+  const readerPaletteUserPresets = ref<ReaderPalettePreset[]>(
+    parseReaderPaletteUserPresets(mainData.readerPaletteUserPresets),
+  );
+  const readerPaletteSelectedPresetId = ref(
+    parseReaderPaletteSelectedPresetId(
+      mainData.readerPaletteSelectedPresetId,
+      readerPaletteUserPresets.value,
+    ),
   );
 
   const readerSurfaceLight = computed(() =>
@@ -284,6 +299,13 @@ function createFindBookReaderSettingsStore() {
             data.readerPaletteColorEnabledOverridesDark,
           )
         : {};
+    readerPaletteUserPresets.value = parseReaderPaletteUserPresets(
+      data.readerPaletteUserPresets,
+    );
+    readerPaletteSelectedPresetId.value = parseReaderPaletteSelectedPresetId(
+      data.readerPaletteSelectedPresetId,
+      readerPaletteUserPresets.value,
+    );
     highlightColorsLight.value = mergeHighlightColors(
       DEFAULT_HIGHLIGHT_COLORS_LIGHT,
       parseHighlightColorsArray(data.highlightColorsLight),
@@ -330,6 +352,8 @@ function createFindBookReaderSettingsStore() {
     dark: ReaderSurfacePalette;
     colorEnabledLight: ReaderSurfaceColorEnabled;
     colorEnabledDark: ReaderSurfaceColorEnabled;
+    userPresets: ReaderPalettePreset[];
+    selectedPresetId: string;
   }) {
     const lightOverrides = overridesFromFullPalette(
       payload.light,
@@ -345,15 +369,24 @@ function createFindBookReaderSettingsStore() {
     const colorEnabledDarkOverrides = overridesFromColorEnabled(
       payload.colorEnabledDark,
     );
+    const userPresets = serializeReaderPaletteUserPresets(payload.userPresets);
+    const selectedPresetId = parseReaderPaletteSelectedPresetId(
+      payload.selectedPresetId,
+      userPresets,
+    );
     readerPaletteOverridesLight.value = lightOverrides;
     readerPaletteOverridesDark.value = darkOverrides;
     readerPaletteColorEnabledOverridesLight.value = colorEnabledLightOverrides;
     readerPaletteColorEnabledOverridesDark.value = colorEnabledDarkOverrides;
+    readerPaletteUserPresets.value = userPresets;
+    readerPaletteSelectedPresetId.value = selectedPresetId;
     patchPersistedMainSettings({
       readerPaletteOverridesLight: lightOverrides,
       readerPaletteOverridesDark: darkOverrides,
       readerPaletteColorEnabledOverridesLight: colorEnabledLightOverrides,
       readerPaletteColorEnabledOverridesDark: colorEnabledDarkOverrides,
+      readerPaletteUserPresets: userPresets,
+      readerPaletteSelectedPresetId: selectedPresetId,
     });
   }
 
@@ -400,6 +433,8 @@ function createFindBookReaderSettingsStore() {
     readerSurfaceDark,
     readerPaletteColorEnabledLight,
     readerPaletteColorEnabledDark,
+    readerPaletteUserPresets,
+    readerPaletteSelectedPresetId,
     effectiveReaderSurfaceLight,
     effectiveReaderSurfaceDark,
     highlightColorsForReader,

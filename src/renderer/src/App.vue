@@ -199,6 +199,12 @@ import {
   type ReaderSurfacePalette,
 } from "./constants/appUi";
 import {
+  DEFAULT_READER_PALETTE_PRESET_ID,
+  parseReaderPaletteSelectedPresetId,
+  serializeReaderPaletteUserPresets,
+  type ReaderPalettePreset,
+} from "./constants/readerPalettePresets";
+import {
   type TextConvertWidthMode,
   type TextConvertZhMode,
 } from "@shared/textConvertTypes";
@@ -278,12 +284,9 @@ const fullscreenSidebarPopoversSuppressCollapse = computed(
     fullscreenCharacterDrawerOpen.value ||
     fullscreenCharacterPopoversOpen.value,
 );
-/** 全屏下打开设置/配色弹框期间，禁用左缘感应自动唤起侧栏 */
-const suppressFullscreenSidebarHover = ref(false);
 const chrome = useAppReaderChrome({
   readerRef,
   fullscreenSidebarPopoversSuppressCollapse,
-  suppressFullscreenSidebarHover,
 });
 const {
   isFullscreenView,
@@ -353,19 +356,6 @@ const showSettingsPanel = ref(false);
 const showColorSchemePanel = ref(false);
 const showWebDavPanel = ref(false);
 const appOverlaysRef = ref<InstanceType<typeof AppOverlays> | null>(null);
-watch(
-  () =>
-    [
-      showSettingsPanel.value,
-      showColorSchemePanel.value,
-      showWebDavPanel.value,
-    ] as const,
-  ([settingsOpen, colorOpen, webDavOpen]) => {
-    suppressFullscreenSidebarHover.value =
-      settingsOpen || colorOpen || webDavOpen;
-  },
-  { immediate: true },
-);
 const showChapterRulePanel = ref(false);
 const showReplaceRulePanel = ref(false);
 const showVoiceReadSpeakSettingsPanel = ref(false);
@@ -753,6 +743,8 @@ const readerPaletteColorEnabledOverridesLight = ref<
 const readerPaletteColorEnabledOverridesDark = ref<
   Partial<ReaderSurfaceColorEnabled>
 >({});
+const readerPaletteUserPresets = ref<ReaderPalettePreset[]>([]);
+const readerPaletteSelectedPresetId = ref(DEFAULT_READER_PALETTE_PRESET_ID);
 
 const readerSurfaceLight = computed(() =>
   mergeReaderSurfacePalette(
@@ -1172,6 +1164,8 @@ const persistence = useAppPersistence({
   readerPaletteOverridesDark,
   readerPaletteColorEnabledOverridesLight,
   readerPaletteColorEnabledOverridesDark,
+  readerPaletteUserPresets,
+  readerPaletteSelectedPresetId,
   highlightColorsLight,
   highlightColorsDark,
   lineationColorsLight,
@@ -3139,6 +3133,13 @@ function onApplyColorScheme(payload: ColorSchemeApplyPayload) {
     readerPaletteColorEnabledOverridesDark.value = overridesFromColorEnabled(
       payload.reader.colorEnabledDark,
     );
+    readerPaletteUserPresets.value = serializeReaderPaletteUserPresets(
+      payload.reader.userPresets,
+    );
+    readerPaletteSelectedPresetId.value = parseReaderPaletteSelectedPresetId(
+      payload.reader.selectedPresetId,
+      readerPaletteUserPresets.value,
+    );
   }
   if (payload.highlight) {
     highlightColorsLight.value = mergeHighlightColors(
@@ -4202,6 +4203,8 @@ useAppShellThemeWatch({
       :reader-surface-dark="readerSurfaceDark"
       :reader-palette-color-enabled-light="readerPaletteColorEnabledLight"
       :reader-palette-color-enabled-dark="readerPaletteColorEnabledDark"
+      :reader-palette-user-presets="readerPaletteUserPresets"
+      :reader-palette-selected-preset-id="readerPaletteSelectedPresetId"
       :monaco-font-family="monacoFontFamily"
       :highlight-colors-light="highlightColorsLight"
       :highlight-colors-dark="highlightColorsDark"
@@ -4232,6 +4235,7 @@ useAppShellThemeWatch({
       "
       @confirm-remove-active-bookmark="confirmRemoveActiveBookmark"
       @apply-color-scheme="onApplyColorScheme"
+      @change-theme="currentTheme = $event"
       @open-reading-data="openReadingDataPanel"
       @open-dictionary-manage="showDictionaryManagePanel = true"
       @open-web-search-manage="showWebSearchManagePanel = true"

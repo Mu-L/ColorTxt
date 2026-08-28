@@ -1,18 +1,31 @@
 <script setup lang="ts">
+import { ref, watch } from "vue";
+import IconButton from "./IconButton.vue";
+import AppShellMenuTeleport from "./AppShellMenuTeleport.vue";
+import { useAnchoredAppShellMenu } from "../composables/useAnchoredAppShellMenu";
+import { icons } from "../icons";
+
 export type ColorSchemeTabId = "reader" | "highlight" | "lineation";
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     activeTab: ColorSchemeTabId;
     visibleTabs?: readonly ColorSchemeTabId[];
+    currentTheme: string;
+    /** 配色弹窗关闭时收起「更多」菜单 */
+    panelOpen?: boolean;
   }>(),
   {
     visibleTabs: () => ["reader", "highlight", "lineation"],
+    panelOpen: true,
   },
 );
 
 const emit = defineEmits<{
   "update:activeTab": [value: ColorSchemeTabId];
+  changeTheme: [theme: "vs" | "vs-dark"];
+  exportColorScheme: [];
+  importColorScheme: [];
 }>();
 
 const tabLabels: Record<ColorSchemeTabId, string> = {
@@ -20,11 +33,49 @@ const tabLabels: Record<ColorSchemeTabId, string> = {
   highlight: "高亮色",
   lineation: "标注色",
 };
+
+const moreBtnRef = ref<HTMLElement | null>(null);
+const moreMenu = useAnchoredAppShellMenu({
+  anchor: moreBtnRef,
+  placement: "below-end",
+  widthPx: 160,
+  gap: 6,
+  zIndex: 7300,
+});
+const {
+  open: moreOpen,
+  left: moreLeft,
+  top: moreTop,
+  toggleMenu: toggleMoreMenu,
+  closeMenu: closeMoreMenu,
+  panelRef: morePanelRef,
+} = moreMenu;
+
+function bindMorePanel(el: HTMLElement | null) {
+  morePanelRef.value = el;
+}
+
+watch(
+  () => props.panelOpen,
+  (open) => {
+    if (!open) closeMoreMenu();
+  },
+);
+
+function onExport() {
+  closeMoreMenu();
+  emit("exportColorScheme");
+}
+
+function onImport() {
+  closeMoreMenu();
+  emit("importColorScheme");
+}
 </script>
 
 <template>
-  <div class="colorSchemeTabBar" role="tablist" aria-label="配色分类">
-    <div class="tabs">
+  <div class="colorSchemeTabBar">
+    <div class="tabs" role="tablist" aria-label="配色分类">
       <button
         v-for="tab in visibleTabs"
         :key="tab"
@@ -38,11 +89,68 @@ const tabLabels: Record<ColorSchemeTabId, string> = {
         {{ tabLabels[tab] }}
       </button>
     </div>
+    <div class="tabBarEnd">
+      <IconButton
+        class="tabBarIconBtn"
+        :icon-html="currentTheme === 'vs' ? icons.light : icons.dark"
+        :title="
+          currentTheme === 'vs'
+            ? '当前亮色，点击切换暗色'
+            : '当前暗色，点击切换亮色'
+        "
+        aria-label="切换主题色"
+        @click="emit('changeTheme', currentTheme === 'vs' ? 'vs-dark' : 'vs')"
+      />
+      <div ref="moreBtnRef" class="tabBarMoreWrap">
+        <IconButton
+          class="tabBarIconBtn"
+          :icon-html="icons.more"
+          :active="moreOpen"
+          :pressed="moreOpen"
+          title="更多"
+          aria-label="更多"
+          aria-haspopup="menu"
+          :aria-expanded="moreOpen"
+          @click="toggleMoreMenu"
+        />
+        <AppShellMenuTeleport
+          v-model:open="moreOpen"
+          :left="moreLeft"
+          :top="moreTop"
+          :z-index="7300"
+          caret="end"
+          :on-panel-mount="bindMorePanel"
+        >
+          <button
+            type="button"
+            class="appShellMenuItem"
+            role="menuitem"
+            @click="onExport"
+          >
+            <span class="appShellMenuIconSlot" v-html="icons.export" />
+            <span class="appShellMenuLabel">导出配色</span>
+          </button>
+          <button
+            type="button"
+            class="appShellMenuItem"
+            role="menuitem"
+            @click="onImport"
+          >
+            <span class="appShellMenuIconSlot" v-html="icons.import" />
+            <span class="appShellMenuLabel">导入配色</span>
+          </button>
+        </AppShellMenuTeleport>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .colorSchemeTabBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   flex-shrink: 0;
   margin-bottom: 0;
   border-bottom: 1px solid var(--border);
@@ -52,6 +160,7 @@ const tabLabels: Record<ColorSchemeTabId, string> = {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
 }
 
 .tabBtn {
@@ -81,5 +190,21 @@ const tabLabels: Record<ColorSchemeTabId, string> = {
   background: transparent;
   border-bottom: 2px solid var(--tab-underline);
   font-weight: 600;
+}
+
+.tabBarEnd {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.tabBarMoreWrap {
+  position: relative;
+}
+
+.tabBarIconBtn {
+  flex-shrink: 0;
 }
 </style>

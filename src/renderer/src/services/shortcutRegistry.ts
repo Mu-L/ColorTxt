@@ -231,7 +231,7 @@ export function createDefaultShortcutBindings(isMac: boolean): ShortcutBindingMa
     openChapterRules: `${accel}+R`,
     toggleBookmark: `${accel}+D`,
     toggleSidebar: `${accel}+B`,
-    toggleMinimalistView: `${accel}+1`,
+    toggleMinimalistView: "F10",
     toggleFullscreen: "F11",
     openSettings: "F5",
     openColorScheme: "F6",

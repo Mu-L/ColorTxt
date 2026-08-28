@@ -15,6 +15,12 @@ import {
   dismissibleOverlayDepth,
   hasDismissibleOverlay,
 } from "../utils/dismissibleOverlayStack";
+import {
+  getModalStackDepth,
+  hasEscBeforeModalLayers,
+  subscribeModalStackChange,
+} from "../utils/modalStack";
+import { appLoadingModel } from "../services/appLoading";
 
 /** 全屏下鼠标静止超过该时间后隐藏光标 */
 const FULLSCREEN_CURSOR_HIDE_IDLE_MS = 2000;
@@ -48,7 +54,7 @@ function nodeIsUnderFullscreenPanel(panel: HTMLElement, start: Node | null) {
 
 /**
  * 全屏 / 极简浮动 UI 统一模型（`chromeAutoHide`）：
- * - `document` mousemove：仅在对应边缘「感应区」且面板未显示、且未按下鼠标按键时唤起；已显示时若指针已不在该面板上则收起；
+ * - `document` mousemove：仅在对应边缘「感应区」且面板未显示、且未按下鼠标按键时唤起；已显示时若指针已不在该面板上则收起；有蒙版弹层（相对挂载时多出来的模态 / 灯箱 / 加载蒙层）时不唤起，并收起已浮出的顶栏/底栏/侧栏；
  * - 面板根节点 `@mouseleave`：自动隐藏 chrome 且已显示时收起（与真实命中区域一致）；
  * - 指针离开窗口（`relatedTarget == null`）：收起浮层（快速擦过边缘移出窗口时可能从未进入面板，不会收到面板 mouseleave）；
  * - 有可点外关闭的弹出菜单时：移出面板不收起；菜单关掉后若指针已不在面板上再收起；
@@ -58,8 +64,6 @@ export function useAppReaderChrome(deps: {
   readerRef: ReaderRef;
   /** 全屏侧栏：Teleport 浮层打开（文件列表下拉、AI 助手历史/导出/模型菜单、header「更多」等）；为真时移出侧栏不立刻收起 */
   fullscreenSidebarPopoversSuppressCollapse: Ref<boolean>;
-  /** 全屏下临时禁用侧栏左缘感应唤起（如设置/配色弹框打开期间） */
-  suppressFullscreenSidebarHover?: Ref<boolean>;
 }) {
   const isFullscreenView = ref(false);
   const isMinimalistView = ref(defaultIsMinimalistView);
@@ -318,6 +322,29 @@ export function useAppReaderChrome(deps: {
     return skipChromeEdgeReveal(ev);
   }
 
+  /**
+   * 挂载时已在栈上的模态不算挡感应（找书阅读器整窗即一层 AppModal）。
+   * 设置/配色等后开的蒙版、灯箱、加载层则不唤起顶/底/侧栏。
+   */
+  let overlayBaselineDepth = 0;
+  let unsubModalStack: (() => void) | null = null;
+
+  function chromeEdgeRevealBlockedByOverlay(): boolean {
+    if (hasEscBeforeModalLayers()) return true;
+    if (appLoadingModel.open) return true;
+    return getModalStackDepth() > overlayBaselineDepth;
+  }
+
+  /** 蒙版弹层打开时收起已浮出的顶栏/底栏/侧栏（顶栏蒙层在 header-float 白名单内，mouseleave 不会收起）。 */
+  function collapseAllChromeForBlockingOverlay() {
+    if (!chromeAutoHide.value) return;
+    if (showFullscreenHeader.value) {
+      collapseFullscreenHeaderAndCloseFindIfRevealed();
+    }
+    showFullscreenFooter.value = false;
+    showFullscreenSidebar.value = false;
+  }
+
   /** 左缘感应：仅负责唤起。收起由侧栏容器 @mouseleave 处理。 */
   function recordFullscreenPointer(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
@@ -328,13 +355,13 @@ export function useAppReaderChrome(deps: {
   function updateFullscreenSidebarHover(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
     if (blockChromeEdgeReveal(ev)) return;
-    if (deps.suppressFullscreenSidebarHover?.value) return;
     if (showFullscreenSidebar.value) {
       if (!hasDismissibleOverlay()) {
         tryCollapseFullscreenSidebarFromPointer(ev.clientX, ev.clientY);
       }
       return;
     }
+    if (chromeEdgeRevealBlockedByOverlay()) return;
     const x = ev.clientX;
     if (x <= FULLSCREEN_LEFT_EDGE_PX && canShowFullscreenPanel("sidebar")) {
       showFullscreenSidebar.value = true;
@@ -422,6 +449,7 @@ export function useAppReaderChrome(deps: {
       }
       return;
     }
+    if (chromeEdgeRevealBlockedByOverlay()) return;
 
     const x = ev.clientX;
     const y = ev.clientY;
@@ -456,6 +484,7 @@ export function useAppReaderChrome(deps: {
       }
       return;
     }
+    if (chromeEdgeRevealBlockedByOverlay()) return;
     const vh = window.innerHeight;
     const y = ev.clientY;
     const inRightScrollbarGutter =
@@ -550,11 +579,26 @@ export function useAppReaderChrome(deps: {
     clearFullscreenTipTimers();
   }
 
+  watch(
+    () => appLoadingModel.open,
+    (open) => {
+      if (open) collapseAllChromeForBlockingOverlay();
+    },
+  );
+
   onMounted(() => {
+    overlayBaselineDepth = getModalStackDepth();
+    unsubModalStack = subscribeModalStackChange(() => {
+      if (chromeEdgeRevealBlockedByOverlay()) {
+        collapseAllChromeForBlockingOverlay();
+      }
+    });
     document.addEventListener("mouseout", onDocumentMouseOutWindow);
   });
 
   onBeforeUnmount(() => {
+    unsubModalStack?.();
+    unsubModalStack = null;
     document.removeEventListener("mouseout", onDocumentMouseOutWindow);
     clearFullscreenTipTimers();
     clearFullscreenCursorHideTimer();

@@ -15,7 +15,10 @@ import {
   bindAppShortcuts,
   type AppShortcutActions,
 } from "../../services/shortcutService";
-import { mergeShortcutBindings } from "../../services/shortcutUtils";
+import {
+  mergeShortcutBindings,
+  shortcutBindingOverridesForPersist,
+} from "../../services/shortcutUtils";
 import { hasEscBeforeModalLayers } from "../../utils/modalStack";
 import { appAlert } from "../../services/appDialog";
 import type { FindBookSettingsTabId } from "../components/FindBookSettingsTabBar.vue";
@@ -80,7 +83,12 @@ export function useFindBookPanelShortcuts(deps: {
       return;
     }
     shortcutBindings.value = merged;
-    patchPersistedMainSettings({ shortcutBindings: merged });
+    patchPersistedMainSettings({
+      shortcutBindings: shortcutBindingOverridesForPersist(
+        defaultShortcutBindings,
+        merged,
+      ),
+    });
   }
 
   function syncShortcutBindingsFromMain() {
