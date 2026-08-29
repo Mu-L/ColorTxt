@@ -52,6 +52,8 @@
   left: 0;
   right: 0;
   z-index: 3500;
+  background: var(--bg);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.45);
 }
 
 .appFooterWrap {
@@ -65,6 +67,7 @@
   right: 0;
   background: var(--bg);
   z-index: 3400;
+  box-shadow: 0 -6px 28px rgba(0, 0, 0, 0.45);
 }
 
 .sidebarPaneWrap {

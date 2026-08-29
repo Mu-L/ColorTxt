@@ -2440,6 +2440,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   right: 0;
   z-index: 3400;
   background: var(--bg);
+  box-shadow: 0 -6px 28px rgba(0, 0, 0, 0.45);
 }
 
 .findBookReaderShell.chromeHidden .findBookReaderHeaderWrap {
@@ -2449,7 +2450,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   right: 0;
   z-index: 3500;
   background: var(--bg);
-  border-bottom: 1px solid var(--border);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.45);
 }
 
 .findBookReaderShell.chromeHidden .findBookReaderSidebar.sidebarPaneWrap--fullscreen {
