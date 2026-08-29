@@ -61,6 +61,7 @@ function nodeIsUnderFullscreenPanel(panel: HTMLElement, start: Node | null) {
  * - `document` mousemove：仅在对应边缘「感应区」且面板未显示、且未按下鼠标按键时唤起；已显示时若指针已不在该面板上则收起；有蒙版弹层（相对挂载时多出来的模态 / 灯箱 / 加载蒙层）时不唤起，并收起已浮出的顶栏/底栏/侧栏；
  * - 面板根节点 `@mouseleave`：自动隐藏 chrome 且已显示时收起（与真实命中区域一致）；
  * - 指针离开窗口（`relatedTarget == null`）：收起浮层（快速擦过边缘移出窗口时可能从未进入面板，不会收到面板 mouseleave）；
+ *   输入法合成中、或焦点仍在浮层输入框内时不收起（候选词弹框是原生窗口，会出现在指针下方并触发同样的 mouseout）；
  * - 有可点外关闭的弹出菜单时：移出面板不收起；菜单关掉后若指针已不在面板上再收起；
  * - `.layout` 捕获阶段 `pointerdown`：收起顶栏/底栏/侧栏（点击落在已展开侧栏内除外；须捕获以便点击模式在阅读区截断冒泡前仍能收起）；
  * - 快捷键等非边缘唤起侧栏（`revealFullscreenSidebar`）：指针尚未进入侧栏前，mousemove 不因「不在侧栏上」而收起（点阅读区仍收起）；
@@ -315,6 +316,65 @@ export function useAppReaderChrome(deps: {
    */
   let stickyFullscreenSidebarUntilPointerEnters = false;
 
+  /** IME 候选窗为原生窗口，出现在指针下会 mouseout relatedTarget=null，看起来像离开网页 */
+  let imeComposing = false;
+
+  function onImeCompositionStart() {
+    imeComposing = true;
+  }
+
+  function onImeCompositionEnd() {
+    imeComposing = false;
+  }
+
+  function isTypingFieldElement(el: EventTarget | null): el is HTMLElement {
+    if (!(el instanceof HTMLElement)) return false;
+    if (el.isContentEditable) return true;
+    const tag = el.tagName;
+    if (tag === "TEXTAREA") return true;
+    if (tag !== "INPUT") return false;
+    const type = ((el as HTMLInputElement).type || "text").toLowerCase();
+    return (
+      type !== "button" &&
+      type !== "checkbox" &&
+      type !== "radio" &&
+      type !== "file" &&
+      type !== "submit" &&
+      type !== "reset" &&
+      type !== "hidden" &&
+      type !== "image" &&
+      type !== "range" &&
+      type !== "color"
+    );
+  }
+
+  function focusedTypingInFloatingChrome(): boolean {
+    const el = document.activeElement;
+    if (!isTypingFieldElement(el)) return false;
+    if (showFullscreenHeader.value) {
+      const header = fullscreenHeaderOverlayRef.value;
+      if (header && nodeIsUnderFullscreenPanel(header, el)) return true;
+      if (nodeIsUnderFullscreenHeaderFloat(el)) return true;
+    }
+    if (showFullscreenSidebar.value) {
+      const sidebar = fullscreenSidebarOverlayRef.value;
+      if (sidebar && nodeIsUnderFullscreenPanel(sidebar, el)) return true;
+      if (nodeIsUnderFullscreenSidebarFloat(el)) return true;
+    }
+    if (showFullscreenFooter.value) {
+      const footer = fullscreenFooterOverlayRef.value;
+      if (footer && nodeIsUnderFullscreenPanel(footer, el)) return true;
+    }
+    return false;
+  }
+
+  /** 合成中，或「离开网页」且焦点仍在浮层输入框（IME 候选窗盖住指针） */
+  function chromeCollapseBlockedByIme(ev?: MouseEvent): boolean {
+    if (imeComposing) return true;
+    if (ev && ev.relatedTarget != null) return false;
+    return focusedTypingInFloatingChrome();
+  }
+
   function pinFullscreenSidebarUntilPointerEnters() {
     stickyFullscreenSidebarUntilPointerEnters = true;
   }
@@ -410,6 +470,7 @@ export function useAppReaderChrome(deps: {
     if (resizingSidebar.value) return;
     if (deps.fullscreenSidebarPopoversSuppressCollapse.value) return;
     const top = document.elementFromPoint(clientX, clientY);
+    if (imeComposing || (!top && focusedTypingInFloatingChrome())) return;
     const sidebar = fullscreenSidebarOverlayRef.value;
     const overSidebar = Boolean(
       (top && nodeIsUnderFullscreenSidebarFloat(top)) ||
@@ -428,6 +489,7 @@ export function useAppReaderChrome(deps: {
     if (resizingSidebar.value) return;
     if (hasDismissibleOverlay()) return;
     if (deps.fullscreenSidebarPopoversSuppressCollapse.value) return;
+    if (chromeCollapseBlockedByIme(ev)) return;
     const rt = ev.relatedTarget;
     if (rt instanceof Node && nodeIsUnderFullscreenSidebarFloat(rt)) return;
     const { clientX, clientY } = ev;
@@ -469,6 +531,7 @@ export function useAppReaderChrome(deps: {
   ) {
     if (!chromeAutoHide.value || !showFullscreenHeader.value) return;
     const top = document.elementFromPoint(clientX, clientY);
+    if (imeComposing || (!top && focusedTypingInFloatingChrome())) return;
     if (top && nodeIsUnderFullscreenHeaderFloat(top)) return;
     const header = fullscreenHeaderOverlayRef.value;
     if (header && top && nodeIsUnderFullscreenPanel(header, top)) return;
@@ -504,6 +567,7 @@ export function useAppReaderChrome(deps: {
   function onFullscreenHeaderMouseLeave(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
     if (hasDismissibleOverlay()) return;
+    if (chromeCollapseBlockedByIme(ev)) return;
     const rt = ev.relatedTarget;
     if (rt instanceof Node && nodeIsUnderFullscreenHeaderFloat(rt)) return;
     const { clientX, clientY } = ev;
@@ -541,6 +605,7 @@ export function useAppReaderChrome(deps: {
   ) {
     if (!chromeAutoHide.value || !showFullscreenFooter.value) return;
     const top = document.elementFromPoint(clientX, clientY);
+    if (imeComposing || (!top && focusedTypingInFloatingChrome())) return;
     const footer = fullscreenFooterOverlayRef.value;
     if (footer && top && nodeIsUnderFullscreenPanel(footer, top)) return;
     showFullscreenFooter.value = false;
@@ -569,6 +634,7 @@ export function useAppReaderChrome(deps: {
     if (hasDismissibleOverlay()) return;
     if (resizingSidebar.value) return;
     if (ev.relatedTarget != null) return;
+    if (chromeCollapseBlockedByIme(ev)) return;
     if (showFullscreenHeader.value) {
       collapseFullscreenHeaderAndCloseFindIfRevealed();
     }
@@ -576,9 +642,10 @@ export function useAppReaderChrome(deps: {
     showFullscreenSidebar.value = false;
   }
 
-  function onFullscreenFooterMouseLeave() {
+  function onFullscreenFooterMouseLeave(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
     if (hasDismissibleOverlay()) return;
+    if (chromeCollapseBlockedByIme(ev)) return;
     showFullscreenFooter.value = false;
   }
 
@@ -784,12 +851,20 @@ export function useAppReaderChrome(deps: {
       }
     });
     document.addEventListener("mouseout", onDocumentMouseOutWindow);
+    document.addEventListener("compositionstart", onImeCompositionStart, true);
+    document.addEventListener("compositionend", onImeCompositionEnd, true);
   });
 
   onBeforeUnmount(() => {
     unsubModalStack?.();
     unsubModalStack = null;
     document.removeEventListener("mouseout", onDocumentMouseOutWindow);
+    document.removeEventListener(
+      "compositionstart",
+      onImeCompositionStart,
+      true,
+    );
+    document.removeEventListener("compositionend", onImeCompositionEnd, true);
     clearFullscreenTipTimers();
     clearFullscreenCursorHideTimer();
     clearExitFullscreenEscArm();

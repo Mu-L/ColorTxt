@@ -42,18 +42,23 @@ function scrollParent(el: HTMLElement): HTMLElement | null {
   return null;
 }
 
+function isLaidOut(el: HTMLElement): boolean {
+  return el.getClientRects().length > 0;
+}
+
 function scrollActiveIntoView() {
   const root = rootRef.value;
   if (!root) return;
   const el = root.querySelector(
     `[data-preset-key="${CSS.escape(props.activeKey)}"]`,
   );
-  if (!(el instanceof HTMLElement)) return;
+  if (!(el instanceof HTMLElement) || !isLaidOut(el)) return;
   const scroller = scrollParent(el);
   if (!scroller) {
     el.scrollIntoView({ block: "center", inline: "nearest" });
     return;
   }
+  if (!isLaidOut(scroller)) return;
   const er = el.getBoundingClientRect();
   const sr = scroller.getBoundingClientRect();
   /** 弹窗 scale 动画中 getBoundingClientRect 是视觉尺寸，scrollTop 是布局尺寸 */
@@ -63,6 +68,18 @@ function scrollActiveIntoView() {
   const scrollerMid = (sr.top + sr.bottom) / 2;
   scroller.scrollTop += (elMid - scrollerMid) / scale;
 }
+
+async function scheduleScrollActiveIntoView() {
+  await nextTick();
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      scrollActiveIntoView();
+      resolve();
+    });
+  });
+}
+
+defineExpose({ scrollActiveIntoView, scheduleScrollActiveIntoView });
 
 let modalPanelEl: HTMLElement | null = null;
 

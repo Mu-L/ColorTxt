@@ -277,6 +277,7 @@ export function buildReaderEditorReadOnlyInteractionOptions(): Pick<
   | "readOnly"
   | "domReadOnly"
   | "readOnlyMessage"
+  | "editContext"
   | "cursorBlinking"
   | "cursorWidth"
   | "renderLineHighlight"
@@ -286,6 +287,12 @@ export function buildReaderEditorReadOnlyInteractionOptions(): Pick<
     readOnly: true,
     domReadOnly: true,
     readOnlyMessage: { value: "" },
+    /**
+     * Monaco 0.55 默认 `editContext: true`（Chromium EditContext）。
+     * 只读时仍会开输入法：光标处出现空白合成框，且 `updateSelectionBounds`
+     * 会把视口拽回光标。查找栏有独立 input，不受此项影响。
+     */
+    editContext: false,
     cursorBlinking: "solid",
     cursorWidth: 0,
     renderLineHighlight: "none",
@@ -298,6 +305,7 @@ export function buildReaderEditorEditableInteractionOptions(): Pick<
   editor.IEditorOptions,
   | "readOnly"
   | "domReadOnly"
+  | "editContext"
   | "cursorBlinking"
   | "cursorWidth"
   | "renderLineHighlight"
@@ -306,6 +314,7 @@ export function buildReaderEditorEditableInteractionOptions(): Pick<
   return {
     readOnly: false,
     domReadOnly: false,
+    editContext: true,
     cursorBlinking: "blink",
     cursorWidth: 2,
     renderLineHighlight: "none",

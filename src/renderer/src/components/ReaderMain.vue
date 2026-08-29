@@ -61,6 +61,7 @@ import {
   type TxtrMonarchHighlightOptions,
 } from "../monaco/txtrTextMonarch";
 import { installReaderScrollKeyHandler } from "../monaco/readerKeyScroll";
+import { installReaderReadOnlyImeGuard } from "../monaco/readerReadOnlyImeGuard";
 import {
   applyLeadIndentFullWidth,
   chapterTitleForDisplay,
@@ -4032,6 +4033,7 @@ onMounted(() => {
       shouldInterceptReadOnlyKeys: () =>
         !props.readerEditMode && !props.voiceReadScrollLocked,
     });
+    const dReadOnlyIme = installReaderReadOnlyImeGuard(monaco, e);
     function openEditorEditContextMenu(clientX: number, clientY: number) {
       if (smartFormatReviewActive.value) return;
       if (props.readerEditMode && smartFormatRunning.value) return;
@@ -4183,6 +4185,7 @@ onMounted(() => {
       d2.dispose();
       dSel.dispose();
       d3.dispose();
+      dReadOnlyIme.dispose();
       saveCommandDisposable?.dispose();
       saveCommandDisposable = null;
       editorHost?.removeEventListener(

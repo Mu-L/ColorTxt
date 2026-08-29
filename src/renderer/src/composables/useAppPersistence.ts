@@ -452,7 +452,8 @@ export function useAppPersistence(deps: {
       highlightColorsDark: [...deps.highlightColorsDark.value],
       lineationColorsLight: [...deps.lineationColorsLight.value],
       lineationColorsDark: [...deps.lineationColorsDark.value],
-      highlightWordsByIndexGlobal: deps.highlightWordsByIndexGlobal.value,
+      // 空表也要写入：合并落盘时若用 undefined 会跳过，磁盘上旧收藏无法清除
+      highlightWordsByIndexGlobal: deps.highlightWordsByIndexGlobal.value ?? {},
       lineationLastColors:
         deps.lineationLastColors.value.marker ===
           DEFAULT_LINEATION_LAST_COLORS.marker &&

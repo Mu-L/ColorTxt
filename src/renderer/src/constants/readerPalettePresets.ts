@@ -28,6 +28,19 @@ export type ReaderPalettePreset = ReaderPalettePresetSnapshot & {
   name: string;
 };
 
+function assertFullPalette(
+  id: string,
+  side: "light" | "dark",
+  palette: ReaderSurfacePalette,
+): ReaderSurfacePalette {
+  for (const key of READER_SURFACE_KEYS) {
+    if (!palette[key]) {
+      throw new Error(`配色方案「${id}」${side} 缺少 ${key}`);
+    }
+  }
+  return palette;
+}
+
 function preset(
   id: string,
   name: string,
@@ -37,8 +50,8 @@ function preset(
   return {
     id,
     name,
-    light,
-    dark,
+    light: assertFullPalette(id, "light", light),
+    dark: assertFullPalette(id, "dark", dark),
   };
 }
 
@@ -282,6 +295,111 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       txtrSpecialMarker: "#f0b8b0",
       txtrNumber: "#e0c898",
       txtrEnglish: "#d0b0c8",
+    },
+  ),
+  /** 下列四套按开源编辑器主题色板映射到 9 槽（非官方移植；名称自拟） */
+  preset(
+    "nord",
+    "北境",
+    {
+      readerBg: "#eceff4",
+      chapterTitle: "#3d6494",
+      bodyText: "#2e3440",
+      txtrQuoteInner: "#3d8b48",
+      txtrBracketInner: "#5e81ac",
+      txtrPunctuation: "#2a6a88",
+      txtrSpecialMarker: "#bf616a",
+      txtrNumber: "#b48ead",
+      txtrEnglish: "#c07850",
+    },
+    {
+      readerBg: "#2e3440",
+      chapterTitle: "#88c0d0",
+      bodyText: "#d8dee9",
+      txtrQuoteInner: "#a3be8c",
+      txtrBracketInner: "#81a1c1",
+      txtrPunctuation: "#8fbcbb",
+      txtrSpecialMarker: "#bf616a",
+      txtrNumber: "#b48ead",
+      txtrEnglish: "#d08770",
+    },
+  ),
+  preset(
+    "solarized",
+    "日晖",
+    {
+      readerBg: "#fdf6e3",
+      chapterTitle: "#268bd2",
+      bodyText: "#4a5c63",
+      txtrQuoteInner: "#2aa198",
+      txtrBracketInner: "#6c71c4",
+      txtrPunctuation: "#d4b01c",
+      txtrSpecialMarker: "#e04a88",
+      txtrNumber: "#c44510",
+      txtrEnglish: "#859900",
+    },
+    {
+      readerBg: "#1a2428",
+      chapterTitle: "#84b8d8",
+      bodyText: "#c5d0d0",
+      txtrQuoteInner: "#7ab8b0",
+      txtrBracketInner: "#b4b8ea",
+      txtrPunctuation: "#b58900",
+      txtrSpecialMarker: "#c87e7a",
+      txtrNumber: "#cb4b16",
+      txtrEnglish: "#859900",
+    },
+  ),
+  preset(
+    "catppuccin",
+    "奶茶",
+    {
+      readerBg: "#eff1f5",
+      chapterTitle: "#1e66f5",
+      bodyText: "#4c4f69",
+      txtrQuoteInner: "#40a02b",
+      txtrBracketInner: "#1a7ab8",
+      txtrPunctuation: "#179299",
+      txtrSpecialMarker: "#c04a5c",
+      txtrNumber: "#d07848",
+      txtrEnglish: "#8839ef",
+    },
+    {
+      readerBg: "#1e1e2e",
+      chapterTitle: "#89b4fa",
+      bodyText: "#cdd6f4",
+      txtrQuoteInner: "#a6e3a1",
+      txtrBracketInner: "#74c7ec",
+      txtrPunctuation: "#94e2d5",
+      txtrSpecialMarker: "#f38ba8",
+      txtrNumber: "#fab387",
+      txtrEnglish: "#cba6f7",
+    },
+  ),
+  preset(
+    "gruvbox",
+    "暖木",
+    {
+      readerBg: "#fbf1c7",
+      chapterTitle: "#076678",
+      bodyText: "#3c3836",
+      txtrQuoteInner: "#79740e",
+      txtrBracketInner: "#427b58",
+      txtrPunctuation: "#c4b49a",
+      txtrSpecialMarker: "#b84842",
+      txtrNumber: "#8f3f71",
+      txtrEnglish: "#af3a03",
+    },
+    {
+      readerBg: "#282828",
+      chapterTitle: "#83a598",
+      bodyText: "#ebdbb2",
+      txtrQuoteInner: "#b8bb26",
+      txtrBracketInner: "#8ec07c",
+      txtrPunctuation: "#928374",
+      txtrSpecialMarker: "#d09088",
+      txtrNumber: "#d3869b",
+      txtrEnglish: "#fe8019",
     },
   ),
 ];

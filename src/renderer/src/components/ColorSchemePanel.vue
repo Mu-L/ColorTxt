@@ -173,8 +173,12 @@ const highlightPickerLive = ref<Partial<Record<number, string>>>({});
 const lineationPickerLive = ref<Partial<Record<number, string>>>({});
 
 type ColorSchemeListPanelExpose = { scrollToBottom: () => void | Promise<void> };
+type ColorSchemePresetListExpose = {
+  scheduleScrollActiveIntoView: () => Promise<void>;
+};
 const highlightPanelRef = ref<ColorSchemeListPanelExpose | null>(null);
 const lineationPanelRef = ref<ColorSchemeListPanelExpose | null>(null);
+const presetListRef = ref<ColorSchemePresetListExpose | null>(null);
 
 const displaySurface = computed((): ReaderSurfacePalette => {
   const palette = {
@@ -349,6 +353,8 @@ async function onDuplicatePreset(id: string) {
   draftUserPresets.value = next;
   applyPaletteToDraft(copy);
   activePresetKey.value = copy.id;
+  // 进入编辑前先按选中项居中（末项会停在底部）；列表 v-show 会保留 scrollTop
+  await presetListRef.value?.scheduleScrollActiveIntoView();
   readerPane.value = "colors";
 }
 
@@ -771,6 +777,11 @@ watch(activeTab, (tab) => {
   if (tab !== "lineation") lineationPickerLive.value = {};
 });
 
+watch(readerPane, (pane) => {
+  if (pane !== "list") return;
+  void presetListRef.value?.scheduleScrollActiveIntoView();
+});
+
 function clearPickerLive() {
   pickerLive.value = {};
   highlightPickerLive.value = {};
@@ -829,6 +840,7 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
         >
           <template #presetList>
             <ColorSchemePresetList
+              ref="presetListRef"
               :rows="presetListRows"
               :active-key="activePresetKey"
               @select="onSelectPreset"

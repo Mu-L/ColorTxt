@@ -519,6 +519,24 @@ body > .overflowingContentWidgets
   -webkit-box-decoration-break: clone;
 }
 
+/*
+ * 只读：隐藏 textarea IME 合成层（空白框）。查找栏有独立 input，不受影响。
+ * 根节点 `content--readerEdit` 见 ReaderMain。
+ */
+.content:not(.content--readerEdit) .monaco-editor .inputarea.ime-input {
+  opacity: 0 !important;
+  color: transparent !important;
+  caret-color: transparent !important;
+}
+
+/*
+ * Native EditContext 默认 overflow-y:scroll；合成时 Chromium 会把该节点滚进视口。
+ * 只读已关 editContext，此处作兜底。
+ */
+.content:not(.content--readerEdit) .monaco-editor .native-edit-context {
+  overflow: hidden !important;
+}
+
 .monaco-editor .view-lines .view-line span.readerAnnotationNoteOnly {
   text-decoration: none !important;
   background-image: repeating-linear-gradient(
