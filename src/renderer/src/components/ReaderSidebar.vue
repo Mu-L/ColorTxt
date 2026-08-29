@@ -712,20 +712,37 @@ const highlightTabIconMuted = computed(() => {
 });
 
 const isMacPlatform = /mac|iphone|ipad|ipod/i.test(navigator.platform || "");
-const searchTabTitle = computed(() => {
-  const accel = props.shortcutBindings?.openSidebarSearch;
-  return accel
-    ? titleWithShortcut("搜索", accel, isMacPlatform)
-    : "搜索";
-});
-const colorSchemeTabTitle = computed(() => {
-  const accel = props.shortcutBindings?.openColorScheme;
-  return accel ? titleWithShortcut("配色", accel, isMacPlatform) : "配色";
-});
-const settingsTabTitle = computed(() => {
-  const accel = props.shortcutBindings?.openSettings;
-  return accel ? titleWithShortcut("设置", accel, isMacPlatform) : "设置";
-});
+function activityTabTitle(
+  label: string,
+  action:
+    | "openSidebarSearch"
+    | "openSidebarFiles"
+    | "openSidebarChapters"
+    | "openSidebarAiAssistant"
+    | "openColorScheme"
+    | "openSettings",
+): string {
+  const accel = props.shortcutBindings?.[action];
+  return accel ? titleWithShortcut(label, accel, isMacPlatform) : label;
+}
+const filesTabTitle = computed(() =>
+  activityTabTitle("文件", "openSidebarFiles"),
+);
+const chaptersTabTitle = computed(() =>
+  activityTabTitle("章节", "openSidebarChapters"),
+);
+const searchTabTitle = computed(() =>
+  activityTabTitle("搜索", "openSidebarSearch"),
+);
+const aiAssistantTabTitle = computed(() =>
+  activityTabTitle("AI 阅读助手", "openSidebarAiAssistant"),
+);
+const colorSchemeTabTitle = computed(() =>
+  activityTabTitle("配色", "openColorScheme"),
+);
+const settingsTabTitle = computed(() =>
+  activityTabTitle("设置", "openSettings"),
+);
 
 function onPrimaryTabClick(tab: ReaderSidebarTab) {
   if (props.panelExpanded && props.activeTab === tab) {
@@ -829,8 +846,8 @@ defineExpose({
           type="button"
           class="activityTabBtn"
           :class="{ active: panelExpanded && activeTab === 'files' }"
-          title="文件"
-          aria-label="文件"
+          :title="filesTabTitle"
+          :aria-label="filesTabTitle"
           @click="onPrimaryTabClick('files')"
         >
           <span class="activityIcon" v-html="icons.ebook"></span>
@@ -839,8 +856,8 @@ defineExpose({
           type="button"
           class="activityTabBtn"
           :class="{ active: panelExpanded && activeTab === 'chapters' }"
-          title="章节"
-          aria-label="章节"
+          :title="chaptersTabTitle"
+          :aria-label="chaptersTabTitle"
           @click="onPrimaryTabClick('chapters')"
         >
           <span class="activityIcon" v-html="icons.chapterList"></span>
@@ -893,8 +910,8 @@ defineExpose({
           type="button"
           class="activityTabBtn"
           :class="{ active: panelExpanded && activeTab === 'aiAssistant' }"
-          title="AI 阅读助手"
-          aria-label="AI 阅读助手"
+          :title="aiAssistantTabTitle"
+          :aria-label="aiAssistantTabTitle"
           @click="onPrimaryTabClick('aiAssistant')"
         >
           <span class="activityIcon" v-html="icons.aiChat"></span>

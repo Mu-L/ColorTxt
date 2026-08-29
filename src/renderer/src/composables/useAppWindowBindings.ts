@@ -70,6 +70,8 @@ export function useAppWindowBindings(deps: {
   updateFullscreenSidebarHover: (ev: MouseEvent) => void;
   endSidebarResize: () => void;
   dismissFullscreenChromeForNativeExit: () => void;
+  /** 极简 / 全屏 Esc：关蒙版后的查找栏、浮动栏、连按两次退出全屏 */
+  handleReaderChromeEscape: (ev: KeyboardEvent) => boolean;
   /** chrome 自动隐藏时鼠标移动重置「空闲隐藏光标」计时 */
   bumpFullscreenCursorIdle: () => void;
   /** chrome 自动隐藏时记录指针坐标，供侧栏浮层关闭后判断是否应收起 */
@@ -123,6 +125,9 @@ export function useAppWindowBindings(deps: {
   openBookSource?: () => void;
   toggleFind: () => void;
   openSidebarSearch: () => void;
+  openSidebarFiles: () => void;
+  openSidebarChapters: () => void;
+  openSidebarAiAssistant: () => void;
   /** 极简 / 全屏下快捷键唤出浮动侧栏（不改 `showSidebar`） */
   revealFullscreenSidebar: () => void;
   toggleReaderEdit: () => void;
@@ -191,43 +196,14 @@ export function useAppWindowBindings(deps: {
     };
     unsubscribers.push(window.colorTxt.onFullscreenChanged(onFullscreenChange));
 
-    const onDocumentKeydownEscapeFullscreen = (ev: KeyboardEvent) => {
-      if (ev.key !== "Escape") return;
-      if (!deps.isFullscreenView.value) return;
-      const target = ev.target;
-      if (
-        target instanceof HTMLElement &&
-        target.classList.contains("fileItemRenameInput")
-      ) {
-        // 文件重命名输入框优先处理 Esc（取消重命名），不应触发退出全屏。
-        return;
-      }
-      // 有模态时仅由 modalStack 的捕获监听 resolve 一次；此处再 resolve 会关两层
-      if (hasModalOrEscBeforeModalLayer()) return;
-      if (keyboardEventFromReaderSidebar(ev)) return;
-      if (
-        deps.readerEditMode.value &&
-        keyboardTargetInsideReaderMonacoEditor(ev, deps.readerRef)
-      ) {
-        return;
-      }
-      ev.preventDefault();
-      ev.stopPropagation();
-      if (deps.readerRef.value?.isFindWidgetRevealed?.()) {
-        deps.readerRef.value?.toggleFindWidget?.();
-        return;
-      }
-      void window.colorTxt.setFullscreen(false).catch(() => {});
+    const onDocumentKeydownEscapeChrome = (ev: KeyboardEvent) => {
+      deps.handleReaderChromeEscape(ev);
     };
-    document.addEventListener(
-      "keydown",
-      onDocumentKeydownEscapeFullscreen,
-      true,
-    );
+    document.addEventListener("keydown", onDocumentKeydownEscapeChrome, true);
     unsubscribers.push(() =>
       document.removeEventListener(
         "keydown",
-        onDocumentKeydownEscapeFullscreen,
+        onDocumentKeydownEscapeChrome,
         true,
       ),
     );
@@ -274,6 +250,9 @@ export function useAppWindowBindings(deps: {
           jumpToNextChapter: deps.jumpToNextChapter,
           toggleFind: deps.toggleFind,
           openSidebarSearch: deps.openSidebarSearch,
+          openSidebarFiles: deps.openSidebarFiles,
+          openSidebarChapters: deps.openSidebarChapters,
+          openSidebarAiAssistant: deps.openSidebarAiAssistant,
           toggleReaderEdit: deps.toggleReaderEdit,
           editSelectedText: deps.editSelectedText,
           scrollDownLine: deps.scrollDownLine,

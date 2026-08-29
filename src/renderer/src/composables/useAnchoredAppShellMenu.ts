@@ -132,6 +132,7 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
     if (opts.enableDismiss === false) return;
     if (ev.key !== "Escape" || !open.value) return;
     ev.preventDefault();
+    ev.stopPropagation();
     closeMenu();
   }
 

@@ -7,6 +7,7 @@ import {
   type HighlightListTerm,
 } from "../utils/highlightWords";
 import { useAnchoredAppShellMenu } from "../composables/useAnchoredAppShellMenu";
+import { syncDismissibleOverlay } from "../utils/dismissibleOverlayStack";
 import AppShellMenuTeleport from "./AppShellMenuTeleport.vue";
 import HighlightTermEditModal, {
   type HighlightTermEditCommit,
@@ -187,6 +188,8 @@ const suppressItemClick = ref(false);
 
 /** —— 多词组：代表词 + +N，就地展开 —— */
 const expandedListKey = ref<string | null>(null);
+const groupListExpanded = computed(() => expandedListKey.value != null);
+syncDismissibleOverlay(groupListExpanded);
 
 function closeGroupExpand() {
   expandedListKey.value = null;
@@ -246,6 +249,7 @@ function onExpandOutsidePointerDown(ev: PointerEvent) {
 function onExpandEsc(ev: KeyboardEvent) {
   if (ev.key !== "Escape" || !expandedListKey.value) return;
   ev.preventDefault();
+  ev.stopPropagation();
   closeGroupExpand();
 }
 

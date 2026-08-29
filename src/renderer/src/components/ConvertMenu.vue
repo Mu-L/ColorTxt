@@ -113,6 +113,17 @@ function onDocPointerDown(ev: PointerEvent) {
   closeMenu();
 }
 
+function onDocKeydown(ev: KeyboardEvent) {
+  if (ev.key !== "Escape" || !menuOpen.value) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  if (zhSubOpen.value || letterSubOpen.value || digitSubOpen.value) {
+    closeSubmenus();
+    return;
+  }
+  closeMenu();
+}
+
 function isZhItemActive(id: TextConvertZhMode): boolean {
   return !props.readerEditMode && props.textConvertZh === id;
 }
@@ -191,10 +202,12 @@ function openDigitSubmenu() {
 
 onMounted(() => {
   document.addEventListener("pointerdown", onDocPointerDown, true);
+  document.addEventListener("keydown", onDocKeydown, true);
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener("pointerdown", onDocPointerDown, true);
+  document.removeEventListener("keydown", onDocKeydown, true);
 });
 </script>
 

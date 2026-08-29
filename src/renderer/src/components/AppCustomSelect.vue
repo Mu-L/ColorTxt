@@ -293,6 +293,7 @@ function onKey(ev: KeyboardEvent) {
   if (!open.value) return;
   if (ev.key === "Escape") {
     ev.preventDefault();
+    ev.stopPropagation();
     close();
   }
 }

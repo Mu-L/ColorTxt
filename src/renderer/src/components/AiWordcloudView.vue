@@ -28,6 +28,7 @@ import {
 } from "../constants/wordcloudPalettes";
 import type { AIWordcloudMode } from "@shared/aiTypes";
 import { WORDCLOUD_MAX_WORDS_MAX } from "@shared/aiTypes";
+import { pushEscBeforeModal } from "../utils/modalStack";
 
 type CloudWord = {
   text: string;
@@ -100,6 +101,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const previewViewportRef = ref<HTMLElement | null>(null);
 const fullscreenCanvasRef = ref<HTMLCanvasElement | null>(null);
 const expanded = ref(false);
+let removeEscBeforeModal: (() => void) | null = null;
 
 /** 词云字体弹框：钉在外层的「其他字体」（会话内有效） */
 const wordcloudPinnedOtherFonts = ref<string[]>([]);
@@ -524,20 +526,23 @@ function onPointerUp(ev: PointerEvent) {
   }
 }
 
+function closeFullscreenEscLayer() {
+  if (angleMenuOpen.value) {
+    closeAngleMenu();
+    return;
+  }
+  if (paletteMenuOpen.value) {
+    closePaletteMenu();
+    return;
+  }
+  closeFullscreen();
+}
+
 function onKeydown(ev: KeyboardEvent) {
   if (ev.key === "Escape" && expanded.value) {
-    if (angleMenuOpen.value) {
-      ev.preventDefault();
-      closeAngleMenu();
-      return;
-    }
-    if (paletteMenuOpen.value) {
-      ev.preventDefault();
-      closePaletteMenu();
-      return;
-    }
     ev.preventDefault();
-    closeFullscreen();
+    ev.stopPropagation();
+    closeFullscreenEscLayer();
   }
 }
 
@@ -592,12 +597,19 @@ onMounted(() => {
 });
 
 watch(expanded, (v) => {
+  removeEscBeforeModal?.();
+  removeEscBeforeModal = null;
   if (v) {
+    removeEscBeforeModal = pushEscBeforeModal(() => {
+      if (expanded.value) closeFullscreenEscLayer();
+    });
     void nextTick(() => scheduleRedraw(true));
   }
 });
 
 onBeforeUnmount(() => {
+  removeEscBeforeModal?.();
+  removeEscBeforeModal = null;
   inlineObserver?.disconnect();
   window.removeEventListener("keydown", onKeydown);
   document.removeEventListener("pointerdown", onToolbarMenuPointerDown, true);

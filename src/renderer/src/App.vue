@@ -295,6 +295,7 @@ const {
   toggleMinimalistView,
   showFullscreenTip,
   fullscreenTipFading,
+  fullscreenTipText,
   showFullscreenHeader,
   fullscreenHeaderOverlayRef,
   showFullscreenFooter,
@@ -319,6 +320,7 @@ const {
   dismissFullscreenPanelsOnLayoutPointerDown,
   endSidebarResize,
   dismissFullscreenChromeForNativeExit,
+  handleReaderChromeEscape,
   revealFullscreenSidebar,
   fullscreenCursorHidden,
   bumpFullscreenCursorIdle,
@@ -3267,11 +3269,16 @@ function onSearchWithQuote(text: string) {
   searchQuery.value = q;
 }
 
-function openSidebarSearch() {
-  const sel = readerRef.value?.getSelectedText?.()?.trim() ?? "";
-  sidebarTab.value = "search";
+function openReaderSidebarTab(tab: ReaderSidebarTab) {
+  if (tab === "aiAssistant" && !aiFeaturesEnabled.value) return;
+  sidebarTab.value = tab;
   showSidebar.value = true;
   if (chromeAutoHide.value) revealFullscreenSidebar();
+}
+
+function openSidebarSearch() {
+  const sel = readerRef.value?.getSelectedText?.()?.trim() ?? "";
+  openReaderSidebarTab("search");
   if (sel) searchQuery.value = sel;
   void nextTick(() => {
     readerSidebarRef.value?.focusSidebarSearchInput?.();
@@ -3492,6 +3499,7 @@ useAppWindowBindings({
   updateFullscreenSidebarHover,
   endSidebarResize,
   dismissFullscreenChromeForNativeExit,
+  handleReaderChromeEscape,
   bumpFullscreenCursorIdle,
   recordFullscreenPointer,
   enterOrExitFullscreenView,
@@ -3544,6 +3552,9 @@ useAppWindowBindings({
   openFindBook: openFindBookWindow,
   toggleFind: onToggleFind,
   openSidebarSearch,
+  openSidebarFiles: () => openReaderSidebarTab("files"),
+  openSidebarChapters: () => openReaderSidebarTab("chapters"),
+  openSidebarAiAssistant: () => openReaderSidebarTab("aiAssistant"),
   revealFullscreenSidebar,
   toggleReaderEdit: () => {
     void onToggleReaderEdit();
@@ -3596,6 +3607,7 @@ useAppShellThemeWatch({
       'fullscreen--cursorHidden': chromeAutoHide && fullscreenCursorHidden,
     }"
   >
+    <Transition name="chromeFloatHeader" :css="chromeAutoHide">
     <div
       :ref="setFullscreenHeaderOverlayEl"
       class="appHeaderWrap"
@@ -3700,6 +3712,7 @@ useAppShellThemeWatch({
         @timed-scroll-toggle="toggleTimedScroll"
       />
     </div>
+    </Transition>
 
     <div
       class="layout"
@@ -3707,6 +3720,7 @@ useAppShellThemeWatch({
       @contextmenu="onLayoutContextMenu"
       @wheel.capture="onLayoutWheel"
     >
+      <Transition name="chromeFloatSidebar" :css="chromeAutoHide">
       <div
         ref="fullscreenSidebarOverlayRef"
         class="sidebarPaneWrap"
@@ -3867,6 +3881,7 @@ useAppShellThemeWatch({
           @mousedown="startResizeSidebar"
         ></div>
       </div>
+      </Transition>
       <div
         v-show="showSidebar && !chromeAutoHide"
         class="resizer"
@@ -4035,7 +4050,7 @@ useAppShellThemeWatch({
       class="fullscreenTip"
       :class="{ fading: fullscreenTipFading }"
     >
-      按 ESC 退出全屏
+      {{ fullscreenTipText }}
     </div>
     <FullscreenSystemClock
       :visible="isFullscreenView && fullscreenShowSystemTime"
@@ -4044,6 +4059,7 @@ useAppShellThemeWatch({
       :pomodoro-paused="pomodoroPaused"
     />
 
+    <Transition name="chromeFloatFooter" :css="chromeAutoHide">
     <div
       :ref="setFullscreenFooterOverlayEl"
       class="appFooterWrap"
@@ -4107,6 +4123,7 @@ useAppShellThemeWatch({
         @pomodoro-stop="stopPomodoro"
       />
     </div>
+    </Transition>
     <PomodoroBreakOverlay
       :visible="pomodoroShowBreakOverlay"
       :countdown-text="pomodoroCountdownText"

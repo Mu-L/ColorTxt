@@ -24,6 +24,10 @@ import { appLoadingModel } from "../services/appLoading";
 
 /** 全屏下鼠标静止超过该时间后隐藏光标 */
 const FULLSCREEN_CURSOR_HIDE_IDLE_MS = 2000;
+const FULLSCREEN_TIP_ENTER_MSG = "按 2 次 ESC 退出全屏";
+const FULLSCREEN_TIP_CONFIRM_MSG = "再按 1 次 ESC 退出全屏";
+/** 连按两次 Esc 退出全屏的确认窗口 */
+const EXIT_FULLSCREEN_ESC_CONFIRM_MS = 2000;
 
 /** 过渡结束后再开始算「可见时长」，避免 macOS 全屏动画期间就把计时耗完 */
 const FULLSCREEN_TIP_MS_BEFORE_FADE = 1000;
@@ -59,7 +63,8 @@ function nodeIsUnderFullscreenPanel(panel: HTMLElement, start: Node | null) {
  * - 指针离开窗口（`relatedTarget == null`）：收起浮层（快速擦过边缘移出窗口时可能从未进入面板，不会收到面板 mouseleave）；
  * - 有可点外关闭的弹出菜单时：移出面板不收起；菜单关掉后若指针已不在面板上再收起；
  * - `.layout` 捕获阶段 `pointerdown`：收起顶栏/底栏/侧栏（点击落在已展开侧栏内除外；须捕获以便点击模式在阅读区截断冒泡前仍能收起）；
- * - 快捷键等非边缘唤起侧栏（`revealFullscreenSidebar`）：指针尚未进入侧栏前，mousemove 不因「不在侧栏上」而收起（点阅读区仍收起）。
+ * - 快捷键等非边缘唤起侧栏（`revealFullscreenSidebar`）：指针尚未进入侧栏前，mousemove 不因「不在侧栏上」而收起（点阅读区仍收起）；
+ * - Esc：输入框聚焦时只失焦（入口 `escapeBlurTextField` 捕获，含菜单 / 蒙版内）；再关蒙版与弹出菜单；再收浮动顶/底/侧栏；全屏再连按两次才退出。
  */
 export function useAppReaderChrome(deps: {
   readerRef: ReaderRef;
@@ -73,6 +78,8 @@ export function useAppReaderChrome(deps: {
   );
   const showFullscreenTip = ref(false);
   const fullscreenTipFading = ref(false);
+  const fullscreenTipText = ref(FULLSCREEN_TIP_ENTER_MSG);
+  let exitFullscreenEscArmed = false;
   let tipFadeTimer: ReturnType<typeof setTimeout> | null = null;
   let tipHideTimer: ReturnType<typeof setTimeout> | null = null;
   let tipArmDelayTimer: ReturnType<typeof setTimeout> | null = null;
@@ -174,22 +181,25 @@ export function useAppReaderChrome(deps: {
     tipArmDelayTimer = null;
   }
 
-  function armFullscreenTipHideTimers() {
-    if (!showFullscreenTip.value || !isFullscreenView.value) return;
+  function armFullscreenTipHideTimers(
+    visibleMs: number = FULLSCREEN_TIP_MS_BEFORE_FADE,
+  ) {
+    if (!showFullscreenTip.value) return;
     clearFullscreenTipTimers();
     fullscreenTipFading.value = false;
     tipFadeTimer = setTimeout(() => {
       fullscreenTipFading.value = true;
-    }, FULLSCREEN_TIP_MS_BEFORE_FADE);
+    }, visibleMs);
     tipHideTimer = setTimeout(() => {
       showFullscreenTip.value = false;
       fullscreenTipFading.value = false;
-    }, FULLSCREEN_TIP_MS_BEFORE_FADE + FULLSCREEN_TIP_FADE_MS);
+    }, visibleMs + FULLSCREEN_TIP_FADE_MS);
   }
 
   async function enterOrExitFullscreenView() {
     if (!isFullscreenView.value) {
       isFullscreenView.value = true;
+      fullscreenTipText.value = FULLSCREEN_TIP_ENTER_MSG;
       showFullscreenTip.value = true;
       fullscreenTipFading.value = false;
       clearFullscreenTipTimers();
@@ -247,6 +257,7 @@ export function useAppReaderChrome(deps: {
   }
 
   watch(isFullscreenView, (fs) => {
+    clearExitFullscreenEscArm();
     if (fs) {
       const minW = getSidebarMinWidth();
       const maxW = getSidebarMaxWidth();
@@ -605,6 +616,38 @@ export function useAppReaderChrome(deps: {
     }
   }
 
+  let exitFullscreenEscTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function hideFullscreenTip() {
+    showFullscreenTip.value = false;
+    fullscreenTipFading.value = false;
+    clearFullscreenTipTimers();
+  }
+
+  function clearExitFullscreenEscArm() {
+    const wasArmed = exitFullscreenEscArmed;
+    exitFullscreenEscArmed = false;
+    if (exitFullscreenEscTimer) {
+      clearTimeout(exitFullscreenEscTimer);
+      exitFullscreenEscTimer = null;
+    }
+    if (wasArmed) hideFullscreenTip();
+  }
+
+  function armExitFullscreenEsc() {
+    exitFullscreenEscArmed = true;
+    if (exitFullscreenEscTimer) clearTimeout(exitFullscreenEscTimer);
+    exitFullscreenEscTimer = setTimeout(() => {
+      exitFullscreenEscArmed = false;
+      exitFullscreenEscTimer = null;
+    }, EXIT_FULLSCREEN_ESC_CONFIRM_MS);
+
+    fullscreenTipText.value = FULLSCREEN_TIP_CONFIRM_MSG;
+    showFullscreenTip.value = true;
+    fullscreenTipFading.value = false;
+    armFullscreenTipHideTimers(EXIT_FULLSCREEN_ESC_CONFIRM_MS);
+  }
+
   /** 主进程通知退出全屏时，与 enterOrExitFullscreenView 的提示计时器对齐清理 */
   function dismissFullscreenChromeForNativeExit() {
     showFullscreenTip.value = false;
@@ -615,12 +658,120 @@ export function useAppReaderChrome(deps: {
     showFullscreenFooter.value = false;
     showFullscreenSidebar.value = false;
     clearFullscreenTipTimers();
+    clearExitFullscreenEscArm();
   }
+
+  function hasFloatingChromePanel(): boolean {
+    return (
+      showFullscreenHeader.value ||
+      showFullscreenFooter.value ||
+      showFullscreenSidebar.value
+    );
+  }
+
+  function collapseFloatingChromePanels(): boolean {
+    if (!hasFloatingChromePanel()) return false;
+    if (showFullscreenHeader.value) {
+      collapseFullscreenHeaderAndCloseFindIfRevealed();
+    }
+    showFullscreenFooter.value = false;
+    showFullscreenSidebar.value = false;
+    return true;
+  }
+
+  function escapeTargetIsFileRename(ev: KeyboardEvent): boolean {
+    const target = ev.target;
+    return (
+      target instanceof HTMLElement &&
+      target.classList.contains("fileItemRenameInput")
+    );
+  }
+
+  /** 焦点在阅读器 Monaco 内，且不在查找栏（补全等仍需 Esc） */
+  function escapeTargetInReaderMonaco(ev: KeyboardEvent): boolean {
+    const t = ev.target;
+    if (!(t instanceof Node)) return false;
+    const root = deps.readerRef.value?.getReaderEditorDomNode?.() ?? null;
+    if (!root || !root.contains(t)) return false;
+    if (t instanceof Element && t.closest(".find-widget")) return false;
+    return true;
+  }
+
+  function isReaderEditModeActive(): boolean {
+    const root = deps.readerRef.value?.getReaderEditorDomNode?.() ?? null;
+    return Boolean(
+      root instanceof Element && root.closest(".content--readerEdit"),
+    );
+  }
+
+  /**
+   * 极简 / 全屏 Esc：蒙版与弹出菜单交给各自监听；查找栏 → 浮动顶/底/侧栏 →
+   * 全屏再连按两次退出。Esc 不退出极简。输入框失焦由 `escapeBlurTextField` 全局捕获。
+   * 按住不放的 repeat 不计第二次。
+   * @returns 已消费该次 Esc
+   */
+  function handleReaderChromeEscape(ev: KeyboardEvent): boolean {
+    if (ev.key !== "Escape") return false;
+    if (escapeTargetIsFileRename(ev)) return false;
+
+    const consume = () => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      return true;
+    };
+
+    if (!chromeAutoHide.value) return false;
+    if (chromeEdgeRevealBlockedByOverlay()) return false;
+    if (hasDismissibleOverlay()) return false;
+    const findOpen = Boolean(deps.readerRef.value?.isFindWidgetRevealed?.());
+    if (
+      isReaderEditModeActive() &&
+      !findOpen &&
+      escapeTargetInReaderMonaco(ev)
+    ) {
+      return false;
+    }
+
+    if (ev.repeat) {
+      if (findOpen || hasFloatingChromePanel() || isFullscreenView.value) {
+        return consume();
+      }
+      return false;
+    }
+
+    if (findOpen) {
+      deps.readerRef.value?.closeFindWidgetIfRevealed?.();
+      clearExitFullscreenEscArm();
+      return consume();
+    }
+
+    if (collapseFloatingChromePanels()) {
+      clearExitFullscreenEscArm();
+      return consume();
+    }
+
+    if (!isFullscreenView.value) return false;
+
+    if (!exitFullscreenEscArmed) {
+      armExitFullscreenEsc();
+      return consume();
+    }
+    clearExitFullscreenEscArm();
+    void window.colorTxt.setFullscreen(false).catch(() => {});
+    return consume();
+  }
+
+  watch(dismissibleOverlayDepth, (n) => {
+    if (n > 0) clearExitFullscreenEscArm();
+  });
 
   watch(
     () => appLoadingModel.open,
     (open) => {
-      if (open) collapseAllChromeForBlockingOverlay();
+      if (open) {
+        collapseAllChromeForBlockingOverlay();
+        clearExitFullscreenEscArm();
+      }
     },
   );
 
@@ -629,6 +780,7 @@ export function useAppReaderChrome(deps: {
     unsubModalStack = subscribeModalStackChange(() => {
       if (chromeEdgeRevealBlockedByOverlay()) {
         collapseAllChromeForBlockingOverlay();
+        clearExitFullscreenEscArm();
       }
     });
     document.addEventListener("mouseout", onDocumentMouseOutWindow);
@@ -640,6 +792,7 @@ export function useAppReaderChrome(deps: {
     document.removeEventListener("mouseout", onDocumentMouseOutWindow);
     clearFullscreenTipTimers();
     clearFullscreenCursorHideTimer();
+    clearExitFullscreenEscArm();
   });
 
   return {
@@ -649,6 +802,7 @@ export function useAppReaderChrome(deps: {
     toggleMinimalistView,
     showFullscreenTip,
     fullscreenTipFading,
+    fullscreenTipText,
     showFullscreenHeader,
     fullscreenHeaderOverlayRef,
     showFullscreenFooter,
@@ -673,6 +827,7 @@ export function useAppReaderChrome(deps: {
     onFullscreenFooterMouseLeave,
     dismissFullscreenPanelsOnLayoutPointerDown,
     dismissFullscreenChromeForNativeExit,
+    handleReaderChromeEscape,
     revealFullscreenSidebar,
     fullscreenCursorHidden,
     bumpFullscreenCursorIdle,

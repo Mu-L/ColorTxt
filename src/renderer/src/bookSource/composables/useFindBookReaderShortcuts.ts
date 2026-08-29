@@ -117,6 +117,9 @@ export function useFindBookReaderShortcuts(deps: {
           deps.readerRef.value?.toggleFindWidget?.();
         },
         openSidebarSearch: () => {},
+        openSidebarFiles: () => {},
+        openSidebarChapters: () => {},
+        openSidebarAiAssistant: () => {},
         toggleReaderEdit: () => {
           void deps.toggleReaderEdit();
         },

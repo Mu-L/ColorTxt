@@ -18,6 +18,9 @@ export type ShortcutActionId =
   | "increaseLineHeight"
   | "toggleFind"
   | "openSidebarSearch"
+  | "openSidebarFiles"
+  | "openSidebarChapters"
+  | "openSidebarAiAssistant"
   | "toggleReaderEdit"
   | "editSelectedText"
   | "openChapterRules"
@@ -52,6 +55,9 @@ const FIND_BOOK_PANEL_HIDDEN_ACTION_IDS = new Set<ShortcutActionId>([
   "openChapterRules",
   "toggleBookmark",
   "openSidebarSearch",
+  "openSidebarFiles",
+  "openSidebarChapters",
+  "openSidebarAiAssistant",
 ]);
 
 export const SHORTCUT_ACTIONS: ShortcutActionDef[] = [
@@ -116,8 +122,26 @@ export const SHORTCUT_ACTIONS: ShortcutActionDef[] = [
   {
     id: "openSidebarSearch",
     scope: "window",
-    desc: "搜索",
+    desc: "侧边栏：搜索",
     handlerKey: "openSidebarSearch",
+  },
+  {
+    id: "openSidebarFiles",
+    scope: "window",
+    desc: "侧边栏：文件",
+    handlerKey: "openSidebarFiles",
+  },
+  {
+    id: "openSidebarChapters",
+    scope: "window",
+    desc: "侧边栏：章节",
+    handlerKey: "openSidebarChapters",
+  },
+  {
+    id: "openSidebarAiAssistant",
+    scope: "window",
+    desc: "侧边栏：AI 阅读助手",
+    handlerKey: "openSidebarAiAssistant",
   },
   {
     id: "toggleReaderEdit",
@@ -146,20 +170,8 @@ export const SHORTCUT_ACTIONS: ShortcutActionDef[] = [
   {
     id: "toggleSidebar",
     scope: "window",
-    desc: "显示/隐藏侧边栏（极简/全屏下唤出）",
+    desc: "显示/隐藏侧边栏",
     handlerKey: "toggleSidebar",
-  },
-  {
-    id: "toggleMinimalistView",
-    scope: "window",
-    desc: "进入/退出极简视图",
-    handlerKey: "toggleMinimalistView",
-  },
-  {
-    id: "toggleFullscreen",
-    scope: "window",
-    desc: "进入/退出全屏阅读",
-    handlerKey: "toggleFullscreen",
   },
   {
     id: "toggleTheme",
@@ -185,6 +197,18 @@ export const SHORTCUT_ACTIONS: ShortcutActionDef[] = [
     scope: "window",
     desc: "书源管理",
     handlerKey: "openBookSource",
+  },
+  {
+    id: "toggleMinimalistView",
+    scope: "window",
+    desc: "进入/退出极简视图",
+    handlerKey: "toggleMinimalistView",
+  },
+  {
+    id: "toggleFullscreen",
+    scope: "window",
+    desc: "进入/退出全屏阅读",
+    handlerKey: "toggleFullscreen",
   },
   {
     id: "openNewWindow",
@@ -233,6 +257,9 @@ export function createDefaultShortcutBindings(isMac: boolean): ShortcutBindingMa
     increaseLineHeight: `${accel}+]`,
     toggleFind: `${accel}+F`,
     openSidebarSearch: `${accel}+Shift+F`,
+    openSidebarFiles: `${accel}+Shift+E`,
+    openSidebarChapters: `${accel}+Shift+C`,
+    openSidebarAiAssistant: `${accel}+Shift+A`,
     toggleReaderEdit: `${accel}+/`,
     editSelectedText: `${accel}+E`,
     openChapterRules: `${accel}+R`,

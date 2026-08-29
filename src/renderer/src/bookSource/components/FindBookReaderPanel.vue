@@ -66,7 +66,6 @@ import { useAppFullscreenReaderLayout } from "../../composables/useAppFullscreen
 import { useAppTimedScroll } from "../../composables/useAppTimedScroll";
 import { useAppVoiceRead } from "../../composables/useAppVoiceRead";
 import { useReaderClickModeAltHold } from "../../composables/useReaderClickModeAltHold";
-import { hasEscBeforeModalLayers } from "../../utils/modalStack";
 import { applyTextDisplayConverts } from "../../services/textConvertApply";
 import { applyAppShellTheme, type AppShellTheme } from "../../utils/appShellThemeSync";
 import { appConfirm, appLog } from "../../services/appDialog";
@@ -382,6 +381,7 @@ const {
   toggleMinimalistView,
   showFullscreenTip,
   fullscreenTipFading,
+  fullscreenTipText,
   showFullscreenHeader,
   fullscreenHeaderOverlayRef,
   showFullscreenFooter,
@@ -400,6 +400,7 @@ const {
   onFullscreenFooterMouseLeave,
   dismissFullscreenPanelsOnLayoutPointerDown,
   dismissFullscreenChromeForNativeExit,
+  handleReaderChromeEscape,
   revealFullscreenSidebar,
   fullscreenCursorHidden,
   bumpFullscreenCursorIdle,
@@ -1640,16 +1641,8 @@ async function toggleFullscreen() {
 }
 
 function onDocumentKeydownEscape(ev: KeyboardEvent) {
-  if (!modelValue.value || !isFullscreenView.value) return;
-  if (ev.key !== "Escape") return;
-  if (hasEscBeforeModalLayers()) return;
-  ev.preventDefault();
-  ev.stopPropagation();
-  if (readerRef.value?.isFindWidgetRevealed?.()) {
-    readerRef.value?.toggleFindWidget?.();
-    return;
-  }
-  void window.colorTxt.setFullscreen(false).catch(() => {});
+  if (!modelValue.value) return;
+  handleReaderChromeEscape(ev);
 }
 
 async function onShowLogs() {
@@ -1903,6 +1896,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
         'fullscreen--cursorHidden': chromeAutoHide && fullscreenCursorHidden,
       }"
     >
+      <Transition name="chromeFloatHeader" :css="chromeAutoHide">
       <div
         :ref="setFullscreenHeaderOverlayEl"
         class="findBookReaderHeaderWrap"
@@ -2098,6 +2092,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
           @save-reader-chapter="onSaveReaderChapter"
         />
       </div>
+      </Transition>
 
       <div
         class="findBookReaderBody"
@@ -2105,6 +2100,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
         @contextmenu="onFullscreenLayoutContextMenu"
         @wheel.capture="onLayoutWheel"
       >
+        <Transition name="chromeFloatSidebar" :css="chromeAutoHide">
         <aside
           v-show="sidebarShellVisible"
           ref="fullscreenSidebarOverlayRef"
@@ -2197,6 +2193,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
             @mousedown="startResizeSidebar"
           ></div>
         </aside>
+        </Transition>
 
         <div
           ref="readerPaneWrapRef"
@@ -2314,6 +2311,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
         </div>
       </div>
 
+      <Transition name="chromeFloatFooter" :css="chromeAutoHide">
       <div
         :ref="setFullscreenFooterOverlayEl"
         class="findBookReaderFooterWrap"
@@ -2351,13 +2349,14 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
           @pomodoro-stop="stopPomodoro"
         />
       </div>
+      </Transition>
 
       <div
         v-if="showFullscreenTip"
         class="fullscreenTip"
         :class="{ fading: fullscreenTipFading }"
       >
-        按 ESC 退出全屏
+        {{ fullscreenTipText }}
       </div>
       <FullscreenSystemClock
         :visible="isFullscreenView && fullscreenShowSystemTime"
@@ -2441,18 +2440,6 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   right: 0;
   z-index: 3400;
   background: var(--bg);
-  animation: findBookReaderFullscreenFooterIn 140ms ease-out;
-}
-
-@keyframes findBookReaderFullscreenFooterIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .findBookReaderShell.chromeHidden .findBookReaderHeaderWrap {
@@ -2463,7 +2450,6 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   z-index: 3500;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
-  animation: findBookReaderFullscreenHeaderIn 140ms ease-out;
 }
 
 .findBookReaderShell.chromeHidden .findBookReaderSidebar.sidebarPaneWrap--fullscreen {
@@ -2473,7 +2459,6 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   bottom: 0;
   z-index: 3000;
   box-shadow: 6px 0 28px rgba(0, 0, 0, 0.45);
-  animation: findBookReaderFullscreenSidebarIn 180ms ease-out;
 }
 
 .findBookReaderShell.fullscreen .readerPane.content--readerEditMinimap .monaco-editor .minimap {
@@ -2511,26 +2496,55 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   opacity: 0;
 }
 
-@keyframes findBookReaderFullscreenSidebarIn {
-  from {
-    opacity: 0;
-    transform: translateX(-12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.chromeFloatHeader-enter-active,
+.chromeFloatHeader-leave-active {
+  transition:
+    opacity 140ms ease-out,
+    transform 140ms ease-out;
 }
 
-@keyframes findBookReaderFullscreenHeaderIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.chromeFloatHeader-enter-from,
+.chromeFloatHeader-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.chromeFloatHeader-leave-active {
+  pointer-events: none;
+}
+
+.chromeFloatFooter-enter-active,
+.chromeFloatFooter-leave-active {
+  transition:
+    opacity 140ms ease-out,
+    transform 140ms ease-out;
+}
+
+.chromeFloatFooter-enter-from,
+.chromeFloatFooter-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.chromeFloatFooter-leave-active {
+  pointer-events: none;
+}
+
+.chromeFloatSidebar-enter-active,
+.chromeFloatSidebar-leave-active {
+  transition:
+    opacity 180ms ease-out,
+    transform 180ms ease-out;
+}
+
+.chromeFloatSidebar-enter-from,
+.chromeFloatSidebar-leave-to {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+
+.chromeFloatSidebar-leave-active {
+  pointer-events: none;
 }
 
 </style>

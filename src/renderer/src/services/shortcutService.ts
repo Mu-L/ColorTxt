@@ -20,6 +20,9 @@ export type AppShortcutActions = {
   jumpToNextChapter: () => void | Promise<void>;
   toggleFind: () => void | Promise<void>;
   openSidebarSearch: () => void | Promise<void>;
+  openSidebarFiles: () => void | Promise<void>;
+  openSidebarChapters: () => void | Promise<void>;
+  openSidebarAiAssistant: () => void | Promise<void>;
   toggleReaderEdit: () => void | Promise<void>;
   editSelectedText: () => void | Promise<void>;
   scrollDownLine: () => void | Promise<void>;
@@ -30,8 +33,22 @@ export type AppShortcutActions = {
 
 import type { ShortcutBindingMap } from "./shortcutRegistry";
 import { keyboardEventToAccelerator, normalizeAccelerator } from "./shortcutUtils";
+import { hasDismissibleOverlay } from "../utils/dismissibleOverlayStack";
 
 type ActionKey = keyof AppShortcutActions;
+
+/**
+ * 快捷键面板正在录制时由 ShortcutPanel 挂上。
+ * 必须在 bindAppShortcuts 的 window 捕获监听里先处理并 stopImmediatePropagation，
+ * 否则已绑定的 Ctrl+F 等会先触发动作，录制框只收到修饰键。
+ */
+let windowShortcutRecordingHandler: ((ev: KeyboardEvent) => void) | null = null;
+
+export function setWindowShortcutRecordingHandler(
+  handler: ((ev: KeyboardEvent) => void) | null,
+): void {
+  windowShortcutRecordingHandler = handler;
+}
 
 const ACTION_BY_ID: Record<string, ActionKey> = {
   openFile: "openFile",
@@ -48,6 +65,9 @@ const ACTION_BY_ID: Record<string, ActionKey> = {
   increaseLineHeight: "increaseLineHeight",
   toggleFind: "toggleFind",
   openSidebarSearch: "openSidebarSearch",
+  openSidebarFiles: "openSidebarFiles",
+  openSidebarChapters: "openSidebarChapters",
+  openSidebarAiAssistant: "openSidebarAiAssistant",
   toggleReaderEdit: "toggleReaderEdit",
   editSelectedText: "editSelectedText",
   openChapterRules: "openChapterRules",
@@ -153,6 +173,12 @@ export function bindAppShortcuts(
   voiceReadReaderKeys?: VoiceReadReaderKeyHandlers,
 ): () => void {
   const onShortcutKeyDown = (ev: KeyboardEvent) => {
+    if (windowShortcutRecordingHandler) {
+      windowShortcutRecordingHandler(ev);
+      return;
+    }
+    // 弹出菜单开着时不派发（侧栏因焦点仍在侧栏内本来就会让出；顶栏/底栏 Teleport 菜单不会）。Esc 不在绑定表里，仍由菜单自己关。
+    if (hasDismissibleOverlay()) return;
     if (shouldHandleEvent && !shouldHandleEvent(ev)) return;
     if (voiceReadReaderKeys?.isActive()) {
       const kind = voiceReadReaderKeyKind(ev);
