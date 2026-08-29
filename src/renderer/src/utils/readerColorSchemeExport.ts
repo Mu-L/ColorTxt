@@ -13,7 +13,6 @@ import {
   type ReaderSurfacePalette,
 } from "../constants/readerPalette";
 import {
-  parseReaderPaletteSelectedPresetId,
   parseReaderPaletteUserPresets,
   serializeReaderPaletteUserPresets,
   type ReaderPalettePreset,
@@ -28,10 +27,8 @@ export const COLOR_SCHEME_EXPORT_DEFAULT_NAME = "colortxt-color-scheme.json";
 export type ColorSchemeExportReader = {
   light: ReaderSurfacePalette;
   dark: ReaderSurfacePalette;
-  colorEnabledLight: ReaderSurfaceColorEnabled;
-  colorEnabledDark: ReaderSurfaceColorEnabled;
+  colorEnabled: ReaderSurfaceColorEnabled;
   userPresets: ReaderPalettePreset[];
-  selectedPresetId: string;
 };
 
 export type ColorSchemeExportColors = {
@@ -80,13 +77,8 @@ function parseExportedReader(raw: unknown): ColorSchemeExportReader | null {
   return {
     light,
     dark,
-    colorEnabledLight: parseExportedColorEnabled(o.colorEnabledLight),
-    colorEnabledDark: parseExportedColorEnabled(o.colorEnabledDark),
+    colorEnabled: parseExportedColorEnabled(o.colorEnabled),
     userPresets,
-    selectedPresetId: parseReaderPaletteSelectedPresetId(
-      o.selectedPresetId,
-      userPresets,
-    ),
   };
 }
 
@@ -115,10 +107,8 @@ export function buildColorSchemeExportPayload(input: {
     payload.reader = {
       light: { ...input.reader.light },
       dark: { ...input.reader.dark },
-      colorEnabledLight: { ...input.reader.colorEnabledLight },
-      colorEnabledDark: { ...input.reader.colorEnabledDark },
+      colorEnabled: { ...input.reader.colorEnabled },
       userPresets: serializeReaderPaletteUserPresets(input.reader.userPresets),
-      selectedPresetId: input.reader.selectedPresetId,
     };
   }
   if (input.highlight) {

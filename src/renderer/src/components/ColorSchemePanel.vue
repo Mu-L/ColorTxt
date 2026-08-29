@@ -8,7 +8,9 @@ import ColorSchemeHighlightPanel, {
 import ColorSchemeLineationPanel, {
   type LineationColorRow,
 } from "./ColorSchemeLineationPanel.vue";
-import ColorSchemeReaderPanel from "./ColorSchemeReaderPanel.vue";
+import ColorSchemeReaderPanel, {
+  type ColorSchemeReaderPane,
+} from "./ColorSchemeReaderPanel.vue";
 import ColorSchemePresetList, {
   type ColorSchemePresetListRow,
 } from "./ColorSchemePresetList.vue";
@@ -28,15 +30,11 @@ import {
 import {
   BUILTIN_READER_PALETTE_PRESETS,
   cloneReaderPaletteSnapshot,
-  CURRENT_READER_PALETTE_PRESET_KEY,
-  CURRENT_READER_PALETTE_PRESET_NAME,
   DEFAULT_READER_PALETTE_PRESET_ID,
   DEFAULT_USER_READER_PALETTE_PRESET_NAME,
+  ensureMatchedReaderPalettePreset,
   findNamedReaderPalettePreset,
   newUserReaderPalettePresetId,
-  parseReaderPaletteSelectedPresetId,
-  readerPaletteConfigsEqual,
-  readerPaletteSurfacesEqual,
   resolveNamedReaderPalettePreset,
   serializeReaderPaletteUserPresets,
   type ReaderPalettePreset,
@@ -69,10 +67,8 @@ export type ColorSchemeApplyPayload = {
   reader?: {
     light: ReaderSurfacePalette;
     dark: ReaderSurfacePalette;
-    colorEnabledLight: ReaderSurfaceColorEnabled;
-    colorEnabledDark: ReaderSurfaceColorEnabled;
+    colorEnabled: ReaderSurfaceColorEnabled;
     userPresets: ReaderPalettePreset[];
-    selectedPresetId: string;
   };
   highlight?: { light: string[]; dark: string[] };
   lineation?: { light: string[]; dark: string[] };
@@ -83,15 +79,13 @@ const props = withDefaults(
     currentTheme: string;
     readerSurfaceLight: ReaderSurfacePalette;
     readerSurfaceDark: ReaderSurfacePalette;
-    readerPaletteColorEnabledLight: ReaderSurfaceColorEnabled;
-    readerPaletteColorEnabledDark: ReaderSurfaceColorEnabled;
+    readerPaletteColorEnabled: ReaderSurfaceColorEnabled;
     monacoFontFamily: string;
     highlightColorsLight?: string[];
     highlightColorsDark?: string[];
     lineationColorsLight?: string[];
     lineationColorsDark?: string[];
     readerPaletteUserPresets?: ReaderPalettePreset[];
-    readerPaletteSelectedPresetId?: string;
     /** 显示的标签；找书窗口仅传 `['reader']` */
     visibleTabs?: ColorSchemeTabId[];
   }>(),
@@ -101,7 +95,6 @@ const props = withDefaults(
     lineationColorsLight: () => [...DEFAULT_LINEATION_COLORS_LIGHT],
     lineationColorsDark: () => [...DEFAULT_LINEATION_COLORS_DARK],
     readerPaletteUserPresets: () => [],
-    readerPaletteSelectedPresetId: DEFAULT_READER_PALETTE_PRESET_ID,
     visibleTabs: () => ["reader", "highlight", "lineation"],
   },
 );
@@ -123,18 +116,14 @@ function ensureActiveTabInVisible() {
 
 const draftLight = ref<ReaderSurfacePalette>({ ...defaultReaderPaletteLight });
 const draftDark = ref<ReaderSurfacePalette>({ ...defaultReaderPaletteDark });
-const draftColorEnabledLight = ref<ReaderSurfaceColorEnabled>({
-  ...defaultReaderPaletteColorEnabled,
-});
-const draftColorEnabledDark = ref<ReaderSurfaceColorEnabled>({
+const draftColorEnabled = ref<ReaderSurfaceColorEnabled>({
   ...defaultReaderPaletteColorEnabled,
 });
 
-const presetListOpen = ref(false);
-const customSnapshot = ref<ReaderPalettePresetSnapshot | null>(null);
-const selectedPresetId = ref(DEFAULT_READER_PALETTE_PRESET_ID);
+const readerPane = ref<ColorSchemeReaderPane>("list");
 const activePresetKey = ref(DEFAULT_READER_PALETTE_PRESET_ID);
 const draftUserPresets = ref<ReaderPalettePreset[]>([]);
+let draftBaselineJson = "";
 
 let highlightRowIdSeq = 0;
 
@@ -178,12 +167,6 @@ const activeDraft = computed(() =>
   isLightShell.value ? draftLight.value : draftDark.value,
 );
 
-const activeColorEnabledDraft = computed(() =>
-  isLightShell.value
-    ? draftColorEnabledLight.value
-    : draftColorEnabledDark.value,
-);
-
 const pickerLive = ref<Partial<Record<keyof ReaderSurfacePalette, string>>>({});
 
 const highlightPickerLive = ref<Partial<Record<number, string>>>({});
@@ -193,15 +176,14 @@ type ColorSchemeListPanelExpose = { scrollToBottom: () => void | Promise<void> }
 const highlightPanelRef = ref<ColorSchemeListPanelExpose | null>(null);
 const lineationPanelRef = ref<ColorSchemeListPanelExpose | null>(null);
 
-const displaySurface = computed((): ReaderSurfacePalette =>
-  resolveEffectiveReaderPalette(
-    {
-      ...activeDraft.value,
-      ...pickerLive.value,
-    },
-    activeColorEnabledDraft.value,
-  ),
-);
+const displaySurface = computed((): ReaderSurfacePalette => {
+  const palette = {
+    ...activeDraft.value,
+    ...pickerLive.value,
+  };
+  if (readerPane.value === "colors") return palette;
+  return resolveEffectiveReaderPalette(palette, draftColorEnabled.value);
+});
 
 const previewBoxStyle = computed(
   (): StyleValue => ({
@@ -246,61 +228,27 @@ function snapshotFromDraft(): ReaderPalettePresetSnapshot {
   return {
     light: { ...draftLight.value },
     dark: { ...draftDark.value },
-    colorEnabledLight: { ...draftColorEnabledLight.value },
-    colorEnabledDark: { ...draftColorEnabledDark.value },
   };
 }
 
-function applySnapshotToDraft(snap: ReaderPalettePresetSnapshot) {
+function applyPaletteToDraft(snap: Pick<ReaderPalettePresetSnapshot, "light" | "dark">) {
   draftLight.value = { ...snap.light };
   draftDark.value = { ...snap.dark };
-  draftColorEnabledLight.value = { ...snap.colorEnabledLight };
-  draftColorEnabledDark.value = { ...snap.colorEnabledDark };
-}
-
-function lastNamedPreset(): ReaderPalettePreset {
-  return resolveNamedReaderPalettePreset(
-    selectedPresetId.value,
-    draftUserPresets.value,
-  );
-}
-
-function currentThemeSurface(
-  snap: ReaderPalettePresetSnapshot,
-): ReaderSurfacePalette {
-  return isLightShell.value ? snap.light : snap.dark;
-}
-
-/**
- * 列表卡片只展示当前亮/暗主题：背景、正文、其余 7 色。
- * 只要这一面和最后点选的命名预设相同，就不单独占「当前配色」一行
- *（另一面或开关不同时，点该预设仍会把两套草稿一起换成预设）。
- */
-function snapshotLooksLikeNamed(
-  snap: ReaderPalettePresetSnapshot,
-  named: ReaderPalettePreset = lastNamedPreset(),
-): boolean {
-  return (
-    readerPaletteConfigsEqual(snap, named) ||
-    readerPaletteSurfacesEqual(currentThemeSurface(snap), currentThemeSurface(named))
-  );
-}
-
-/** 快照若与最后点选的命名预设相同，则不算「当前配色」 */
-function reconcileCustomSnapshot() {
-  const named = lastNamedPreset();
-  if (customSnapshot.value && snapshotLooksLikeNamed(customSnapshot.value, named)) {
-    customSnapshot.value = null;
-    if (activePresetKey.value === CURRENT_READER_PALETTE_PRESET_KEY) {
-      activePresetKey.value = named.id;
-    }
-  }
 }
 
 function isEditingUserPreset(): boolean {
-  const key = activePresetKey.value;
-  if (key === CURRENT_READER_PALETTE_PRESET_KEY) return false;
-  return draftUserPresets.value.some((p) => p.id === key);
+  return draftUserPresets.value.some((p) => p.id === activePresetKey.value);
+}
+
+const isUserPreset = computed(() => isEditingUserPreset());
+
+function syncSelectionFromColors() {
+  const matched = ensureMatchedReaderPalettePreset(
+    snapshotFromDraft(),
+    draftUserPresets.value,
+  );
+  draftUserPresets.value = matched.userPresets;
+  activePresetKey.value = matched.selected.id;
 }
 
 function writeDraftIntoUserPreset(id: string) {
@@ -318,25 +266,14 @@ function writeDraftIntoUserPreset(id: string) {
 function markManualEdit() {
   if (isEditingUserPreset()) {
     writeDraftIntoUserPreset(activePresetKey.value);
-    return;
   }
-  const named = lastNamedPreset();
-  const snap = snapshotFromDraft();
-  if (snapshotLooksLikeNamed(snap, named)) {
-    customSnapshot.value = null;
-    activePresetKey.value = named.id;
-    return;
-  }
-  customSnapshot.value = snap;
-  activePresetKey.value = CURRENT_READER_PALETTE_PRESET_KEY;
 }
 
 function presetListRowFromPalette(
   key: string,
   name: string,
   palette: ReaderSurfacePalette,
-  editable: boolean,
-  canAddAsPreset = false,
+  custom: boolean,
 ): ColorSchemePresetListRow {
   return {
     key,
@@ -344,26 +281,9 @@ function presetListRowFromPalette(
     bg: palette.readerBg,
     bodyText: palette.bodyText,
     swatches: READER_SURFACE_PRESET_CARD_SWATCH_KEYS.map((k) => palette[k]),
-    editable,
-    canAddAsPreset,
+    custom,
   };
 }
-
-const hasCustomSnapshot = computed(() => {
-  const snap = customSnapshot.value;
-  if (!snap) return false;
-  return !snapshotLooksLikeNamed(snap);
-});
-
-const presetListActiveKey = computed(() => {
-  if (
-    activePresetKey.value === CURRENT_READER_PALETTE_PRESET_KEY &&
-    !hasCustomSnapshot.value
-  ) {
-    return selectedPresetId.value;
-  }
-  return activePresetKey.value;
-});
 
 const presetListRows = computed((): ColorSchemePresetListRow[] => {
   const isLight = isLightShell.value;
@@ -376,61 +296,14 @@ const presetListRows = computed((): ColorSchemePresetListRow[] => {
     const pal = isLight ? p.light : p.dark;
     rows.push(presetListRowFromPalette(p.id, p.name, pal, true));
   }
-  if (hasCustomSnapshot.value && customSnapshot.value) {
-    const pal = isLight
-      ? customSnapshot.value.light
-      : customSnapshot.value.dark;
-    rows.push(
-      presetListRowFromPalette(
-        CURRENT_READER_PALETTE_PRESET_KEY,
-        CURRENT_READER_PALETTE_PRESET_NAME,
-        pal,
-        false,
-        true,
-      ),
-    );
-  }
   return rows;
 });
 
 function onSelectPreset(key: string) {
-  if (key === CURRENT_READER_PALETTE_PRESET_KEY) {
-    if (!customSnapshot.value) return;
-    applySnapshotToDraft(customSnapshot.value);
-    activePresetKey.value = CURRENT_READER_PALETTE_PRESET_KEY;
-    return;
-  }
   const named = findNamedReaderPalettePreset(key, draftUserPresets.value);
   if (!named) return;
-  applySnapshotToDraft(named);
+  applyPaletteToDraft(named);
   activePresetKey.value = named.id;
-  selectedPresetId.value = named.id;
-  reconcileCustomSnapshot();
-}
-
-async function onAddAsPreset() {
-  const snap = customSnapshot.value;
-  if (!snap) return;
-  const input = await appPrompt("", {
-    title: "预设名称",
-    defaultValue: "",
-    placeholder: DEFAULT_USER_READER_PALETTE_PRESET_NAME,
-  });
-  if (input === null) return;
-  const name = input.trim() || DEFAULT_USER_READER_PALETTE_PRESET_NAME;
-  const newPreset: ReaderPalettePreset = {
-    id: newUserReaderPalettePresetId(),
-    name,
-    ...cloneReaderPaletteSnapshot(snap),
-  };
-  const wasOnCurrent =
-    activePresetKey.value === CURRENT_READER_PALETTE_PRESET_KEY;
-  draftUserPresets.value = [...draftUserPresets.value, newPreset];
-  customSnapshot.value = null;
-  if (wasOnCurrent) {
-    selectedPresetId.value = newPreset.id;
-    activePresetKey.value = newPreset.id;
-  }
 }
 
 async function onRenamePreset(id: string) {
@@ -438,7 +311,7 @@ async function onRenamePreset(id: string) {
   if (idx < 0) return;
   const current = draftUserPresets.value[idx]!;
   const input = await appPrompt("", {
-    title: "预设名称",
+    title: "方案名称",
     defaultValue: current.name,
     placeholder: DEFAULT_USER_READER_PALETTE_PRESET_NAME,
   });
@@ -449,62 +322,104 @@ async function onRenamePreset(id: string) {
   draftUserPresets.value = next;
 }
 
-function uniqueUserPresetCopyName(sourceName: string): string {
-  const existing = new Set(draftUserPresets.value.map((p) => p.name));
-  const base = `${sourceName} 副本`;
-  if (!existing.has(base)) return base;
-  let n = 2;
-  while (existing.has(`${base} ${n}`)) n += 1;
-  return `${base} ${n}`;
-}
-
-function onDuplicatePreset(id: string) {
-  const idx = draftUserPresets.value.findIndex((p) => p.id === id);
-  if (idx < 0) return;
-  const current = draftUserPresets.value[idx]!;
+async function onDuplicatePreset(id: string) {
+  const source = findNamedReaderPalettePreset(id, draftUserPresets.value);
+  if (!source) return;
+  const defaultName = `${source.name} 副本`;
+  const input = await appPrompt("", {
+    title: "方案名称",
+    defaultValue: defaultName,
+    placeholder: defaultName,
+  });
+  if (input === null) return;
+  const name = input.trim() || defaultName;
   const snap =
     activePresetKey.value === id
       ? snapshotFromDraft()
-      : cloneReaderPaletteSnapshot(current);
+      : cloneReaderPaletteSnapshot(source);
   const copy: ReaderPalettePreset = {
     id: newUserReaderPalettePresetId(),
-    name: uniqueUserPresetCopyName(current.name),
+    name,
     ...cloneReaderPaletteSnapshot(snap),
   };
+  const userIdx = draftUserPresets.value.findIndex((p) => p.id === id);
   const next = [...draftUserPresets.value];
-  next.splice(idx + 1, 0, copy);
+  if (userIdx >= 0) next.splice(userIdx + 1, 0, copy);
+  else next.push(copy);
   draftUserPresets.value = next;
+  applyPaletteToDraft(copy);
+  activePresetKey.value = copy.id;
+  readerPane.value = "colors";
+}
+
+function onCreateScheme() {
+  void onDuplicatePreset(activePresetKey.value);
 }
 
 async function onDeletePreset(id: string) {
   const current = draftUserPresets.value.find((p) => p.id === id);
   if (!current) return;
-  const ok = await appConfirm(`确定要删除预设「${current.name}」吗？`);
+  const ok = await appConfirm(`确定要删除配色方案「${current.name}」吗？`);
   if (!ok) return;
   const wasActive = activePresetKey.value === id;
-  const wasSelected = selectedPresetId.value === id;
   draftUserPresets.value = draftUserPresets.value.filter((p) => p.id !== id);
-  if (wasActive || wasSelected) {
-    if (wasActive) {
-      customSnapshot.value = snapshotFromDraft();
-      activePresetKey.value = CURRENT_READER_PALETTE_PRESET_KEY;
-    }
-    selectedPresetId.value = DEFAULT_READER_PALETTE_PRESET_ID;
+  if (wasActive) {
+    const fallback = resolveNamedReaderPalettePreset(
+      DEFAULT_READER_PALETTE_PRESET_ID,
+      draftUserPresets.value,
+    );
+    applyPaletteToDraft(fallback);
+    activePresetKey.value = fallback.id;
+    readerPane.value = "list";
   }
 }
 
-function togglePresetList() {
-  presetListOpen.value = !presetListOpen.value;
+function captureDraftBaseline() {
+  draftBaselineJson = serializeDraftForCompare();
+}
+
+function serializeDraftForCompare(): string {
+  return JSON.stringify({
+    reader: props.visibleTabs.includes("reader")
+      ? {
+          light: draftLight.value,
+          dark: draftDark.value,
+          colorEnabled: draftColorEnabled.value,
+          userPresets: draftUserPresets.value,
+        }
+      : null,
+    highlight: props.visibleTabs.includes("highlight")
+      ? {
+          light: draftHighlightLight.value.map((r) => r.color),
+          dark: draftHighlightDark.value.map((r) => r.color),
+        }
+      : null,
+    lineation: props.visibleTabs.includes("lineation")
+      ? {
+          light: draftLineationLight.value.map((r) => r.color),
+          dark: draftLineationDark.value.map((r) => r.color),
+        }
+      : null,
+  });
+}
+
+function isDraftDirty(): boolean {
+  if (Object.keys(pickerLive.value).length) return true;
+  if (Object.keys(highlightPickerLive.value).length) return true;
+  if (Object.keys(lineationPickerLive.value).length) return true;
+  return serializeDraftForCompare() !== draftBaselineJson;
+}
+
+async function confirmDiscardIfDirty(): Promise<boolean> {
+  if (!isDraftDirty()) return true;
+  return appConfirm("配色已修改，确定要放弃这些改动吗？", "修改未保存");
 }
 
 function syncDraftFromProps() {
   draftLight.value = { ...props.readerSurfaceLight };
   draftDark.value = { ...props.readerSurfaceDark };
-  draftColorEnabledLight.value = mergeReaderPaletteColorEnabled(
-    props.readerPaletteColorEnabledLight,
-  );
-  draftColorEnabledDark.value = mergeReaderPaletteColorEnabled(
-    props.readerPaletteColorEnabledDark,
+  draftColorEnabled.value = mergeReaderPaletteColorEnabled(
+    props.readerPaletteColorEnabled,
   );
 }
 
@@ -512,25 +427,8 @@ function syncPresetDraftFromProps() {
   draftUserPresets.value = serializeReaderPaletteUserPresets(
     props.readerPaletteUserPresets,
   );
-  selectedPresetId.value = parseReaderPaletteSelectedPresetId(
-    props.readerPaletteSelectedPresetId,
-    draftUserPresets.value,
-  );
-  const named = resolveNamedReaderPalettePreset(
-    selectedPresetId.value,
-    draftUserPresets.value,
-  );
-  const applied = snapshotFromDraft();
-  if (!snapshotLooksLikeNamed(applied, named)) {
-    customSnapshot.value = applied;
-    activePresetKey.value = CURRENT_READER_PALETTE_PRESET_KEY;
-  } else {
-    customSnapshot.value = null;
-    activePresetKey.value = named.id;
-    selectedPresetId.value = named.id;
-  }
-  reconcileCustomSnapshot();
-  presetListOpen.value = false;
+  syncSelectionFromColors();
+  readerPane.value = "list";
 }
 
 function syncHighlightDraftFromProps() {
@@ -570,22 +468,11 @@ function onColorEnabledUpdate(
   key: keyof ReaderSurfaceColorEnabled,
   enabled: boolean,
 ) {
-  const current = isLightShell.value
-    ? draftColorEnabledLight.value[key]
-    : draftColorEnabledDark.value[key];
-  if (current === enabled) return;
-  if (isLightShell.value) {
-    draftColorEnabledLight.value = {
-      ...draftColorEnabledLight.value,
-      [key]: enabled,
-    };
-  } else {
-    draftColorEnabledDark.value = {
-      ...draftColorEnabledDark.value,
-      [key]: enabled,
-    };
-  }
-  markManualEdit();
+  if (draftColorEnabled.value[key] === enabled) return;
+  draftColorEnabled.value = {
+    ...draftColorEnabled.value,
+    [key]: enabled,
+  };
 }
 
 function onApplyAll() {
@@ -594,10 +481,8 @@ function onApplyAll() {
     payload.reader = {
       light: { ...draftLight.value },
       dark: { ...draftDark.value },
-      colorEnabledLight: { ...draftColorEnabledLight.value },
-      colorEnabledDark: { ...draftColorEnabledDark.value },
+      colorEnabled: { ...draftColorEnabled.value },
       userPresets: serializeReaderPaletteUserPresets(draftUserPresets.value),
-      selectedPresetId: selectedPresetId.value,
     };
   }
   if (props.visibleTabs.includes("highlight")) {
@@ -617,18 +502,9 @@ function onApplyAll() {
 }
 
 function onCancel() {
-  modelValue.value = false;
-}
-
-function onResetReaderDefaults() {
-  const named = resolveNamedReaderPalettePreset(
-    selectedPresetId.value,
-    draftUserPresets.value,
-  );
-  applySnapshotToDraft(named);
-  customSnapshot.value = null;
-  activePresetKey.value = named.id;
-  selectedPresetId.value = named.id;
+  void confirmDiscardIfDirty().then((ok) => {
+    if (ok) modelValue.value = false;
+  });
 }
 
 function mutActiveHighlightDraft(updater: (arr: HighlightColorRow[]) => void) {
@@ -780,10 +656,8 @@ async function onExportColorScheme() {
           reader: {
             light: { ...draftLight.value },
             dark: { ...draftDark.value },
-            colorEnabledLight: { ...draftColorEnabledLight.value },
-            colorEnabledDark: { ...draftColorEnabledDark.value },
+            colorEnabled: { ...draftColorEnabled.value },
             userPresets: draftUserPresets.value,
-            selectedPresetId: selectedPresetId.value,
           },
         }
       : {}),
@@ -827,29 +701,11 @@ function applyImportedColorScheme(data: ColorSchemeExportV1) {
   if (data.reader && props.visibleTabs.includes("reader")) {
     draftLight.value = { ...data.reader.light };
     draftDark.value = { ...data.reader.dark };
-    draftColorEnabledLight.value = { ...data.reader.colorEnabledLight };
-    draftColorEnabledDark.value = { ...data.reader.colorEnabledDark };
+    draftColorEnabled.value = { ...data.reader.colorEnabled };
     draftUserPresets.value = serializeReaderPaletteUserPresets(
       data.reader.userPresets,
     );
-    selectedPresetId.value = parseReaderPaletteSelectedPresetId(
-      data.reader.selectedPresetId,
-      draftUserPresets.value,
-    );
-    const named = resolveNamedReaderPalettePreset(
-      selectedPresetId.value,
-      draftUserPresets.value,
-    );
-    const snap = snapshotFromDraft();
-    if (!snapshotLooksLikeNamed(snap, named)) {
-      customSnapshot.value = snap;
-      activePresetKey.value = CURRENT_READER_PALETTE_PRESET_KEY;
-    } else {
-      customSnapshot.value = null;
-      activePresetKey.value = named.id;
-      selectedPresetId.value = named.id;
-    }
-    reconcileCustomSnapshot();
+    syncSelectionFromColors();
     pickerLive.value = {};
     applied += 1;
   }
@@ -906,10 +762,11 @@ watch(modelValue, (open) => {
   syncPresetDraftFromProps();
   if (props.visibleTabs.includes("highlight")) syncHighlightDraftFromProps();
   if (props.visibleTabs.includes("lineation")) syncLineationDraftFromProps();
+  captureDraftBaseline();
 });
 
 watch(activeTab, (tab) => {
-  if (tab !== "reader") presetListOpen.value = false;
+  if (tab !== "reader") readerPane.value = "list";
   if (tab !== "highlight") highlightPickerLive.value = {};
   if (tab !== "lineation") lineationPickerLive.value = {};
 });
@@ -943,6 +800,7 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
     :mask-closable="false"
     :esc-closable="true"
     :body-scroll="false"
+    :before-close="confirmDiscardIfDirty"
   >
     <div class="colorSchemeLayout">
       <ColorSchemeTabBar
@@ -961,9 +819,9 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
           v-show="activeTab === 'reader'"
           :display-surface="displaySurface"
           :editing-surface="activeDraft"
-          :color-enabled="activeColorEnabledDraft"
+          :color-enabled="draftColorEnabled"
           :preview-box-style="previewBoxStyle"
-          :show-preset-list="presetListOpen"
+          :reader-pane="readerPane"
           @update-surface-key="onPickerUpdate"
           @update-color-enabled="onColorEnabledUpdate"
           @draft-hex="onPickerDraftHex"
@@ -972,12 +830,8 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
           <template #presetList>
             <ColorSchemePresetList
               :rows="presetListRows"
-              :active-key="presetListActiveKey"
+              :active-key="activePresetKey"
               @select="onSelectPreset"
-              @edit="onRenamePreset"
-              @duplicate="onDuplicatePreset"
-              @remove="onDeletePreset"
-              @add="onAddAsPreset"
             />
           </template>
         </ColorSchemeReaderPanel>
@@ -1020,27 +874,90 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
       <div class="colorSchemePanelFooter">
         <div v-if="activeTab === 'reader'" class="colorSchemePanelFooterStart">
           <button
+            v-if="readerPane !== 'list'"
             type="button"
             class="btn"
             size="large"
-            @click="onResetReaderDefaults"
-          >
-            恢复默认阅读器配色
-          </button>
-          <button
-            type="button"
-            class="btn btnIconColorful"
-            :class="{ active: presetListOpen }"
-            size="large"
-            @click="togglePresetList"
+            @click="readerPane = 'list'"
           >
             <span
               class="colorSchemeFooterBtnIcon"
               aria-hidden="true"
-              v-html="icons.palette"
+              v-html="icons.back"
             />
-            预设阅读器配色
+            退出编辑
           </button>
+          <template v-else>
+            <button
+              type="button"
+              class="btn"
+              size="large"
+              @click="readerPane = 'switches'"
+            >
+              <span
+                class="colorSchemeFooterBtnIcon"
+                aria-hidden="true"
+                v-html="icons.switch"
+              />
+              编辑开关
+            </button>
+            <button
+              type="button"
+              class="btn btnIconColorful"
+              size="large"
+              :disabled="!isUserPreset"
+              :title="isUserPreset ? undefined : '内置方案不支持改色，请通过「新增配色方案」来创建自定义方案'"
+              @click="readerPane = 'colors'"
+            >
+              <span
+                class="colorSchemeFooterBtnIcon"
+                aria-hidden="true"
+                v-html="icons.palette"
+              />
+              编辑配色
+            </button>
+            <button
+              type="button"
+              class="btn"
+              size="large"
+              @click="onCreateScheme"
+            >
+              <span
+                class="colorSchemeFooterBtnIcon"
+                aria-hidden="true"
+                v-html="icons.add"
+              />
+              新增配色方案
+            </button>
+          </template>
+          <template v-if="readerPane === 'colors' && isUserPreset">
+            <button
+              type="button"
+              class="btn"
+              size="large"
+              @click="onRenamePreset(activePresetKey)"
+            >
+              <span
+                class="colorSchemeFooterBtnIcon"
+                aria-hidden="true"
+                v-html="icons.edit"
+              />
+              重命名
+            </button>
+            <button
+              type="button"
+              class="btn danger"
+              size="large"
+              @click="onDeletePreset(activePresetKey)"
+            >
+              <span
+                class="colorSchemeFooterBtnIcon"
+                aria-hidden="true"
+                v-html="icons.remove"
+              />
+              删除
+            </button>
+          </template>
         </div>
         <div
           v-else-if="activeTab === 'highlight'"

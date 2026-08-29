@@ -1,38 +1,32 @@
 /**
- * 阅读器表面配色预设：内置亮/暗各一套完整 9 色，用户预设可增删改名。
+ * 阅读器表面配色方案：内置亮/暗各一套完整 9 色，用户方案可增删改名。
  */
 import {
-  defaultReaderPaletteColorEnabled,
   defaultReaderPaletteDark,
   defaultReaderPaletteLight,
   isValidReaderSurfaceHex,
+  overridesFromColorEnabled,
+  overridesFromFullPalette,
   parseReaderPaletteOverrides,
   READER_SURFACE_KEYS,
-  READER_SURFACE_OPTIONAL_COLOR_KEYS,
   type ReaderSurfaceColorEnabled,
   type ReaderSurfacePalette,
 } from "./readerPalette";
 
 export const DEFAULT_READER_PALETTE_PRESET_ID = "default";
+/** 保留 id，避免用户方案占用（旧草稿曾用「当前配色」） */
 export const CURRENT_READER_PALETTE_PRESET_KEY = "current";
-export const CURRENT_READER_PALETTE_PRESET_NAME = "当前配色";
 export const DEFAULT_USER_READER_PALETTE_PRESET_NAME = "自定义";
 
 export type ReaderPalettePresetSnapshot = {
   light: ReaderSurfacePalette;
   dark: ReaderSurfacePalette;
-  colorEnabledLight: ReaderSurfaceColorEnabled;
-  colorEnabledDark: ReaderSurfaceColorEnabled;
 };
 
 export type ReaderPalettePreset = ReaderPalettePresetSnapshot & {
   id: string;
   name: string;
 };
-
-function allEnabled(): ReaderSurfaceColorEnabled {
-  return { ...defaultReaderPaletteColorEnabled };
-}
 
 function preset(
   id: string,
@@ -45,12 +39,10 @@ function preset(
     name,
     light,
     dark,
-    colorEnabledLight: allEnabled(),
-    colorEnabledDark: allEnabled(),
   };
 }
 
-/** 内置预设（「默认」为现有阅读器色；其余名称与色调见列表顺序） */
+/** 内置方案（「默认」为现有阅读器色；其余名称与色调见列表顺序） */
 export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
   preset(
     DEFAULT_READER_PALETTE_PRESET_ID,
@@ -65,7 +57,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#fff6e8",
       chapterTitle: "#c4783a",
       bodyText: "#3d2e24",
-      txtrQuoteInner: "#b84a3a",
+      txtrQuoteInner: "#5340a0",
       txtrBracketInner: "#3a5a88",
       txtrPunctuation: "#3a8a78",
       txtrSpecialMarker: "#d87858",
@@ -76,7 +68,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#2a221c",
       chapterTitle: "#e8b06a",
       bodyText: "#f0e0c8",
-      txtrQuoteInner: "#e8a090",
+      txtrQuoteInner: "#cbb8f5",
       txtrBracketInner: "#90b0d8",
       txtrPunctuation: "#78c8b0",
       txtrSpecialMarker: "#f0a080",
@@ -91,7 +83,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#fff7f0",
       chapterTitle: "#fe6b64",
       bodyText: "#423126",
-      txtrQuoteInner: "#c04030",
+      txtrQuoteInner: "#6b2e90",
       txtrBracketInner: "#405070",
       txtrPunctuation: "#508070",
       txtrSpecialMarker: "#e05040",
@@ -102,7 +94,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#3c2b25",
       chapterTitle: "#ff9c94",
       bodyText: "#f6e1d7",
-      txtrQuoteInner: "#ffb0a0",
+      txtrQuoteInner: "#d8b0ff",
       txtrBracketInner: "#b0c0d8",
       txtrPunctuation: "#a0d0c0",
       txtrSpecialMarker: "#ff9080",
@@ -117,7 +109,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#f3f8fd",
       chapterTitle: "#1a73c9",
       bodyText: "#1a2838",
-      txtrQuoteInner: "#c04050",
+      txtrQuoteInner: "#9a6808",
       txtrBracketInner: "#2d53e5",
       txtrPunctuation: "#2a8090",
       txtrSpecialMarker: "#e07070",
@@ -128,7 +120,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#1a2838",
       chapterTitle: "#7ec8f0",
       bodyText: "#d4e4f0",
-      txtrQuoteInner: "#e09090",
+      txtrQuoteInner: "#f5d15c",
       txtrBracketInner: "#90b0e8",
       txtrPunctuation: "#70c0d0",
       txtrSpecialMarker: "#f07080",
@@ -143,7 +135,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#d8dde4",
       chapterTitle: "#4a6a88",
       bodyText: "#2a3038",
-      txtrQuoteInner: "#8b3a3a",
+      txtrQuoteInner: "#27664f",
       txtrBracketInner: "#3a4a7a",
       txtrPunctuation: "#3a6a78",
       txtrSpecialMarker: "#a85858",
@@ -154,7 +146,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#2c323c",
       chapterTitle: "#8aa4bc",
       bodyText: "#c8d0d8",
-      txtrQuoteInner: "#d09088",
+      txtrQuoteInner: "#8fcfb4",
       txtrBracketInner: "#a0b8d8",
       txtrPunctuation: "#78b0b8",
       txtrSpecialMarker: "#d08888",
@@ -169,7 +161,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#eceff4",
       chapterTitle: "#5e81ac",
       bodyText: "#2e3440",
-      txtrQuoteInner: "#bf616a",
+      txtrQuoteInner: "#3f6f4e",
       txtrBracketInner: "#5e81ac",
       txtrPunctuation: "#8fbcbb",
       txtrSpecialMarker: "#d08770",
@@ -180,7 +172,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#2e3440",
       chapterTitle: "#88c0d0",
       bodyText: "#d8dee9",
-      txtrQuoteInner: "#bf616a",
+      txtrQuoteInner: "#a3be8c",
       txtrBracketInner: "#81a1c1",
       txtrPunctuation: "#8fbcbb",
       txtrSpecialMarker: "#d08770",
@@ -195,7 +187,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#d7dbbd",
       chapterTitle: "#177b4d",
       bodyText: "#232c16",
-      txtrQuoteInner: "#8b2a1a",
+      txtrQuoteInner: "#9c3470",
       txtrBracketInner: "#1a4060",
       txtrPunctuation: "#2a6b5a",
       txtrSpecialMarker: "#c45c4c",
@@ -206,7 +198,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#333627",
       chapterTitle: "#a6d608",
       bodyText: "#d8deba",
-      txtrQuoteInner: "#e0a080",
+      txtrQuoteInner: "#f2b0d0",
       txtrBracketInner: "#9cc8e0",
       txtrPunctuation: "#7ec9a0",
       txtrSpecialMarker: "#f08070",
@@ -221,7 +213,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#f0d1d5",
       chapterTitle: "#de3838",
       bodyText: "#4e1609",
-      txtrQuoteInner: "#a01020",
+      txtrQuoteInner: "#2f6a36",
       txtrBracketInner: "#3a2060",
       txtrPunctuation: "#6a4070",
       txtrSpecialMarker: "#c03040",
@@ -232,7 +224,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#462f32",
       chapterTitle: "#ff646e",
       bodyText: "#e5c4c8",
-      txtrQuoteInner: "#ff9aa0",
+      txtrQuoteInner: "#9fd4a0",
       txtrBracketInner: "#c8b0e0",
       txtrPunctuation: "#e0a0b0",
       txtrSpecialMarker: "#ff8088",
@@ -247,7 +239,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#fbf1c7",
       chapterTitle: "#c06020",
       bodyText: "#3c3836",
-      txtrQuoteInner: "#9d0006",
+      txtrQuoteInner: "#6b6410",
       txtrBracketInner: "#076678",
       txtrPunctuation: "#427b58",
       txtrSpecialMarker: "#af3a03",
@@ -258,7 +250,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#282828",
       chapterTitle: "#fe8019",
       bodyText: "#ebdbb2",
-      txtrQuoteInner: "#fb4934",
+      txtrQuoteInner: "#b8bb26",
       txtrBracketInner: "#83a598",
       txtrPunctuation: "#8ec07c",
       txtrSpecialMarker: "#fe8019",
@@ -273,7 +265,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#faf0e8",
       chapterTitle: "#c9887a",
       bodyText: "#5a453c",
-      txtrQuoteInner: "#c07070",
+      txtrQuoteInner: "#6e52a8",
       txtrBracketInner: "#7a8ab0",
       txtrPunctuation: "#7aaa9a",
       txtrSpecialMarker: "#e8a0a0",
@@ -284,7 +276,7 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
       readerBg: "#342c2a",
       chapterTitle: "#e8b0a0",
       bodyText: "#efe4dc",
-      txtrQuoteInner: "#e8a8a0",
+      txtrQuoteInner: "#d4c0f8",
       txtrBracketInner: "#a8b8d8",
       txtrPunctuation: "#a8d0c0",
       txtrSpecialMarker: "#f0b8b0",
@@ -308,20 +300,12 @@ export function cloneReaderSurfacePalette(
   return { ...palette };
 }
 
-export function cloneReaderPaletteColorEnabled(
-  enabled: ReaderSurfaceColorEnabled,
-): ReaderSurfaceColorEnabled {
-  return { ...enabled };
-}
-
 export function cloneReaderPaletteSnapshot(
   snap: ReaderPalettePresetSnapshot,
 ): ReaderPalettePresetSnapshot {
   return {
     light: cloneReaderSurfacePalette(snap.light),
     dark: cloneReaderSurfacePalette(snap.dark),
-    colorEnabledLight: cloneReaderPaletteColorEnabled(snap.colorEnabledLight),
-    colorEnabledDark: cloneReaderPaletteColorEnabled(snap.colorEnabledDark),
   };
 }
 
@@ -351,41 +335,81 @@ function palettesEqual(
   return true;
 }
 
-/** 只比较 9 个色值（忽略 token 开关） */
-export function readerPaletteSurfacesEqual(
-  a: ReaderSurfacePalette,
-  b: ReaderSurfacePalette,
-): boolean {
-  return palettesEqual(a, b);
-}
-
-function isOptionalColorOn(
-  enabled: ReaderSurfaceColorEnabled,
-  key: (typeof READER_SURFACE_OPTIONAL_COLOR_KEYS)[number],
-): boolean {
-  return enabled[key] !== false;
-}
-
-function colorEnabledEqual(
-  a: ReaderSurfaceColorEnabled,
-  b: ReaderSurfaceColorEnabled,
-): boolean {
-  for (const key of READER_SURFACE_OPTIONAL_COLOR_KEYS) {
-    if (isOptionalColorOn(a, key) !== isOptionalColorOn(b, key)) return false;
-  }
-  return true;
-}
-
 export function readerPaletteConfigsEqual(
   a: ReaderPalettePresetSnapshot,
   b: ReaderPalettePresetSnapshot,
 ): boolean {
-  return (
-    palettesEqual(a.light, b.light) &&
-    palettesEqual(a.dark, b.dark) &&
-    colorEnabledEqual(a.colorEnabledLight, b.colorEnabledLight) &&
-    colorEnabledEqual(a.colorEnabledDark, b.colorEnabledDark)
-  );
+  return palettesEqual(a.light, b.light) && palettesEqual(a.dark, b.dark);
+}
+
+/**
+ * 按亮/暗 9 色匹配方案：先用户方案（相同色时保留副本为选中），再内置。
+ */
+export function findReaderPalettePresetByColors(
+  snap: ReaderPalettePresetSnapshot,
+  userPresets: readonly ReaderPalettePreset[],
+): ReaderPalettePreset | undefined {
+  for (const p of userPresets) {
+    if (readerPaletteConfigsEqual(p, snap)) return p;
+  }
+  for (const p of BUILTIN_READER_PALETTE_PRESETS) {
+    if (readerPaletteConfigsEqual(p, snap)) return p;
+  }
+  return undefined;
+}
+
+/** 当前色匹配不到任何方案时，追加名为「自定义」的用户方案并选中 */
+export function ensureMatchedReaderPalettePreset(
+  snap: ReaderPalettePresetSnapshot,
+  userPresets: readonly ReaderPalettePreset[],
+): { userPresets: ReaderPalettePreset[]; selected: ReaderPalettePreset } {
+  const found = findReaderPalettePresetByColors(snap, userPresets);
+  if (found) {
+    return {
+      userPresets: serializeReaderPaletteUserPresets(userPresets),
+      selected: found,
+    };
+  }
+  const custom: ReaderPalettePreset = {
+    id: newUserReaderPalettePresetId(),
+    name: DEFAULT_USER_READER_PALETTE_PRESET_NAME,
+    ...cloneReaderPaletteSnapshot(snap),
+  };
+  return {
+    userPresets: [...serializeReaderPaletteUserPresets(userPresets), custom],
+    selected: custom,
+  };
+}
+
+export type PersistedReaderPaletteState = {
+  readerPaletteOverridesLight: Partial<ReaderSurfacePalette>;
+  readerPaletteOverridesDark: Partial<ReaderSurfacePalette>;
+  readerPaletteColorEnabledOverrides: Partial<ReaderSurfaceColorEnabled>;
+  readerPaletteUserPresets: ReaderPalettePreset[];
+};
+
+export function toPersistedReaderPaletteState(input: {
+  light: ReaderSurfacePalette;
+  dark: ReaderSurfacePalette;
+  colorEnabled: ReaderSurfaceColorEnabled;
+  userPresets: readonly ReaderPalettePreset[];
+}): PersistedReaderPaletteState {
+  return {
+    readerPaletteOverridesLight: overridesFromFullPalette(
+      input.light,
+      defaultReaderPaletteLight,
+    ),
+    readerPaletteOverridesDark: overridesFromFullPalette(
+      input.dark,
+      defaultReaderPaletteDark,
+    ),
+    readerPaletteColorEnabledOverrides: overridesFromColorEnabled(
+      input.colorEnabled,
+    ),
+    readerPaletteUserPresets: serializeReaderPaletteUserPresets(
+      input.userPresets,
+    ),
+  };
 }
 
 export function getBuiltinReaderPalettePreset(
@@ -436,17 +460,6 @@ function parseFullPalette(raw: unknown): ReaderSurfacePalette | null {
   };
 }
 
-function parsePresetColorEnabled(raw: unknown): ReaderSurfaceColorEnabled {
-  const out = allEnabled();
-  if (!raw || typeof raw !== "object") return out;
-  const o = raw as Record<string, unknown>;
-  for (const key of READER_SURFACE_OPTIONAL_COLOR_KEYS) {
-    if (o[key] === false) out[key] = false;
-    else if (o[key] === true) out[key] = true;
-  }
-  return out;
-}
-
 function isReservedPresetId(id: string): boolean {
   return (
     id === CURRENT_READER_PALETTE_PRESET_KEY ||
@@ -454,7 +467,7 @@ function isReservedPresetId(id: string): boolean {
   );
 }
 
-/** 从持久化 JSON 解析用户预设；非法项丢弃 */
+/** 从持久化 JSON 解析用户配色方案；非法项丢弃 */
 export function parseReaderPaletteUserPresets(
   raw: unknown,
 ): ReaderPalettePreset[] {
@@ -478,25 +491,9 @@ export function parseReaderPaletteUserPresets(
       name,
       light,
       dark,
-      colorEnabledLight: parsePresetColorEnabled(o.colorEnabledLight),
-      colorEnabledDark: parsePresetColorEnabled(o.colorEnabledDark),
     });
   }
   return out;
-}
-
-/** 校验已点选的命名预设 id；无效则回退「默认」 */
-export function parseReaderPaletteSelectedPresetId(
-  raw: unknown,
-  userPresets: readonly ReaderPalettePreset[],
-): string {
-  if (typeof raw !== "string") return DEFAULT_READER_PALETTE_PRESET_ID;
-  const id = raw.trim();
-  if (!id || id === CURRENT_READER_PALETTE_PRESET_KEY) {
-    return DEFAULT_READER_PALETTE_PRESET_ID;
-  }
-  if (findNamedReaderPalettePreset(id, userPresets)) return id;
-  return DEFAULT_READER_PALETTE_PRESET_ID;
 }
 
 export function serializeReaderPaletteUserPresets(

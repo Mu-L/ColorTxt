@@ -36,12 +36,11 @@ import {
 } from "./fileMetaStore";
 import {
   parseReaderPaletteOverrides,
-  parseReaderPaletteColorEnabledOverrides,
+  parseReaderPaletteColorEnabledOverridesFromPersisted,
   type ReaderSurfaceColorEnabled,
   type ReaderSurfacePalette,
 } from "../constants/readerPalette";
 import {
-  parseReaderPaletteSelectedPresetId,
   parseReaderPaletteUserPresets,
   type ReaderPalettePreset,
 } from "../constants/readerPalettePresets";
@@ -173,14 +172,10 @@ export type PersistedSettingsData = {
   readerPaletteOverridesLight?: Partial<ReaderSurfacePalette>;
   /** 阅读器表面色用户覆盖（暗色侧） */
   readerPaletteOverridesDark?: Partial<ReaderSurfacePalette>;
-  /** 阅读器 token 独立配色开关覆盖（亮色侧，仅持久化 false） */
-  readerPaletteColorEnabledOverridesLight?: Partial<ReaderSurfaceColorEnabled>;
-  /** 阅读器 token 独立配色开关覆盖（暗色侧，仅持久化 false） */
-  readerPaletteColorEnabledOverridesDark?: Partial<ReaderSurfaceColorEnabled>;
-  /** 用户添加的阅读器配色预设 */
+  /** 阅读器 token 独立配色开关覆盖（亮暗共用，仅持久化 false） */
+  readerPaletteColorEnabledOverrides?: Partial<ReaderSurfaceColorEnabled>;
+  /** 用户添加的阅读器配色方案 */
   readerPaletteUserPresets?: ReaderPalettePreset[];
-  /** 最后点选的命名预设 id（内置或用户；不含「当前配色」） */
-  readerPaletteSelectedPresetId?: string;
   /** 自定义高亮色（亮色主题），与默认逐项相同可不写入 */
   highlightColorsLight?: string[];
   /** 自定义高亮色（暗色主题） */
@@ -545,35 +540,16 @@ export function loadPersistedSettingsData(
     const p = parseReaderPaletteOverrides(obj.readerPaletteOverridesDark);
     if (Object.keys(p).length) data.readerPaletteOverridesDark = p;
   }
-  if (
-    obj.readerPaletteColorEnabledOverridesLight &&
-    typeof obj.readerPaletteColorEnabledOverridesLight === "object"
-  ) {
-    const p = parseReaderPaletteColorEnabledOverrides(
-      obj.readerPaletteColorEnabledOverridesLight,
-    );
-    if (Object.keys(p).length) data.readerPaletteColorEnabledOverridesLight = p;
-  }
-  if (
-    obj.readerPaletteColorEnabledOverridesDark &&
-    typeof obj.readerPaletteColorEnabledOverridesDark === "object"
-  ) {
-    const p = parseReaderPaletteColorEnabledOverrides(
-      obj.readerPaletteColorEnabledOverridesDark,
-    );
-    if (Object.keys(p).length) data.readerPaletteColorEnabledOverridesDark = p;
+  const enabledOverrides = parseReaderPaletteColorEnabledOverridesFromPersisted(
+    obj,
+  );
+  if (Object.keys(enabledOverrides).length) {
+    data.readerPaletteColorEnabledOverrides = enabledOverrides;
   }
   const userPresets = parseReaderPaletteUserPresets(
     obj.readerPaletteUserPresets,
   );
   if (userPresets.length) data.readerPaletteUserPresets = userPresets;
-  const selectedPresetId = parseReaderPaletteSelectedPresetId(
-    obj.readerPaletteSelectedPresetId,
-    userPresets,
-  );
-  if (selectedPresetId !== "default" || typeof obj.readerPaletteSelectedPresetId === "string") {
-    data.readerPaletteSelectedPresetId = selectedPresetId;
-  }
   if (Array.isArray(obj.highlightColorsLight)) {
     const h = parseHighlightColorsArray(obj.highlightColorsLight);
     if (h) data.highlightColorsLight = h;
@@ -755,7 +731,11 @@ export function persistSettingsData(
   data: PersistedSettingsData,
 ) {
   try {
-    storage?.setItem(key, JSON.stringify(data));
+    const payload = { ...(data as Record<string, unknown>) };
+    delete payload.readerPaletteColorEnabledOverridesLight;
+    delete payload.readerPaletteColorEnabledOverridesDark;
+    delete payload.readerPaletteSelectedPresetId;
+    storage?.setItem(key, JSON.stringify(payload));
     if (
       typeof window !== "undefined" &&
       storage === window.localStorage &&
@@ -798,6 +778,9 @@ export function patchPersistedMainSettings(
       if (value === undefined) continue;
       next[key] = value;
     }
+    delete next.readerPaletteColorEnabledOverridesLight;
+    delete next.readerPaletteColorEnabledOverridesDark;
+    delete next.readerPaletteSelectedPresetId;
   }
   persistSettingsData(
     typeof localStorage !== "undefined" ? localStorage : undefined,

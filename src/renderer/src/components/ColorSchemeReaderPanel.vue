@@ -11,13 +11,18 @@ import {
   type ReaderSurfacePalette,
 } from "../constants/appUi";
 
-defineProps<{
-  displaySurface: ReaderSurfacePalette;
-  editingSurface: ReaderSurfacePalette;
-  colorEnabled: ReaderSurfaceColorEnabled;
-  previewBoxStyle: StyleValue;
-  showPresetList?: boolean;
-}>();
+export type ColorSchemeReaderPane = "list" | "colors" | "switches";
+
+withDefaults(
+  defineProps<{
+    displaySurface: ReaderSurfacePalette;
+    editingSurface: ReaderSurfacePalette;
+    colorEnabled: ReaderSurfaceColorEnabled;
+    previewBoxStyle: StyleValue;
+    readerPane?: ColorSchemeReaderPane;
+  }>(),
+  { readerPane: "list" },
+);
 
 const emit = defineEmits<{
   "update-surface-key": [key: keyof ReaderSurfacePalette, color: string];
@@ -69,11 +74,13 @@ function switchAriaLabel(key: ReaderSurfaceOptionalColorKey): string {
     </div>
 
     <div
-      class="schemePanelTableScroll"
-      :class="{ 'schemePanelTableScroll--presets': showPresetList }"
+      v-show="readerPane === 'list'"
+      class="schemePanelTableScroll schemePanelTableScroll--presets"
     >
-      <slot v-if="showPresetList" name="presetList" />
-      <table v-else class="colorSchemeTable">
+      <slot name="presetList" />
+    </div>
+    <div v-show="readerPane !== 'list'" class="schemePanelTableScroll">
+      <table class="colorSchemeTable">
         <colgroup>
           <col class="colorSchemeColLabel" />
           <col class="colorSchemeColValue" />
@@ -86,7 +93,10 @@ function switchAriaLabel(key: ReaderSurfaceOptionalColorKey): string {
               <td class="colorSchemeRowLabel">
                 <div class="colorSchemeRowLabelInner">
                   <SwitchToggle
-                    v-if="isReaderSurfaceOptionalColorKey(row[0])"
+                    v-if="
+                      readerPane === 'switches' &&
+                      isReaderSurfaceOptionalColorKey(row[0])
+                    "
                     :model-value="colorEnabled[row[0]]"
                     size="sm"
                     :aria-label="switchAriaLabel(row[0])"
@@ -95,7 +105,7 @@ function switchAriaLabel(key: ReaderSurfaceOptionalColorKey): string {
                     "
                   />
                   <span
-                    v-else
+                    v-else-if="readerPane === 'switches'"
                     class="colorSchemeSwitchSpacer"
                     aria-hidden="true"
                   />
@@ -106,14 +116,9 @@ function switchAriaLabel(key: ReaderSurfaceOptionalColorKey): string {
                 <HexColorPickerField
                   class="colorSchemePicker"
                   :class="{
-                    'colorSchemePicker--off':
-                      isReaderSurfaceOptionalColorKey(row[0]) &&
-                      !colorEnabled[row[0]],
+                    'colorSchemePicker--off': readerPane === 'switches',
                   }"
-                  :disabled="
-                    isReaderSurfaceOptionalColorKey(row[0]) &&
-                    !colorEnabled[row[0]]
-                  "
+                  :disabled="readerPane === 'switches'"
                   :model-value="editingSurface[row[0]]"
                   @update:model-value="
                     emit('update-surface-key', row[0], $event)
@@ -125,7 +130,10 @@ function switchAriaLabel(key: ReaderSurfaceOptionalColorKey): string {
               <td class="colorSchemeRowLabel">
                 <div class="colorSchemeRowLabelInner">
                   <SwitchToggle
-                    v-if="isReaderSurfaceOptionalColorKey(row[1])"
+                    v-if="
+                      readerPane === 'switches' &&
+                      isReaderSurfaceOptionalColorKey(row[1])
+                    "
                     :model-value="colorEnabled[row[1]]"
                     size="sm"
                     :aria-label="switchAriaLabel(row[1])"
@@ -134,7 +142,7 @@ function switchAriaLabel(key: ReaderSurfaceOptionalColorKey): string {
                     "
                   />
                   <span
-                    v-else
+                    v-else-if="readerPane === 'switches'"
                     class="colorSchemeSwitchSpacer"
                     aria-hidden="true"
                   />
@@ -145,14 +153,9 @@ function switchAriaLabel(key: ReaderSurfaceOptionalColorKey): string {
                 <HexColorPickerField
                   class="colorSchemePicker"
                   :class="{
-                    'colorSchemePicker--off':
-                      isReaderSurfaceOptionalColorKey(row[1]) &&
-                      !colorEnabled[row[1]],
+                    'colorSchemePicker--off': readerPane === 'switches',
                   }"
-                  :disabled="
-                    isReaderSurfaceOptionalColorKey(row[1]) &&
-                    !colorEnabled[row[1]]
-                  "
+                  :disabled="readerPane === 'switches'"
                   :model-value="editingSurface[row[1]]"
                   @update:model-value="
                     emit('update-surface-key', row[1], $event)
@@ -165,12 +168,21 @@ function switchAriaLabel(key: ReaderSurfaceOptionalColorKey): string {
             <template v-else>
               <td class="colorSchemeRowLabel">
                 <div class="colorSchemeRowLabelInner">
-                  <span class="colorSchemeSwitchSpacer" aria-hidden="true" />
+                  <span
+                    v-if="readerPane === 'switches'"
+                    class="colorSchemeSwitchSpacer"
+                    aria-hidden="true"
+                  />
                   <span>{{ READER_SURFACE_LABELS[row[0]] }}</span>
                 </div>
               </td>
               <td>
                 <HexColorPickerField
+                  class="colorSchemePicker"
+                  :class="{
+                    'colorSchemePicker--off': readerPane === 'switches',
+                  }"
+                  :disabled="readerPane === 'switches'"
                   :model-value="editingSurface[row[0]]"
                   @update:model-value="
                     emit('update-surface-key', row[0], $event)
@@ -251,7 +263,6 @@ function switchAriaLabel(key: ReaderSurfaceOptionalColorKey): string {
   min-width: 0;
 }
 
-/* 与 SwitchToggle size="sm" 轨道同宽，无开关项用于对齐标签文字 */
 .colorSchemeSwitchSpacer {
   flex: 0 0 32px;
   width: 32px;

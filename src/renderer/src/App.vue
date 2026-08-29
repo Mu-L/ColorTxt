@@ -170,8 +170,6 @@ import {
   defaultRecentFilesHistoryLimit,
   mergeReaderPaletteColorEnabled,
   mergeReaderSurfacePalette,
-  overridesFromColorEnabled,
-  overridesFromFullPalette,
   resolveEffectiveReaderPalette,
   defaultRestoreSessionOnStartup,
   defaultSyncCurrentFile,
@@ -199,9 +197,7 @@ import {
   type ReaderSurfacePalette,
 } from "./constants/appUi";
 import {
-  DEFAULT_READER_PALETTE_PRESET_ID,
-  parseReaderPaletteSelectedPresetId,
-  serializeReaderPaletteUserPresets,
+  toPersistedReaderPaletteState,
   type ReaderPalettePreset,
 } from "./constants/readerPalettePresets";
 import {
@@ -740,14 +736,10 @@ const ebookConvertProgressText = ref("");
 
 const readerPaletteOverridesLight = ref<Partial<ReaderSurfacePalette>>({});
 const readerPaletteOverridesDark = ref<Partial<ReaderSurfacePalette>>({});
-const readerPaletteColorEnabledOverridesLight = ref<
-  Partial<ReaderSurfaceColorEnabled>
->({});
-const readerPaletteColorEnabledOverridesDark = ref<
+const readerPaletteColorEnabledOverrides = ref<
   Partial<ReaderSurfaceColorEnabled>
 >({});
 const readerPaletteUserPresets = ref<ReaderPalettePreset[]>([]);
-const readerPaletteSelectedPresetId = ref(DEFAULT_READER_PALETTE_PRESET_ID);
 
 const readerSurfaceLight = computed(() =>
   mergeReaderSurfacePalette(
@@ -762,23 +754,20 @@ const readerSurfaceDark = computed(() =>
   ),
 );
 
-const readerPaletteColorEnabledLight = computed(() =>
-  mergeReaderPaletteColorEnabled(readerPaletteColorEnabledOverridesLight.value),
-);
-const readerPaletteColorEnabledDark = computed(() =>
-  mergeReaderPaletteColorEnabled(readerPaletteColorEnabledOverridesDark.value),
+const readerPaletteColorEnabled = computed(() =>
+  mergeReaderPaletteColorEnabled(readerPaletteColorEnabledOverrides.value),
 );
 
 const effectiveReaderSurfaceLight = computed(() =>
   resolveEffectiveReaderPalette(
     readerSurfaceLight.value,
-    readerPaletteColorEnabledLight.value,
+    readerPaletteColorEnabled.value,
   ),
 );
 const effectiveReaderSurfaceDark = computed(() =>
   resolveEffectiveReaderPalette(
     readerSurfaceDark.value,
-    readerPaletteColorEnabledDark.value,
+    readerPaletteColorEnabled.value,
   ),
 );
 
@@ -806,10 +795,8 @@ const lineationColorsForReader = computed(() =>
     : lineationColorsDark.value,
 );
 
-const readerPaletteColorEnabledForReader = computed(() =>
-  currentTheme.value === "vs"
-    ? readerPaletteColorEnabledLight.value
-    : readerPaletteColorEnabledDark.value,
+const readerPaletteColorEnabledForReader = computed(
+  () => readerPaletteColorEnabled.value,
 );
 
 const currentFileMetaRecord = computed(() => {
@@ -1165,10 +1152,8 @@ const persistence = useAppPersistence({
   defaultShortcutBindings,
   readerPaletteOverridesLight,
   readerPaletteOverridesDark,
-  readerPaletteColorEnabledOverridesLight,
-  readerPaletteColorEnabledOverridesDark,
+  readerPaletteColorEnabledOverrides,
   readerPaletteUserPresets,
-  readerPaletteSelectedPresetId,
   highlightColorsLight,
   highlightColorsDark,
   lineationColorsLight,
@@ -3122,27 +3107,12 @@ function refreshReaderSurfaceAfterPaletteChange() {
 
 function onApplyColorScheme(payload: ColorSchemeApplyPayload) {
   if (payload.reader) {
-    readerPaletteOverridesLight.value = overridesFromFullPalette(
-      payload.reader.light,
-      defaultReaderPaletteLight,
-    );
-    readerPaletteOverridesDark.value = overridesFromFullPalette(
-      payload.reader.dark,
-      defaultReaderPaletteDark,
-    );
-    readerPaletteColorEnabledOverridesLight.value = overridesFromColorEnabled(
-      payload.reader.colorEnabledLight,
-    );
-    readerPaletteColorEnabledOverridesDark.value = overridesFromColorEnabled(
-      payload.reader.colorEnabledDark,
-    );
-    readerPaletteUserPresets.value = serializeReaderPaletteUserPresets(
-      payload.reader.userPresets,
-    );
-    readerPaletteSelectedPresetId.value = parseReaderPaletteSelectedPresetId(
-      payload.reader.selectedPresetId,
-      readerPaletteUserPresets.value,
-    );
+    const persisted = toPersistedReaderPaletteState(payload.reader);
+    readerPaletteOverridesLight.value = persisted.readerPaletteOverridesLight;
+    readerPaletteOverridesDark.value = persisted.readerPaletteOverridesDark;
+    readerPaletteColorEnabledOverrides.value =
+      persisted.readerPaletteColorEnabledOverrides;
+    readerPaletteUserPresets.value = persisted.readerPaletteUserPresets;
   }
   if (payload.highlight) {
     highlightColorsLight.value = mergeHighlightColors(
@@ -4224,10 +4194,8 @@ useAppShellThemeWatch({
       :current-theme="currentTheme"
       :reader-surface-light="readerSurfaceLight"
       :reader-surface-dark="readerSurfaceDark"
-      :reader-palette-color-enabled-light="readerPaletteColorEnabledLight"
-      :reader-palette-color-enabled-dark="readerPaletteColorEnabledDark"
+      :reader-palette-color-enabled="readerPaletteColorEnabled"
       :reader-palette-user-presets="readerPaletteUserPresets"
-      :reader-palette-selected-preset-id="readerPaletteSelectedPresetId"
       :monaco-font-family="monacoFontFamily"
       :highlight-colors-light="highlightColorsLight"
       :highlight-colors-dark="highlightColorsDark"

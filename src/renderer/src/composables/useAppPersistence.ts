@@ -132,7 +132,6 @@ import {
   type ReaderSurfacePalette,
 } from "../constants/appUi";
 import {
-  parseReaderPaletteSelectedPresetId,
   parseReaderPaletteUserPresets,
   serializeReaderPaletteUserPresets,
   type ReaderPalettePreset,
@@ -289,14 +288,10 @@ export function useAppPersistence(deps: {
   defaultShortcutBindings: ShortcutBindingMap;
   readerPaletteOverridesLight: Ref<Partial<ReaderSurfacePalette>>;
   readerPaletteOverridesDark: Ref<Partial<ReaderSurfacePalette>>;
-  readerPaletteColorEnabledOverridesLight: Ref<
-    Partial<import("../constants/readerPalette").ReaderSurfaceColorEnabled>
-  >;
-  readerPaletteColorEnabledOverridesDark: Ref<
+  readerPaletteColorEnabledOverrides: Ref<
     Partial<import("../constants/readerPalette").ReaderSurfaceColorEnabled>
   >;
   readerPaletteUserPresets: Ref<ReaderPalettePreset[]>;
-  readerPaletteSelectedPresetId: Ref<string>;
   highlightColorsLight: Ref<string[]>;
   highlightColorsDark: Ref<string[]>;
   lineationColorsLight: Ref<string[]>;
@@ -446,16 +441,12 @@ export function useAppPersistence(deps: {
       readerPaletteOverridesDark: {
         ...deps.readerPaletteOverridesDark.value,
       },
-      readerPaletteColorEnabledOverridesLight: {
-        ...deps.readerPaletteColorEnabledOverridesLight.value,
-      },
-      readerPaletteColorEnabledOverridesDark: {
-        ...deps.readerPaletteColorEnabledOverridesDark.value,
+      readerPaletteColorEnabledOverrides: {
+        ...deps.readerPaletteColorEnabledOverrides.value,
       },
       readerPaletteUserPresets: serializeReaderPaletteUserPresets(
         deps.readerPaletteUserPresets.value,
       ),
-      readerPaletteSelectedPresetId: deps.readerPaletteSelectedPresetId.value,
       // 始终写入完整数组：PersistPayload 在与默认相同时返回 undefined，合并会跳过并保留磁盘旧表
       highlightColorsLight: [...deps.highlightColorsLight.value],
       highlightColorsDark: [...deps.highlightColorsDark.value],
@@ -1414,23 +1405,14 @@ export function useAppPersistence(deps: {
     deps.readerPaletteOverridesDark.value = data.readerPaletteOverridesDark
       ? { ...data.readerPaletteOverridesDark }
       : {};
-    deps.readerPaletteColorEnabledOverridesLight.value =
-      data.readerPaletteColorEnabledOverridesLight
-        ? { ...data.readerPaletteColorEnabledOverridesLight }
-        : {};
-    deps.readerPaletteColorEnabledOverridesDark.value =
-      data.readerPaletteColorEnabledOverridesDark
-        ? { ...data.readerPaletteColorEnabledOverridesDark }
+    deps.readerPaletteColorEnabledOverrides.value =
+      data.readerPaletteColorEnabledOverrides
+        ? { ...data.readerPaletteColorEnabledOverrides }
         : {};
     const loadedUserPresets = parseReaderPaletteUserPresets(
       data.readerPaletteUserPresets,
     );
     deps.readerPaletteUserPresets.value = loadedUserPresets;
-    deps.readerPaletteSelectedPresetId.value =
-      parseReaderPaletteSelectedPresetId(
-        data.readerPaletteSelectedPresetId,
-        loadedUserPresets,
-      );
 
     const parsedHL = parseHighlightColorsArray(data.highlightColorsLight);
     deps.highlightColorsLight.value = mergeHighlightColors(

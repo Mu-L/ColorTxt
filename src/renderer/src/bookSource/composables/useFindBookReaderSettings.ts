@@ -10,18 +10,14 @@ import {
   minFontSize,
   minLineHeightMultiple,
   persistKey,
-  parseReaderPaletteColorEnabledOverrides,
   parseReaderPaletteOverrides,
   resolveEffectiveReaderPalette,
-  overridesFromColorEnabled,
-  overridesFromFullPalette,
   type ReaderSurfaceColorEnabled,
   type ReaderSurfacePalette,
 } from "../../constants/appUi";
 import {
-  parseReaderPaletteSelectedPresetId,
   parseReaderPaletteUserPresets,
-  serializeReaderPaletteUserPresets,
+  toPersistedReaderPaletteState,
   type ReaderPalettePreset,
 } from "../../constants/readerPalettePresets";
 import {
@@ -90,28 +86,13 @@ function createFindBookReaderSettingsStore() {
   const readerPaletteOverridesDark = ref<Partial<ReaderSurfacePalette>>(
     mainData.readerPaletteOverridesDark ? { ...mainData.readerPaletteOverridesDark } : {},
   );
-  const readerPaletteColorEnabledOverridesLight = ref(
-    mainData.readerPaletteColorEnabledOverridesLight
-      ? parseReaderPaletteColorEnabledOverrides(
-          mainData.readerPaletteColorEnabledOverridesLight,
-        )
-      : {},
-  );
-  const readerPaletteColorEnabledOverridesDark = ref(
-    mainData.readerPaletteColorEnabledOverridesDark
-      ? parseReaderPaletteColorEnabledOverrides(
-          mainData.readerPaletteColorEnabledOverridesDark,
-        )
+  const readerPaletteColorEnabledOverrides = ref(
+    mainData.readerPaletteColorEnabledOverrides
+      ? { ...mainData.readerPaletteColorEnabledOverrides }
       : {},
   );
   const readerPaletteUserPresets = ref<ReaderPalettePreset[]>(
     parseReaderPaletteUserPresets(mainData.readerPaletteUserPresets),
-  );
-  const readerPaletteSelectedPresetId = ref(
-    parseReaderPaletteSelectedPresetId(
-      mainData.readerPaletteSelectedPresetId,
-      readerPaletteUserPresets.value,
-    ),
   );
 
   const readerSurfaceLight = computed(() =>
@@ -126,26 +107,21 @@ function createFindBookReaderSettingsStore() {
       parseReaderPaletteOverrides(readerPaletteOverridesDark.value),
     ),
   );
-  const readerPaletteColorEnabledLight = computed(() =>
+  const readerPaletteColorEnabled = computed(() =>
     mergeReaderPaletteColorEnabled(
-      readerPaletteColorEnabledOverridesLight.value,
-    ),
-  );
-  const readerPaletteColorEnabledDark = computed(() =>
-    mergeReaderPaletteColorEnabled(
-      readerPaletteColorEnabledOverridesDark.value,
+      readerPaletteColorEnabledOverrides.value,
     ),
   );
   const effectiveReaderSurfaceLight = computed(() =>
     resolveEffectiveReaderPalette(
       readerSurfaceLight.value,
-      readerPaletteColorEnabledLight.value,
+      readerPaletteColorEnabled.value,
     ),
   );
   const effectiveReaderSurfaceDark = computed(() =>
     resolveEffectiveReaderPalette(
       readerSurfaceDark.value,
-      readerPaletteColorEnabledDark.value,
+      readerPaletteColorEnabled.value,
     ),
   );
 
@@ -257,10 +233,8 @@ function createFindBookReaderSettingsStore() {
       ? highlightColorsLight.value
       : highlightColorsDark.value,
   );
-  const readerPaletteColorEnabledForReader = computed(() =>
-    currentTheme.value === "vs"
-      ? readerPaletteColorEnabledLight.value
-      : readerPaletteColorEnabledDark.value,
+  const readerPaletteColorEnabledForReader = computed(
+    () => readerPaletteColorEnabled.value,
   );
 
   const canIncreaseFont = computed(() => fb.readerFontSize.value < maxFontSize);
@@ -287,24 +261,12 @@ function createFindBookReaderSettingsStore() {
     readerPaletteOverridesDark.value = data.readerPaletteOverridesDark
       ? { ...data.readerPaletteOverridesDark }
       : {};
-    readerPaletteColorEnabledOverridesLight.value =
-      data.readerPaletteColorEnabledOverridesLight
-        ? parseReaderPaletteColorEnabledOverrides(
-            data.readerPaletteColorEnabledOverridesLight,
-          )
-        : {};
-    readerPaletteColorEnabledOverridesDark.value =
-      data.readerPaletteColorEnabledOverridesDark
-        ? parseReaderPaletteColorEnabledOverrides(
-            data.readerPaletteColorEnabledOverridesDark,
-          )
+    readerPaletteColorEnabledOverrides.value =
+      data.readerPaletteColorEnabledOverrides
+        ? { ...data.readerPaletteColorEnabledOverrides }
         : {};
     readerPaletteUserPresets.value = parseReaderPaletteUserPresets(
       data.readerPaletteUserPresets,
-    );
-    readerPaletteSelectedPresetId.value = parseReaderPaletteSelectedPresetId(
-      data.readerPaletteSelectedPresetId,
-      readerPaletteUserPresets.value,
     );
     highlightColorsLight.value = mergeHighlightColors(
       DEFAULT_HIGHLIGHT_COLORS_LIGHT,
@@ -350,43 +312,21 @@ function createFindBookReaderSettingsStore() {
   function applyReaderPalettes(payload: {
     light: ReaderSurfacePalette;
     dark: ReaderSurfacePalette;
-    colorEnabledLight: ReaderSurfaceColorEnabled;
-    colorEnabledDark: ReaderSurfaceColorEnabled;
+    colorEnabled: ReaderSurfaceColorEnabled;
     userPresets: ReaderPalettePreset[];
-    selectedPresetId: string;
   }) {
-    const lightOverrides = overridesFromFullPalette(
-      payload.light,
-      defaultReaderPaletteLight,
-    );
-    const darkOverrides = overridesFromFullPalette(
-      payload.dark,
-      defaultReaderPaletteDark,
-    );
-    const colorEnabledLightOverrides = overridesFromColorEnabled(
-      payload.colorEnabledLight,
-    );
-    const colorEnabledDarkOverrides = overridesFromColorEnabled(
-      payload.colorEnabledDark,
-    );
-    const userPresets = serializeReaderPaletteUserPresets(payload.userPresets);
-    const selectedPresetId = parseReaderPaletteSelectedPresetId(
-      payload.selectedPresetId,
-      userPresets,
-    );
-    readerPaletteOverridesLight.value = lightOverrides;
-    readerPaletteOverridesDark.value = darkOverrides;
-    readerPaletteColorEnabledOverridesLight.value = colorEnabledLightOverrides;
-    readerPaletteColorEnabledOverridesDark.value = colorEnabledDarkOverrides;
-    readerPaletteUserPresets.value = userPresets;
-    readerPaletteSelectedPresetId.value = selectedPresetId;
+    const persisted = toPersistedReaderPaletteState(payload);
+    readerPaletteOverridesLight.value = persisted.readerPaletteOverridesLight;
+    readerPaletteOverridesDark.value = persisted.readerPaletteOverridesDark;
+    readerPaletteColorEnabledOverrides.value =
+      persisted.readerPaletteColorEnabledOverrides;
+    readerPaletteUserPresets.value = persisted.readerPaletteUserPresets;
     patchPersistedMainSettings({
-      readerPaletteOverridesLight: lightOverrides,
-      readerPaletteOverridesDark: darkOverrides,
-      readerPaletteColorEnabledOverridesLight: colorEnabledLightOverrides,
-      readerPaletteColorEnabledOverridesDark: colorEnabledDarkOverrides,
-      readerPaletteUserPresets: userPresets,
-      readerPaletteSelectedPresetId: selectedPresetId,
+      readerPaletteOverridesLight: persisted.readerPaletteOverridesLight,
+      readerPaletteOverridesDark: persisted.readerPaletteOverridesDark,
+      readerPaletteColorEnabledOverrides:
+        persisted.readerPaletteColorEnabledOverrides,
+      readerPaletteUserPresets: persisted.readerPaletteUserPresets,
     });
   }
 
@@ -431,10 +371,8 @@ function createFindBookReaderSettingsStore() {
     aiFeaturesEnabled,
     readerSurfaceLight,
     readerSurfaceDark,
-    readerPaletteColorEnabledLight,
-    readerPaletteColorEnabledDark,
+    readerPaletteColorEnabled,
     readerPaletteUserPresets,
-    readerPaletteSelectedPresetId,
     effectiveReaderSurfaceLight,
     effectiveReaderSurfaceDark,
     highlightColorsForReader,

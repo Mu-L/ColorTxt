@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { nextTick, onMounted, useTemplateRef } from "vue";
-import IconButton from "./IconButton.vue";
-import { icons } from "../icons";
+import { nextTick, onBeforeUnmount, onMounted, useTemplateRef } from "vue";
 import {
   READER_SURFACE_LABELS,
   READER_SURFACE_PRESET_CARD_SWATCH_KEYS,
 } from "../constants/appUi";
+import { icons } from "../icons";
 
 export type ColorSchemePresetListRow = {
   key: string;
@@ -13,9 +12,7 @@ export type ColorSchemePresetListRow = {
   bg: string;
   bodyText: string;
   swatches: string[];
-  editable: boolean;
-  /** 「当前配色」：悬停显示「添加为预设」 */
-  canAddAsPreset?: boolean;
+  custom: boolean;
 };
 
 const props = defineProps<{
@@ -25,10 +22,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [key: string];
-  edit: [key: string];
-  duplicate: [key: string];
-  remove: [key: string];
-  add: [key: string];
 }>();
 
 const rootRef = useTemplateRef<HTMLElement>("root");
@@ -37,9 +30,6 @@ function swatchTitle(index: number): string {
   const key = READER_SURFACE_PRESET_CARD_SWATCH_KEYS[index];
   return key ? READER_SURFACE_LABELS[key] : "";
 }
-
-/** 选中项与滚动容器上下边的最小空隙（含已有 padding） */
-const SCROLL_GUTTER_PX = 10;
 
 function scrollParent(el: HTMLElement): HTMLElement | null {
   let node: HTMLElement | null = el.parentElement;
@@ -61,24 +51,41 @@ function scrollActiveIntoView() {
   if (!(el instanceof HTMLElement)) return;
   const scroller = scrollParent(el);
   if (!scroller) {
-    el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    el.scrollIntoView({ block: "center", inline: "nearest" });
     return;
   }
   const er = el.getBoundingClientRect();
   const sr = scroller.getBoundingClientRect();
-  const topLimit = sr.top + SCROLL_GUTTER_PX;
-  const bottomLimit = sr.bottom - SCROLL_GUTTER_PX;
-  if (er.bottom > bottomLimit) {
-    scroller.scrollTop += er.bottom - bottomLimit;
-  } else if (er.top < topLimit) {
-    scroller.scrollTop -= topLimit - er.top;
-  }
+  /** 弹窗 scale 动画中 getBoundingClientRect 是视觉尺寸，scrollTop 是布局尺寸 */
+  const layoutH = scroller.clientHeight;
+  const scale = layoutH > 0 && sr.height > 0 ? sr.height / layoutH : 1;
+  const elMid = (er.top + er.bottom) / 2;
+  const scrollerMid = (sr.top + sr.bottom) / 2;
+  scroller.scrollTop += (elMid - scrollerMid) / scale;
+}
+
+let modalPanelEl: HTMLElement | null = null;
+
+function onModalPanelTransitionEnd(ev: Event) {
+  if (ev.target !== modalPanelEl) return;
+  if (ev instanceof TransitionEvent && ev.propertyName !== "transform") return;
+  scrollActiveIntoView();
+  modalPanelEl?.removeEventListener("transitionend", onModalPanelTransitionEnd);
 }
 
 onMounted(() => {
   void nextTick(() => {
-    requestAnimationFrame(scrollActiveIntoView);
+    requestAnimationFrame(() => {
+      scrollActiveIntoView();
+      modalPanelEl = rootRef.value?.closest(".appModalPanel") ?? null;
+      modalPanelEl?.addEventListener("transitionend", onModalPanelTransitionEnd);
+    });
   });
+});
+
+onBeforeUnmount(() => {
+  modalPanelEl?.removeEventListener("transitionend", onModalPanelTransitionEnd);
+  modalPanelEl = null;
 });
 </script>
 
@@ -87,7 +94,7 @@ onMounted(() => {
     ref="root"
     class="presetCardGrid"
     role="listbox"
-    aria-label="预设阅读器配色"
+    aria-label="配色方案"
   >
     <div
       v-for="row in rows"
@@ -95,6 +102,12 @@ onMounted(() => {
       class="presetCardWrap"
       :data-preset-key="row.key"
     >
+      <span
+        v-if="row.custom"
+        class="presetCardPaletteBadge"
+        aria-hidden="true"
+        v-html="icons.palette"
+      />
       <button
         type="button"
         class="presetCard"
@@ -115,39 +128,6 @@ onMounted(() => {
           />
         </span>
       </button>
-      <div
-        v-if="row.editable || row.canAddAsPreset"
-        class="presetCardActions"
-      >
-        <template v-if="row.editable">
-          <IconButton
-            :icon-html="icons.edit"
-            title="编辑"
-            aria-label="编辑预设名称"
-            @click="emit('edit', row.key)"
-          />
-          <IconButton
-            :icon-html="icons.copy"
-            title="生成副本"
-            aria-label="生成副本"
-            @click="emit('duplicate', row.key)"
-          />
-          <IconButton
-            :icon-html="icons.remove"
-            danger
-            title="删除"
-            aria-label="删除预设"
-            @click="emit('remove', row.key)"
-          />
-        </template>
-        <IconButton
-          v-if="row.canAddAsPreset"
-          :icon-html="icons.add"
-          title="添加为预设"
-          aria-label="添加为预设"
-          @click="emit('add', row.key)"
-        />
-      </div>
     </div>
   </div>
 </template>
@@ -227,34 +207,20 @@ onMounted(() => {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
 }
 
-.presetCardActions {
+.presetCardPaletteBadge {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 6px;
+  left: 6px;
+  z-index: 1;
   display: flex;
-  align-items: center;
-  border-radius: 6px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--panel) 92%, transparent);
-  opacity: 0;
+  width: 16px;
+  height: 16px;
   pointer-events: none;
-  transition: opacity 0.12s ease;
 }
 
-.presetCardWrap:hover .presetCardActions {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.presetCardActions :deep(.iconBtn) {
-  width: 24px;
-  height: 24px;
-  border-radius: 0;
-}
-
-.presetCardActions :deep(.icon),
-.presetCardActions :deep(.icon svg) {
-  width: 14px;
-  height: 14px;
+.presetCardPaletteBadge :deep(svg) {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 </style>

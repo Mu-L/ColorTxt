@@ -103,10 +103,8 @@ const props = defineProps<{
   currentTheme: string;
   readerSurfaceLight: ReaderSurfacePalette;
   readerSurfaceDark: ReaderSurfacePalette;
-  readerPaletteColorEnabledLight: ReaderSurfaceColorEnabled;
-  readerPaletteColorEnabledDark: ReaderSurfaceColorEnabled;
+  readerPaletteColorEnabled: ReaderSurfaceColorEnabled;
   readerPaletteUserPresets: ReaderPalettePreset[];
-  readerPaletteSelectedPresetId: string;
   monacoFontFamily: string;
   highlightColorsLight: string[];
   highlightColorsDark: string[];
@@ -360,10 +358,8 @@ const busyOverlayText = computed(() => {
     :current-theme="currentTheme"
     :reader-surface-light="readerSurfaceLight"
     :reader-surface-dark="readerSurfaceDark"
-    :reader-palette-color-enabled-light="readerPaletteColorEnabledLight"
-    :reader-palette-color-enabled-dark="readerPaletteColorEnabledDark"
+    :reader-palette-color-enabled="readerPaletteColorEnabled"
     :reader-palette-user-presets="readerPaletteUserPresets"
-    :reader-palette-selected-preset-id="readerPaletteSelectedPresetId"
     :monaco-font-family="monacoFontFamily"
     :highlight-colors-light="highlightColorsLight"
     :highlight-colors-dark="highlightColorsDark"

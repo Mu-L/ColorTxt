@@ -18,6 +18,7 @@ export {
   overridesFromColorEnabled,
   overridesFromFullPalette,
   parseReaderPaletteColorEnabledOverrides,
+  parseReaderPaletteColorEnabledOverridesFromPersisted,
   parseReaderPaletteOverrides,
   READER_SURFACE_KEYS,
   READER_SURFACE_LABELS,

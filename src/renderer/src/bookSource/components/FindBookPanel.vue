@@ -334,10 +334,8 @@ const {
   currentTheme: colorSchemeTheme,
   readerSurfaceLight: colorSchemeSurfaceLight,
   readerSurfaceDark: colorSchemeSurfaceDark,
-  readerPaletteColorEnabledLight: colorSchemeColorEnabledLight,
-  readerPaletteColorEnabledDark: colorSchemeColorEnabledDark,
+  readerPaletteColorEnabled: colorSchemeColorEnabled,
   readerPaletteUserPresets: colorSchemeUserPresets,
-  readerPaletteSelectedPresetId: colorSchemeSelectedPresetId,
   monacoFontFamily: colorSchemeFontFamily,
   applyReaderPalettes,
 } = fbReaderSettings;
@@ -2103,10 +2101,8 @@ function onBack() {
       :current-theme="currentTheme"
       :reader-surface-light="colorSchemeSurfaceLight"
       :reader-surface-dark="colorSchemeSurfaceDark"
-      :reader-palette-color-enabled-light="colorSchemeColorEnabledLight"
-      :reader-palette-color-enabled-dark="colorSchemeColorEnabledDark"
+      :reader-palette-color-enabled="colorSchemeColorEnabled"
       :reader-palette-user-presets="colorSchemeUserPresets"
-      :reader-palette-selected-preset-id="colorSchemeSelectedPresetId"
       :monaco-font-family="colorSchemeFontFamily"
       :visible-tabs="['reader']"
       @apply="onApplyColorScheme"

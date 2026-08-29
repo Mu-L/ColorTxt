@@ -187,6 +187,46 @@ export function parseReaderPaletteColorEnabledOverrides(
   return out;
 }
 
+/** 合并多份开关覆盖：任一为 `false` 则关闭（亮/暗旧数据迁到共用一份时用） */
+export function mergeReaderPaletteColorEnabledOverridePartials(
+  ...parts: Array<Partial<ReaderSurfaceColorEnabled> | null | undefined>
+): Partial<ReaderSurfaceColorEnabled> {
+  const out: Partial<ReaderSurfaceColorEnabled> = {};
+  for (const part of parts) {
+    if (!part) continue;
+    for (const key of READER_SURFACE_OPTIONAL_COLOR_KEYS) {
+      if (part[key] === false) out[key] = false;
+    }
+  }
+  return out;
+}
+
+/**
+ * 读设置 JSON 中的 token 开关覆盖。
+ * 新键 `readerPaletteColorEnabledOverrides` 优先；否则合并旧的亮/暗两份。
+ */
+export function parseReaderPaletteColorEnabledOverridesFromPersisted(
+  obj: Record<string, unknown>,
+): Partial<ReaderSurfaceColorEnabled> {
+  if (
+    "readerPaletteColorEnabledOverrides" in obj &&
+    obj.readerPaletteColorEnabledOverrides &&
+    typeof obj.readerPaletteColorEnabledOverrides === "object"
+  ) {
+    return parseReaderPaletteColorEnabledOverrides(
+      obj.readerPaletteColorEnabledOverrides,
+    );
+  }
+  return mergeReaderPaletteColorEnabledOverridePartials(
+    parseReaderPaletteColorEnabledOverrides(
+      obj.readerPaletteColorEnabledOverridesLight,
+    ),
+    parseReaderPaletteColorEnabledOverrides(
+      obj.readerPaletteColorEnabledOverridesDark,
+    ),
+  );
+}
+
 /** 与默认比较，得到应持久化的开关覆盖（仅 `false` 写入） */
 export function overridesFromColorEnabled(
   draft: ReaderSurfaceColorEnabled,

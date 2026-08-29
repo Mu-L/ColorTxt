@@ -6,6 +6,7 @@ import leaveMinimalistViewIcon from "./assets/leave_minimalist_view.svg?raw";
 import enterFullscreenIcon from "./assets/enter_fullscreen.svg?raw";
 import leaveFullscreenIcon from "./assets/leave_fullscreen.svg?raw";
 import paletteIcon from "./assets/palette.svg?raw";
+import switchIcon from "./assets/switch.svg?raw";
 import moreIcon from "./assets/more.svg?raw";
 import mindmapIcon from "./assets/mindmap.svg?raw";
 import wordcloudIcon from "./assets/wordcloud.svg?raw";
@@ -146,6 +147,7 @@ export const icons = {
   enterFullscreen: enterFullscreenIcon,
   leaveFullscreen: leaveFullscreenIcon,
   palette: paletteIcon,
+  switch: switchIcon,
   more: moreIcon,
   /** 书源列表行「登录」 */
   user: userIcon,
