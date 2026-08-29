@@ -319,6 +319,7 @@ const {
   dismissFullscreenPanelsOnLayoutPointerDown,
   endSidebarResize,
   dismissFullscreenChromeForNativeExit,
+  revealFullscreenSidebar,
   fullscreenCursorHidden,
   bumpFullscreenCursorIdle,
   recordFullscreenPointer,
@@ -3270,7 +3271,7 @@ function openSidebarSearch() {
   const sel = readerRef.value?.getSelectedText?.()?.trim() ?? "";
   sidebarTab.value = "search";
   showSidebar.value = true;
-  if (chromeAutoHide.value) showFullscreenSidebar.value = true;
+  if (chromeAutoHide.value) revealFullscreenSidebar();
   if (sel) searchQuery.value = sel;
   void nextTick(() => {
     readerSidebarRef.value?.focusSidebarSearchInput?.();
@@ -3495,6 +3496,9 @@ useAppWindowBindings({
   recordFullscreenPointer,
   enterOrExitFullscreenView,
   toggleMinimalistView,
+  toggleTheme: () => {
+    currentTheme.value = currentTheme.value === "vs" ? "vs-dark" : "vs";
+  },
   pulseChapterListCenter,
   syncChaptersAfterViewportSettled,
   currentTheme,
@@ -3540,6 +3544,7 @@ useAppWindowBindings({
   openFindBook: openFindBookWindow,
   toggleFind: onToggleFind,
   openSidebarSearch,
+  revealFullscreenSidebar,
   toggleReaderEdit: () => {
     void onToggleReaderEdit();
   },
@@ -3698,7 +3703,7 @@ useAppShellThemeWatch({
 
     <div
       class="layout"
-      @pointerdown="onLayoutMouseDown"
+      @pointerdown.capture="onLayoutMouseDown"
       @contextmenu="onLayoutContextMenu"
       @wheel.capture="onLayoutWheel"
     >
@@ -3848,6 +3853,7 @@ useAppShellThemeWatch({
           @request-expand-panel="showSidebar = true"
           @request-collapse-panel="showSidebar = false"
           :web-dav-enabled="webDavEnabled"
+          :shortcut-bindings="shortcutBindings"
           @open-web-dav="showWebDavPanel = true"
           @open-color-scheme="showColorSchemePanel = true"
         @open-find-book="openFindBookWindow"

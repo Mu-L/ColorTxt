@@ -8,6 +8,8 @@ import type {
   FileSortMode,
 } from "../constants/fileCategories";
 import { SIDEBAR_ACTIVITY_BAR_WIDTH } from "../constants/appUi";
+import type { ShortcutBindingMap } from "../services/shortcutRegistry";
+import { titleWithShortcut } from "../services/shortcutUtils";
 import type { TxtFileItem } from "../services/fileListService";
 import type { SidebarFileItem } from "../composables/useReaderSidebarLists";
 import type { CategoryEditorRow } from "../constants/fileCategories";
@@ -157,6 +159,7 @@ const props = withDefaults(
     showEditChapterRefreshButton?: boolean;
     /** 设置已启用 WebDAV 时在活动栏显示同步入口 */
     webDavEnabled?: boolean;
+    shortcutBindings?: ShortcutBindingMap;
   }>(),
   {
     panelExpanded: true,
@@ -708,6 +711,22 @@ const highlightTabIconMuted = computed(() => {
   return !(hasFile && hasHighlights);
 });
 
+const isMacPlatform = /mac|iphone|ipad|ipod/i.test(navigator.platform || "");
+const searchTabTitle = computed(() => {
+  const accel = props.shortcutBindings?.openSidebarSearch;
+  return accel
+    ? titleWithShortcut("搜索", accel, isMacPlatform)
+    : "搜索";
+});
+const colorSchemeTabTitle = computed(() => {
+  const accel = props.shortcutBindings?.openColorScheme;
+  return accel ? titleWithShortcut("配色", accel, isMacPlatform) : "配色";
+});
+const settingsTabTitle = computed(() => {
+  const accel = props.shortcutBindings?.openSettings;
+  return accel ? titleWithShortcut("设置", accel, isMacPlatform) : "设置";
+});
+
 function onPrimaryTabClick(tab: ReaderSidebarTab) {
   if (props.panelExpanded && props.activeTab === tab) {
     emit("requestCollapsePanel");
@@ -830,8 +849,8 @@ defineExpose({
           type="button"
           class="activityTabBtn"
           :class="{ active: panelExpanded && activeTab === 'search' }"
-          title="搜索"
-          aria-label="搜索"
+          :title="searchTabTitle"
+          :aria-label="searchTabTitle"
           @click="onPrimaryTabClick('search')"
         >
           <span class="activityIcon" v-html="icons.find"></span>
@@ -907,8 +926,8 @@ defineExpose({
         <button
           type="button"
           class="activityTabBtn color"
-          title="配色"
-          aria-label="配色"
+          :title="colorSchemeTabTitle"
+          :aria-label="colorSchemeTabTitle"
           @click="emit('openColorScheme')"
         >
           <span class="activityIcon" v-html="icons.palette"></span>
@@ -916,8 +935,8 @@ defineExpose({
         <button
           type="button"
           class="activityTabBtn"
-          title="设置"
-          aria-label="设置"
+          :title="settingsTabTitle"
+          :aria-label="settingsTabTitle"
           @click="emit('openSettings')"
         >
           <span class="activityIcon" v-html="icons.setting"></span>

@@ -3153,6 +3153,10 @@ function armClickModeOverlaySkipIfNeeded(ev: PointerEvent) {
   clickModeWindowWasBlurred = false;
 }
 
+function armClickModePageSkip() {
+  skipClickModePageUntilPointerUp = true;
+}
+
 function clearClickModeOverlaySkip(ev: PointerEvent) {
   if (ev.button !== 0 && ev.button !== 2) return;
   skipClickModePageUntilPointerUp = false;
@@ -3831,6 +3835,7 @@ defineExpose({
   scrollByDeltaY,
   delegateEditorWheelFromBrowserEvent,
   beginClickModePointerGesture,
+  armClickModePageSkip,
   shouldSuppressClickModeContextMenu,
   scrollByLineStep,
   scrollByPageStep,

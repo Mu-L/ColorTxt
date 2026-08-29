@@ -25,6 +25,7 @@ export type ShortcutActionId =
   | "toggleSidebar"
   | "toggleMinimalistView"
   | "toggleFullscreen"
+  | "toggleTheme"
   | "openSettings"
   | "openColorScheme"
   | "openFindBook"
@@ -145,7 +146,7 @@ export const SHORTCUT_ACTIONS: ShortcutActionDef[] = [
   {
     id: "toggleSidebar",
     scope: "window",
-    desc: "显示/隐藏侧边栏",
+    desc: "显示/隐藏侧边栏（极简/全屏下唤出）",
     handlerKey: "toggleSidebar",
   },
   {
@@ -159,6 +160,12 @@ export const SHORTCUT_ACTIONS: ShortcutActionDef[] = [
     scope: "window",
     desc: "进入/退出全屏阅读",
     handlerKey: "toggleFullscreen",
+  },
+  {
+    id: "toggleTheme",
+    scope: "window",
+    desc: "切换主题色",
+    handlerKey: "toggleTheme",
   },
   { id: "openSettings", scope: "window", desc: "设置", handlerKey: "openSettings" },
   {
@@ -233,6 +240,7 @@ export function createDefaultShortcutBindings(isMac: boolean): ShortcutBindingMa
     toggleSidebar: `${accel}+B`,
     toggleMinimalistView: "F10",
     toggleFullscreen: "F11",
+    toggleTheme: "F2",
     openSettings: "F5",
     openColorScheme: "F6",
     openFindBook: "F7",

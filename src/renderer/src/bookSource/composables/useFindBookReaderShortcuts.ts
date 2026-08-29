@@ -11,6 +11,7 @@ import {
 } from "../../services/shortcutRegistry";
 import {
   bindAppShortcuts,
+  READER_SCROLL_SHORTCUT_ACTIONS,
   VOICE_READ_SCROLL_BLOCKED_ACTIONS,
 } from "../../services/shortcutService";
 import { mergeShortcutBindings } from "../../services/shortcutUtils";
@@ -77,11 +78,14 @@ export function useFindBookReaderShortcuts(deps: {
 
   function findBookReaderShortcutsShouldHandle(ev: KeyboardEvent): boolean {
     if (!deps.readerOpen.value) return false;
-    if (hasEscBeforeModalLayers()) return false;
-    if (getModalStackDepth() > shortcutsBaselineModalDepth) return false;
     // 与主界面一致：侧栏内按键不接管，交给浏览器（↑/↓ 在章节按钮间移动并滚入视口）
     if (keyboardEventFromReaderSidebar(ev)) return false;
     return true;
+  }
+
+  function findBookReaderHasNestedOverlay(): boolean {
+    if (hasEscBeforeModalLayers()) return true;
+    return getModalStackDepth() > shortcutsBaselineModalDepth;
   }
 
   function bindShortcuts() {
@@ -100,6 +104,7 @@ export function useFindBookReaderShortcuts(deps: {
         decreaseLineHeight: deps.decreaseLineHeight,
         toggleSidebar: deps.toggleSidebar,
         toggleMinimalistView: deps.toggleMinimalistView,
+        toggleTheme: () => {},
         openNewWindow: () => {},
         openFile: () => {},
         pickTxtDirectory: () => {},
@@ -137,14 +142,25 @@ export function useFindBookReaderShortcuts(deps: {
       },
       () => shortcutBindings.value,
       findBookReaderShortcutsShouldHandle,
-      (action, ev) =>
-        keyboardTargetInsideFindWidget(ev) &&
-        (action === "scrollUpLine" || action === "scrollDownLine"),
+      (action, ev) => {
+        if (
+          findBookReaderHasNestedOverlay() &&
+          READER_SCROLL_SHORTCUT_ACTIONS.has(action)
+        ) {
+          return true;
+        }
+        return (
+          keyboardTargetInsideFindWidget(ev) &&
+          (action === "scrollUpLine" || action === "scrollDownLine")
+        );
+      },
       (action) =>
         Boolean(deps.isVoiceReadScrollLocked?.value) &&
         VOICE_READ_SCROLL_BLOCKED_ACTIONS.has(action),
       {
-        isActive: () => Boolean(deps.isVoiceReadActive?.value),
+        isActive: () =>
+          Boolean(deps.isVoiceReadActive?.value) &&
+          !findBookReaderHasNestedOverlay(),
         togglePlayPause: () => deps.onVoiceReadTogglePlayPause?.(),
         playPrevLine: () => deps.onVoiceReadPlayPrevLine?.(),
         playNextLine: () => deps.onVoiceReadPlayNextLine?.(),

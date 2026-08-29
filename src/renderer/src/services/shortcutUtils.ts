@@ -234,3 +234,13 @@ export function acceleratorToDisplayText(
 ): string {
   return acceleratorToDisplayKeys(accel, isMac).join("+");
 }
+
+/** 图标按钮 `title`：有绑定时追加「 (Ctrl+=)」 */
+export function titleWithShortcut(
+  label: string,
+  accel: string,
+  isMac: boolean,
+): string {
+  const text = acceleratorToDisplayText(accel, isMac).trim();
+  return text ? `${label} (${text})` : label;
+}

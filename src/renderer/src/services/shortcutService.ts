@@ -10,6 +10,7 @@ export type AppShortcutActions = {
   decreaseLineHeight: () => void | Promise<void>;
   toggleSidebar: () => void | Promise<void>;
   toggleMinimalistView: () => void | Promise<void>;
+  toggleTheme: () => void | Promise<void>;
   openNewWindow: () => void | Promise<void>;
   openFile: () => void | Promise<void>;
   pickTxtDirectory: () => void | Promise<void>;
@@ -54,6 +55,7 @@ const ACTION_BY_ID: Record<string, ActionKey> = {
   toggleSidebar: "toggleSidebar",
   toggleMinimalistView: "toggleMinimalistView",
   toggleFullscreen: "toggleFullscreen",
+  toggleTheme: "toggleTheme",
   openSettings: "openSettings",
   openColorScheme: "openColorScheme",
   openFindBook: "openFindBook",
@@ -82,6 +84,16 @@ export const VOICE_READ_SCROLL_BLOCKED_ACTIONS: ReadonlySet<ActionKey> =
     "jumpToNextChapter",
     "toggleFind",
   ]);
+
+/** 会带动阅读器滚动或切章；蒙版打开时不拦截，交给弹层自己处理方向键/翻页 */
+export const READER_SCROLL_SHORTCUT_ACTIONS: ReadonlySet<ActionKey> = new Set([
+  "scrollDownLine",
+  "scrollUpLine",
+  "scrollPageUp",
+  "scrollPageDown",
+  "jumpToPrevChapter",
+  "jumpToNextChapter",
+]);
 
 export type VoiceReadReaderKeyHandlers = {
   isActive: () => boolean;

@@ -20,6 +20,8 @@ import type {
   TextConvertWidthMode,
   TextConvertZhMode,
 } from "@shared/textConvertTypes";
+import type { ShortcutBindingMap } from "../../services/shortcutRegistry";
+import { titleWithShortcut } from "../../services/shortcutUtils";
 
 const props = withDefaults(
   defineProps<{
@@ -56,6 +58,8 @@ const props = withDefaults(
     findShortcutLabel?: string;
     /** 极简视图菜单项右侧快捷键文案 */
     minimalistShortcutLabel?: string;
+    /** 切换主题色按钮 title 中的快捷键文案（如 F2） */
+    themeShortcutLabel?: string;
     readerEditMode?: boolean;
     /** 阅读器点击翻页模式（false = 可选模式）；传入生效值（含按住 Alt 的临时反转） */
     readerClickMode?: boolean;
@@ -66,6 +70,7 @@ const props = withDefaults(
     readerChapterSaving?: boolean;
     /** 有已启用的文本替换规则时工具栏按钮为激活态 */
     textReplaceActive?: boolean;
+    shortcutBindings: ShortcutBindingMap;
   }>(),
   {
     inFullscreen: false,
@@ -84,6 +89,7 @@ const props = withDefaults(
     colorSchemeShortcutLabel: "",
     findShortcutLabel: "",
     minimalistShortcutLabel: "",
+    themeShortcutLabel: "",
     readerEditMode: false,
     readerClickMode: false,
     readerClickModeAltHeld: false,
@@ -129,6 +135,30 @@ const emit = defineEmits<{
 }>();
 
 const vrFormatLock = computed(() => props.voiceReadHeaderLocked);
+const isMacPlatform = /mac|iphone|ipad|ipod/i.test(navigator.platform || "");
+const themeToggleTitle = computed(() =>
+  titleWithShortcut(
+    props.currentTheme === "vs"
+      ? "当前亮色，点击切换暗色"
+      : "当前暗色，点击切换亮色",
+    props.shortcutBindings.toggleTheme,
+    isMacPlatform,
+  ),
+);
+const editModeTitle = computed(() =>
+  titleWithShortcut(
+    "编辑模式",
+    props.shortcutBindings.toggleReaderEdit,
+    isMacPlatform,
+  ),
+);
+const fullscreenTitle = computed(() =>
+  titleWithShortcut(
+    props.inFullscreen ? "退出全屏" : "全屏阅读",
+    props.shortcutBindings.toggleFullscreen,
+    isMacPlatform,
+  ),
+);
 const readerClickModeTitle = computed(() =>
   props.readerClickMode
     ? readerClickModeButtonTitle
@@ -222,8 +252,8 @@ function onOpenTextReplace() {
         :icon-html="icons.edit"
         :active="readerEditMode"
         :pressed="readerEditMode"
-        title="编辑模式"
-        aria-label="切换编辑模式"
+        :title="editModeTitle"
+        :aria-label="editModeTitle"
         :disabled="!readerEditMode && !canEnterReaderEditMode"
         @click="emit('toggleReaderEdit')"
       />
@@ -283,6 +313,7 @@ function onOpenTextReplace() {
           :can-decrease-line-height="canDecreaseLineHeight"
           :font-size="readerFontSize"
           :line-height-multiple="readerLineHeightMultiple"
+          :shortcut-bindings="shortcutBindings"
           @set-monaco-font="(fontFamily) => emit('setMonacoFont', fontFamily)"
           @toggle-pin-other-font="(fontName) => emit('togglePinOtherFont', fontName)"
           @increase-font-size="emit('increaseFontSize')"
@@ -334,19 +365,22 @@ function onOpenTextReplace() {
         />
         <IconButton
           :icon-html="currentTheme === 'vs' ? icons.light : icons.dark"
-          :title="currentTheme === 'vs' ? '当前亮色，点击切换暗色' : '当前暗色，点击切换亮色'"
+          :title="themeToggleTitle"
+          :aria-label="themeToggleTitle"
           @click="emit('changeTheme', currentTheme === 'vs' ? 'vs-dark' : 'vs')"
         />
         <SidebarViewButton
           v-if="!inFullscreen"
           :show-sidebar="showSidebar"
           :minimalist="inMinimalist"
+          :shortcut-bindings="shortcutBindings"
           @toggle-sidebar="emit('toggleSidebar')"
           @toggle-minimalist="emit('toggleMinimalist')"
         />
         <IconButton
           :icon-html="inFullscreen ? icons.leaveFullscreen : icons.enterFullscreen"
-          :title="inFullscreen ? '退出全屏' : '全屏阅读'"
+          :title="fullscreenTitle"
+          :aria-label="fullscreenTitle"
           @click="emit('toggleFullscreen')"
         />
         <div ref="moreBtnRef" class="findBookReaderMoreWrap">
@@ -385,6 +419,7 @@ function onOpenTextReplace() {
           :can-decrease-line-height="canDecreaseLineHeight"
           :font-size="readerFontSize"
           :line-height-multiple="readerLineHeightMultiple"
+          :shortcut-bindings="shortcutBindings"
           @set-monaco-font="(fontFamily) => { emit('setMonacoFont', fontFamily); closeMoreMenu(); }"
           @toggle-pin-other-font="(fontName) => emit('togglePinOtherFont', fontName)"
           @increase-font-size="emit('increaseFontSize')"

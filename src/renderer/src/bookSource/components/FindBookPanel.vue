@@ -33,7 +33,7 @@ import type { FindBookSettingsTabId } from "./FindBookSettingsTabBar.vue";
 import { useFindBookSettings } from "../composables/useFindBookSettings";
 import { useFindBookReaderSettings } from "../composables/useFindBookReaderSettings";
 import { useFindBookPanelShortcuts } from "../composables/useFindBookPanelShortcuts";
-import { acceleratorToDisplayText } from "../../services/shortcutUtils";
+import { acceleratorToDisplayText, titleWithShortcut } from "../../services/shortcutUtils";
 import { runFindBookDownloadAfterAction } from "../services/findBookDownloadActions";
 import {
   addFindBookSearchHistory,
@@ -782,10 +782,6 @@ const {
   defaultShortcutBindings,
   applyShortcutBindings,
 } = useFindBookPanelShortcuts({
-  showSettingsPanel,
-  showColorSchemePanel,
-  showShortcutPanel,
-  showBookSourcePanel,
   showBookReader,
   openSettings,
   openColorScheme,
@@ -795,6 +791,7 @@ const {
     closeMoreMenu();
     window.colorTxt.openNewFindBookWindow();
   },
+  toggleTheme: onToggleTheme,
 });
 
 const isMacPlatform = /mac|iphone|ipad|ipod/i.test(navigator.platform || "");
@@ -818,6 +815,22 @@ const findBookShortcutLabel = computed(() =>
 );
 const newWindowShortcutLabel = computed(() =>
   acceleratorToDisplayText(shortcutBindings.value.openNewWindow, isMacPlatform),
+);
+const themeToggleTitle = computed(() =>
+  titleWithShortcut(
+    currentTheme.value === "vs"
+      ? "当前亮色，点击切换暗色"
+      : "当前暗色，点击切换亮色",
+    shortcutBindings.value.toggleTheme,
+    isMacPlatform,
+  ),
+);
+const goMainTitle = computed(() =>
+  titleWithShortcut(
+    "主界面",
+    shortcutBindings.value.openFindBook,
+    isMacPlatform,
+  ),
 );
 
 function bookshelfBookIdentity(item: SearchBookItem): string {
@@ -1394,8 +1407,8 @@ function onBack() {
             v-if="standalone"
             type="button"
             class="findBookHomeBtn"
-            title="主界面"
-            aria-label="主界面"
+            :title="goMainTitle"
+            :aria-label="goMainTitle"
             @click="onGoMain"
           >
             <span class="findBookHomeIcon findBookHomeIcon--colorful" aria-hidden="true" v-html="icons.home" />
@@ -1437,12 +1450,8 @@ function onBack() {
           </div>
           <IconButton
             :icon-html="currentTheme === 'vs' ? icons.light : icons.dark"
-            :title="
-              currentTheme === 'vs'
-                ? '当前亮色，点击切换暗色'
-                : '当前暗色，点击切换亮色'
-            "
-            aria-label="切换主题色"
+            :title="themeToggleTitle"
+            :aria-label="themeToggleTitle"
             @click="onToggleTheme"
           />
           <div ref="moreBtnRef" class="findBookHeaderMore">

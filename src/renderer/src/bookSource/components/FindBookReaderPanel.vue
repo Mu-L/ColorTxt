@@ -400,6 +400,7 @@ const {
   onFullscreenFooterMouseLeave,
   dismissFullscreenPanelsOnLayoutPointerDown,
   dismissFullscreenChromeForNativeExit,
+  revealFullscreenSidebar,
   fullscreenCursorHidden,
   bumpFullscreenCursorIdle,
   recordFullscreenPointer,
@@ -1132,6 +1133,9 @@ const minimalistShortcutLabel = computed(() =>
     isMacPlatform,
   ),
 );
+const themeShortcutLabel = computed(() =>
+  acceleratorToDisplayText(shortcutBindings.value.toggleTheme, isMacPlatform),
+);
 
 watch(
   () => [modelValue.value, props.detail.name] as const,
@@ -1749,6 +1753,10 @@ function applySidebarOpenPolicy() {
 }
 
 function onToggleSidebar() {
+  if (chromeAutoHide.value) {
+    revealFullscreenSidebar();
+    return;
+  }
   showSidebar.value = !showSidebar.value;
   findBookSettings.showSidebar.value = showSidebar.value;
   findBookSettings.persistAll();
@@ -2048,6 +2056,8 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
           :color-scheme-shortcut-label="colorSchemeShortcutLabel"
           :find-shortcut-label="findShortcutLabel"
           :minimalist-shortcut-label="minimalistShortcutLabel"
+          :theme-shortcut-label="themeShortcutLabel"
+          :shortcut-bindings="shortcutBindings"
           :reader-edit-mode="readerEditMode"
           :reader-click-mode="effectiveClickMode"
           :reader-click-mode-alt-held="clickModeAltHeld"
@@ -2091,7 +2101,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
 
       <div
         class="findBookReaderBody"
-        @pointerdown="onLayoutMouseDown"
+        @pointerdown.capture="onLayoutMouseDown"
         @contextmenu="onFullscreenLayoutContextMenu"
         @wheel.capture="onLayoutWheel"
       >

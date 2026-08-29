@@ -13,6 +13,7 @@ import { appAlert } from "../services/appDialog";
 import {
   bindAppShortcuts,
   EDIT_MODE_MONACO_DEFERRED_ACTIONS,
+  READER_SCROLL_SHORTCUT_ACTIONS,
   VOICE_READ_SCROLL_BLOCKED_ACTIONS,
 } from "../services/shortcutService";
 import { hasModalOrEscBeforeModalLayer } from "../utils/modalStack";
@@ -75,6 +76,7 @@ export function useAppWindowBindings(deps: {
   recordFullscreenPointer?: (ev: MouseEvent) => void;
   enterOrExitFullscreenView: () => Promise<void>;
   toggleMinimalistView: () => void;
+  toggleTheme: () => void;
   pulseChapterListCenter: (smooth: boolean) => void;
   syncChaptersAfterViewportSettled: () => void | Promise<void>;
   currentTheme: Ref<string>;
@@ -121,6 +123,8 @@ export function useAppWindowBindings(deps: {
   openBookSource?: () => void;
   toggleFind: () => void;
   openSidebarSearch: () => void;
+  /** 极简 / 全屏下快捷键唤出浮动侧栏（不改 `showSidebar`） */
+  revealFullscreenSidebar: () => void;
   toggleReaderEdit: () => void;
   editSelectedText: () => void;
   scrollDownLine: () => void;
@@ -250,9 +254,14 @@ export function useAppWindowBindings(deps: {
           increaseLineHeight: deps.increaseLineHeight,
           decreaseLineHeight: deps.decreaseLineHeight,
           toggleSidebar: () => {
+            if (deps.chromeAutoHide.value) {
+              deps.revealFullscreenSidebar();
+              return;
+            }
             deps.showSidebar.value = !deps.showSidebar.value;
           },
           toggleMinimalistView: deps.toggleMinimalistView,
+          toggleTheme: deps.toggleTheme,
           openNewWindow: deps.openNewWindow,
           openFile: deps.openFileViaDialog,
           pickTxtDirectory: deps.pickTxtDirectory,
@@ -273,10 +282,14 @@ export function useAppWindowBindings(deps: {
           scrollPageDown: deps.scrollPageDown,
         },
         () => deps.shortcutBindings.value,
-        (ev) =>
-          !hasModalOrEscBeforeModalLayer() &&
-          !keyboardEventFromReaderSidebar(ev),
+        (ev) => !keyboardEventFromReaderSidebar(ev),
         (action, ev) => {
+          if (
+            hasModalOrEscBeforeModalLayer() &&
+            READER_SCROLL_SHORTCUT_ACTIONS.has(action)
+          ) {
+            return true;
+          }
           if (
             keyboardTargetInsideFindWidget(ev) &&
             (action === "scrollUpLine" || action === "scrollDownLine")
@@ -293,7 +306,9 @@ export function useAppWindowBindings(deps: {
           Boolean(deps.voiceReadScrollLocked?.value) &&
           VOICE_READ_SCROLL_BLOCKED_ACTIONS.has(action),
         {
-          isActive: () => Boolean(deps.isVoiceReadActive?.value),
+          isActive: () =>
+            Boolean(deps.isVoiceReadActive?.value) &&
+            !hasModalOrEscBeforeModalLayer(),
           togglePlayPause: () => deps.onVoiceReadTogglePlayPause?.(),
           playPrevLine: () => deps.onVoiceReadPlayPrevLine?.(),
           playNextLine: () => deps.onVoiceReadPlayNextLine?.(),

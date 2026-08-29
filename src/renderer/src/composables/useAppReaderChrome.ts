@@ -58,7 +58,8 @@ function nodeIsUnderFullscreenPanel(panel: HTMLElement, start: Node | null) {
  * - 面板根节点 `@mouseleave`：自动隐藏 chrome 且已显示时收起（与真实命中区域一致）；
  * - 指针离开窗口（`relatedTarget == null`）：收起浮层（快速擦过边缘移出窗口时可能从未进入面板，不会收到面板 mouseleave）；
  * - 有可点外关闭的弹出菜单时：移出面板不收起；菜单关掉后若指针已不在面板上再收起；
- * - `.layout` `mousedown`：收起顶栏/底栏/侧栏（点击落在已展开侧栏内除外）。
+ * - `.layout` 捕获阶段 `pointerdown`：收起顶栏/底栏/侧栏（点击落在已展开侧栏内除外；须捕获以便点击模式在阅读区截断冒泡前仍能收起）；
+ * - 快捷键等非边缘唤起侧栏（`revealFullscreenSidebar`）：指针尚未进入侧栏前，mousemove 不因「不在侧栏上」而收起（点阅读区仍收起）。
  */
 export function useAppReaderChrome(deps: {
   readerRef: ReaderRef;
@@ -297,6 +298,27 @@ export function useAppReaderChrome(deps: {
    */
   let suppressChromeEdgeRevealUntilPointerLeaves = false;
 
+  /**
+   * 快捷键打开浮动侧栏时指针往往仍在阅读区：在指针进入侧栏前不因
+   * mousemove「不在侧栏上」而收起。进入后恢复边缘感应那套离开即收。
+   */
+  let stickyFullscreenSidebarUntilPointerEnters = false;
+
+  function pinFullscreenSidebarUntilPointerEnters() {
+    stickyFullscreenSidebarUntilPointerEnters = true;
+  }
+
+  /** 快捷键唤出浮动侧栏：不改 `showSidebar` 持久化开关；指针进入前不因 mousemove 收起。 */
+  function revealFullscreenSidebar() {
+    if (!chromeAutoHide.value) return;
+    showFullscreenSidebar.value = true;
+    pinFullscreenSidebarUntilPointerEnters();
+  }
+
+  watch(showFullscreenSidebar, (shown) => {
+    if (!shown) stickyFullscreenSidebarUntilPointerEnters = false;
+  });
+
   function pointerInChromeEdgeZone(ev: MouseEvent): boolean {
     const x = ev.clientX;
     const y = ev.clientY;
@@ -377,9 +399,16 @@ export function useAppReaderChrome(deps: {
     if (resizingSidebar.value) return;
     if (deps.fullscreenSidebarPopoversSuppressCollapse.value) return;
     const top = document.elementFromPoint(clientX, clientY);
-    if (top && nodeIsUnderFullscreenSidebarFloat(top)) return;
     const sidebar = fullscreenSidebarOverlayRef.value;
-    if (sidebar && top && nodeIsUnderFullscreenPanel(sidebar, top)) return;
+    const overSidebar = Boolean(
+      (top && nodeIsUnderFullscreenSidebarFloat(top)) ||
+        (sidebar && top && nodeIsUnderFullscreenPanel(sidebar, top)),
+    );
+    if (overSidebar) {
+      stickyFullscreenSidebarUntilPointerEnters = false;
+      return;
+    }
+    if (stickyFullscreenSidebarUntilPointerEnters) return;
     showFullscreenSidebar.value = false;
   }
 
@@ -544,8 +573,10 @@ export function useAppReaderChrome(deps: {
 
   /**
    * chrome 自动隐藏时在 `.layout` 上按下指针时收起浮动顶栏/底栏/侧栏。
+   * 须在捕获阶段调用：点击模式会在阅读区捕获里截断冒泡，冒泡到 `.layout` 收不到。
    * 顶栏、底栏不在 layout 子树内，能收到该事件即表示未点在栏上；
    * 侧栏在 layout 内，若当前侧栏展开且点在侧栏面板上则不收起（避免误关）。
+   * 若实际收起了面板，则本轮点击模式松开不翻页（与弹层开着时一致，拖动仍可滚）。
    */
   function dismissFullscreenPanelsOnLayoutPointerDown(ev: MouseEvent) {
     if (!chromeAutoHide.value) return;
@@ -560,11 +591,18 @@ export function useAppReaderChrome(deps: {
     ) {
       return;
     }
+    const hadChrome =
+      showFullscreenHeader.value ||
+      showFullscreenFooter.value ||
+      showFullscreenSidebar.value;
     if (showFullscreenHeader.value) {
       collapseFullscreenHeaderAndCloseFindIfRevealed();
     }
     showFullscreenFooter.value = false;
     showFullscreenSidebar.value = false;
+    if (hadChrome) {
+      deps.readerRef.value?.armClickModePageSkip?.();
+    }
   }
 
   /** 主进程通知退出全屏时，与 enterOrExitFullscreenView 的提示计时器对齐清理 */
@@ -635,6 +673,7 @@ export function useAppReaderChrome(deps: {
     onFullscreenFooterMouseLeave,
     dismissFullscreenPanelsOnLayoutPointerDown,
     dismissFullscreenChromeForNativeExit,
+    revealFullscreenSidebar,
     fullscreenCursorHidden,
     bumpFullscreenCursorIdle,
     recordFullscreenPointer,
