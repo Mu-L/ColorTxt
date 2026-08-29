@@ -63,6 +63,33 @@ export const BUILTIN_READER_PALETTE_PRESETS: readonly ReaderPalettePreset[] = [
     { ...defaultReaderPaletteLight },
     { ...defaultReaderPaletteDark },
   ),
+  /** VS Code Light High Contrast / Default High Contrast（Monaco hc-light / hc-black）映射到 9 槽；背景纯白/纯黑 */
+  preset(
+    "highContrast",
+    "高对比度",
+    {
+      readerBg: "#ffffff",
+      chapterTitle: "#0f4a85",
+      bodyText: "#292929",
+      txtrQuoteInner: "#811f3f",
+      txtrBracketInner: "#185e73",
+      txtrPunctuation: "#000000",
+      txtrSpecialMarker: "#b5200d",
+      txtrNumber: "#096d48",
+      txtrEnglish: "#5e2cbc",
+    },
+    {
+      readerBg: "#000000",
+      chapterTitle: "#569cd6",
+      bodyText: "#ffffff",
+      txtrQuoteInner: "#ce9178",
+      txtrBracketInner: "#3dc9b0",
+      txtrPunctuation: "#ffff00",
+      txtrSpecialMarker: "#f44747",
+      txtrNumber: "#b5cea8",
+      txtrEnglish: "#1aebff",
+    },
+  ),
   preset(
     "dawn",
     "晨曦",

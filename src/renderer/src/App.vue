@@ -100,6 +100,7 @@ import { useAppReaderAnnotations } from "./composables/useAppReaderAnnotations";
 import { useAppReaderChrome } from "./composables/useAppReaderChrome";
 import { useAppReadingProgress } from "./composables/useAppReadingProgress";
 import { useAppReaderUiPrefs } from "./composables/useAppReaderUiPrefs";
+import { useReaderHudTip } from "./composables/useReaderHudTip";
 import { useAppShellThemeWatch } from "./composables/useAppShellThemeWatch";
 import { useAppSidebarSearch } from "./composables/useAppSidebarSearch";
 import { useAppSyncCurrentFileWatch } from "./composables/useAppSyncCurrentFileWatch";
@@ -284,6 +285,12 @@ const chrome = useAppReaderChrome({
   readerRef,
   fullscreenSidebarPopoversSuppressCollapse,
 });
+const {
+  readerHudTipVisible,
+  readerHudTipFading,
+  readerHudTipText,
+  showReaderHudTip,
+} = useReaderHudTip();
 const {
   isFullscreenView,
   isMinimalistView,
@@ -2724,6 +2731,9 @@ const readerUi = useAppReaderUiPrefs({
   readerRef,
   readerFontSize,
   readerLineHeightMultiple,
+  readerLineSpacingPx,
+  readerLetterSpacingPx,
+  readerHorizontalInsetPx,
   monacoFontFamily,
   pinnedOtherFonts,
   monacoCustomHighlight,
@@ -2745,6 +2755,7 @@ const readerUi = useAppReaderUiPrefs({
   viewportVisualProgressPercent,
   viewportAtBottom,
   isVoiceReadBlocksFind,
+  showReaderHudTip,
 });
 
 const {
@@ -2755,6 +2766,12 @@ const {
   decreaseFontSize,
   increaseLineHeight,
   decreaseLineHeight,
+  increaseLetterSpacing,
+  decreaseLetterSpacing,
+  increaseParagraphSpacing,
+  decreaseParagraphSpacing,
+  increaseHorizontalInset,
+  decreaseHorizontalInset,
   setMonacoFontFamily,
   togglePinnedOtherFont,
   toggleMonacoCustomHighlight,
@@ -3506,6 +3523,12 @@ useAppWindowBindings({
   decreaseFontSize,
   increaseLineHeight,
   decreaseLineHeight,
+  increaseLetterSpacing,
+  decreaseLetterSpacing,
+  increaseParagraphSpacing,
+  decreaseParagraphSpacing,
+  increaseHorizontalInset,
+  decreaseHorizontalInset,
   openNewWindow,
   openFileViaDialog,
   pickTxtDirectory,
@@ -4012,6 +4035,14 @@ useAppShellThemeWatch({
           aria-hidden="true"
         >
           {{ emptyFileHintText }}
+        </div>
+        <div
+          v-if="readerHudTipVisible"
+          class="fullscreenTip readerHudTip"
+          :class="{ fading: readerHudTipFading }"
+          aria-live="polite"
+        >
+          {{ readerHudTipText }}
         </div>
       </div>
     </div>

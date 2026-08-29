@@ -62,6 +62,7 @@ import { useAnchoredAppShellMenu } from "../../composables/useAnchoredAppShellMe
 import { acceleratorToDisplayText } from "../../services/shortcutUtils";
 import { useAppReaderUiPrefs } from "../../composables/useAppReaderUiPrefs";
 import { useAppReaderChrome } from "../../composables/useAppReaderChrome";
+import { useReaderHudTip } from "../../composables/useReaderHudTip";
 import { useAppFullscreenReaderLayout } from "../../composables/useAppFullscreenReaderLayout";
 import { useAppTimedScroll } from "../../composables/useAppTimedScroll";
 import { useAppVoiceRead } from "../../composables/useAppVoiceRead";
@@ -374,6 +375,12 @@ const chrome = useAppReaderChrome({
   readerRef,
   fullscreenSidebarPopoversSuppressCollapse,
 });
+const {
+  readerHudTipVisible,
+  readerHudTipFading,
+  readerHudTipText,
+  showReaderHudTip,
+} = useReaderHudTip();
 const {
   isFullscreenView,
   isMinimalistView,
@@ -897,6 +904,9 @@ const readerUi = useAppReaderUiPrefs({
   readerRef,
   readerFontSize,
   readerLineHeightMultiple,
+  readerLineSpacingPx,
+  readerLetterSpacingPx,
+  readerHorizontalInsetPx,
   monacoFontFamily,
   pinnedOtherFonts,
   monacoCustomHighlight,
@@ -920,6 +930,7 @@ const readerUi = useAppReaderUiPrefs({
   viewportEndLine,
   viewportVisualProgressPercent,
   viewportAtBottom,
+  showReaderHudTip,
 });
 
 const emptyCharacterRoster = ref<readonly never[]>([]);
@@ -1100,6 +1111,12 @@ const { shortcutBindings } = useFindBookReaderShortcuts({
   decreaseFontSize: () => readerUi.decreaseFontSize(),
   increaseLineHeight: () => readerUi.increaseLineHeight(),
   decreaseLineHeight: () => readerUi.decreaseLineHeight(),
+  increaseLetterSpacing: () => readerUi.increaseLetterSpacing(),
+  decreaseLetterSpacing: () => readerUi.decreaseLetterSpacing(),
+  increaseParagraphSpacing: () => readerUi.increaseParagraphSpacing(),
+  decreaseParagraphSpacing: () => readerUi.decreaseParagraphSpacing(),
+  increaseHorizontalInset: () => readerUi.increaseHorizontalInset(),
+  decreaseHorizontalInset: () => readerUi.decreaseHorizontalInset(),
   jumpToPrevChapter: jumpToPrevChapterWithShortcut,
   jumpToNextChapter: jumpToNextChapterWithShortcut,
   toggleSidebar: () => onToggleSidebar(),
@@ -2308,6 +2325,14 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
             @prev="goToPrevChapter"
             @next="goToNextChapter"
           />
+          <div
+            v-if="readerHudTipVisible"
+            class="fullscreenTip readerHudTip"
+            :class="{ fading: readerHudTipFading }"
+            aria-live="polite"
+          >
+            {{ readerHudTipText }}
+          </div>
         </div>
       </div>
 
@@ -2486,15 +2511,21 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   background: rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #fff;
-  padding: 8px 12px;
+  padding: 10px 18px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 14px;
   opacity: 1;
   transition: opacity 250ms ease;
 }
 
 .fullscreenTip.fading {
   opacity: 0;
+}
+
+.fullscreenTip.readerHudTip {
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
 }
 
 .chromeFloatHeader-enter-active,

@@ -8,6 +8,12 @@ export type AppShortcutActions = {
   decreaseFontSize: () => void | Promise<void>;
   increaseLineHeight: () => void | Promise<void>;
   decreaseLineHeight: () => void | Promise<void>;
+  increaseLetterSpacing: () => void | Promise<void>;
+  decreaseLetterSpacing: () => void | Promise<void>;
+  increaseParagraphSpacing: () => void | Promise<void>;
+  decreaseParagraphSpacing: () => void | Promise<void>;
+  increaseHorizontalInset: () => void | Promise<void>;
+  decreaseHorizontalInset: () => void | Promise<void>;
   toggleSidebar: () => void | Promise<void>;
   toggleMinimalistView: () => void | Promise<void>;
   toggleTheme: () => void | Promise<void>;
@@ -63,6 +69,12 @@ const ACTION_BY_ID: Record<string, ActionKey> = {
   increaseFontSize: "increaseFontSize",
   decreaseLineHeight: "decreaseLineHeight",
   increaseLineHeight: "increaseLineHeight",
+  decreaseLetterSpacing: "decreaseLetterSpacing",
+  increaseLetterSpacing: "increaseLetterSpacing",
+  decreaseParagraphSpacing: "decreaseParagraphSpacing",
+  increaseParagraphSpacing: "increaseParagraphSpacing",
+  decreaseHorizontalInset: "decreaseHorizontalInset",
+  increaseHorizontalInset: "increaseHorizontalInset",
   toggleFind: "toggleFind",
   openSidebarSearch: "openSidebarSearch",
   openSidebarFiles: "openSidebarFiles",

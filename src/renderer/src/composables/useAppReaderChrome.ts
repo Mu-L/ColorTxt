@@ -24,8 +24,8 @@ import { appLoadingModel } from "../services/appLoading";
 
 /** 全屏下鼠标静止超过该时间后隐藏光标 */
 const FULLSCREEN_CURSOR_HIDE_IDLE_MS = 2000;
-const FULLSCREEN_TIP_ENTER_MSG = "按 2 次 ESC 退出全屏";
-const FULLSCREEN_TIP_CONFIRM_MSG = "再按 1 次 ESC 退出全屏";
+const FULLSCREEN_TIP_ENTER_MSG = "按 2 次 Esc 退出全屏";
+const FULLSCREEN_TIP_CONFIRM_MSG = "再按 1 次 Esc 退出全屏";
 /** 连按两次 Esc 退出全屏的确认窗口 */
 const EXIT_FULLSCREEN_ESC_CONFIRM_MS = 2000;
 

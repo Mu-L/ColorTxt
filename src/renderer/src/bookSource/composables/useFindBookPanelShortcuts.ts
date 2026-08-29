@@ -117,6 +117,12 @@ export function useFindBookPanelShortcuts(deps: {
         decreaseFontSize: () => {},
         increaseLineHeight: () => {},
         decreaseLineHeight: () => {},
+        increaseLetterSpacing: () => {},
+        decreaseLetterSpacing: () => {},
+        increaseParagraphSpacing: () => {},
+        decreaseParagraphSpacing: () => {},
+        increaseHorizontalInset: () => {},
+        decreaseHorizontalInset: () => {},
         toggleSidebar: () => {},
         toggleMinimalistView: () => {},
         toggleTheme: () => {

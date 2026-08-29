@@ -111,6 +111,12 @@ export function useAppWindowBindings(deps: {
   decreaseFontSize: () => void;
   increaseLineHeight: () => void;
   decreaseLineHeight: () => void;
+  increaseLetterSpacing: () => void;
+  decreaseLetterSpacing: () => void;
+  increaseParagraphSpacing: () => void;
+  decreaseParagraphSpacing: () => void;
+  increaseHorizontalInset: () => void;
+  decreaseHorizontalInset: () => void;
   openNewWindow: () => void;
   openFileViaDialog: () => Promise<void>;
   pickTxtDirectory: () => Promise<void>;
@@ -229,6 +235,12 @@ export function useAppWindowBindings(deps: {
           decreaseFontSize: deps.decreaseFontSize,
           increaseLineHeight: deps.increaseLineHeight,
           decreaseLineHeight: deps.decreaseLineHeight,
+          increaseLetterSpacing: deps.increaseLetterSpacing,
+          decreaseLetterSpacing: deps.decreaseLetterSpacing,
+          increaseParagraphSpacing: deps.increaseParagraphSpacing,
+          decreaseParagraphSpacing: deps.decreaseParagraphSpacing,
+          increaseHorizontalInset: deps.increaseHorizontalInset,
+          decreaseHorizontalInset: deps.decreaseHorizontalInset,
           toggleSidebar: () => {
             if (deps.chromeAutoHide.value) {
               deps.revealFullscreenSidebar();

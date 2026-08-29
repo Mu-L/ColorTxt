@@ -44,6 +44,12 @@ export function useFindBookReaderShortcuts(deps: {
   decreaseFontSize: () => void;
   increaseLineHeight: () => void;
   decreaseLineHeight: () => void;
+  increaseLetterSpacing: () => void;
+  decreaseLetterSpacing: () => void;
+  increaseParagraphSpacing: () => void;
+  decreaseParagraphSpacing: () => void;
+  increaseHorizontalInset: () => void;
+  decreaseHorizontalInset: () => void;
   jumpToPrevChapter: () => void;
   jumpToNextChapter: () => void;
   toggleSidebar: () => void;
@@ -102,6 +108,12 @@ export function useFindBookReaderShortcuts(deps: {
         decreaseFontSize: deps.decreaseFontSize,
         increaseLineHeight: deps.increaseLineHeight,
         decreaseLineHeight: deps.decreaseLineHeight,
+        increaseLetterSpacing: deps.increaseLetterSpacing,
+        decreaseLetterSpacing: deps.decreaseLetterSpacing,
+        increaseParagraphSpacing: deps.increaseParagraphSpacing,
+        decreaseParagraphSpacing: deps.decreaseParagraphSpacing,
+        increaseHorizontalInset: deps.increaseHorizontalInset,
+        decreaseHorizontalInset: deps.decreaseHorizontalInset,
         toggleSidebar: deps.toggleSidebar,
         toggleMinimalistView: deps.toggleMinimalistView,
         toggleTheme: () => {},

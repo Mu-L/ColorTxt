@@ -16,6 +16,12 @@ export type ShortcutActionId =
   | "increaseFontSize"
   | "decreaseLineHeight"
   | "increaseLineHeight"
+  | "decreaseLetterSpacing"
+  | "increaseLetterSpacing"
+  | "decreaseParagraphSpacing"
+  | "increaseParagraphSpacing"
+  | "decreaseHorizontalInset"
+  | "increaseHorizontalInset"
   | "toggleFind"
   | "openSidebarSearch"
   | "openSidebarFiles"
@@ -117,6 +123,42 @@ export const SHORTCUT_ACTIONS: ShortcutActionDef[] = [
     scope: "window",
     desc: "加大行间距",
     handlerKey: "increaseLineHeight",
+  },
+  {
+    id: "decreaseLetterSpacing",
+    scope: "window",
+    desc: "减小字间距",
+    handlerKey: "decreaseLetterSpacing",
+  },
+  {
+    id: "increaseLetterSpacing",
+    scope: "window",
+    desc: "加大字间距",
+    handlerKey: "increaseLetterSpacing",
+  },
+  {
+    id: "decreaseParagraphSpacing",
+    scope: "window",
+    desc: "减小段间距",
+    handlerKey: "decreaseParagraphSpacing",
+  },
+  {
+    id: "increaseParagraphSpacing",
+    scope: "window",
+    desc: "加大段间距",
+    handlerKey: "increaseParagraphSpacing",
+  },
+  {
+    id: "decreaseHorizontalInset",
+    scope: "window",
+    desc: "减小左右边距",
+    handlerKey: "decreaseHorizontalInset",
+  },
+  {
+    id: "increaseHorizontalInset",
+    scope: "window",
+    desc: "加大左右边距",
+    handlerKey: "increaseHorizontalInset",
   },
   { id: "toggleFind", scope: "window", desc: "查找", handlerKey: "toggleFind" },
   {
@@ -255,6 +297,12 @@ export function createDefaultShortcutBindings(isMac: boolean): ShortcutBindingMa
     increaseFontSize: `${accel}+=`,
     decreaseLineHeight: `${accel}+[`,
     increaseLineHeight: `${accel}+]`,
+    decreaseLetterSpacing: `${accel}+Shift+[`,
+    increaseLetterSpacing: `${accel}+Shift+]`,
+    decreaseParagraphSpacing: `${accel}+;`,
+    increaseParagraphSpacing: `${accel}+'`,
+    decreaseHorizontalInset: `${accel}+Shift+,`,
+    increaseHorizontalInset: `${accel}+Shift+.`,
     toggleFind: `${accel}+F`,
     openSidebarSearch: `${accel}+Shift+F`,
     openSidebarFiles: `${accel}+Shift+E`,
