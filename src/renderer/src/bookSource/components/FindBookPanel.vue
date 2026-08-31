@@ -332,10 +332,11 @@ const findBookSettings = useFindBookSettings();
 const fbReaderSettings = useFindBookReaderSettings();
 const {
   currentTheme: colorSchemeTheme,
-  readerSurfaceLight: colorSchemeSurfaceLight,
-  readerSurfaceDark: colorSchemeSurfaceDark,
   readerPaletteColorEnabled: colorSchemeColorEnabled,
   readerPaletteUserPresets: colorSchemeUserPresets,
+  readerPaletteSelectedIdLight: colorSchemeSelectedIdLight,
+  readerPaletteSelectedIdDark: colorSchemeSelectedIdDark,
+  readerBackground: colorSchemeBackground,
   monacoFontFamily: colorSchemeFontFamily,
   applyReaderPalettes,
 } = fbReaderSettings;
@@ -348,6 +349,9 @@ const effectiveDownloadDir = findBookSettings.effectiveDownloadDir;
 
 const showSettingsPanel = ref(false);
 const showColorSchemePanel = ref(false);
+const colorSchemePanelRef = ref<InstanceType<typeof ColorSchemePanel> | null>(
+  null,
+);
 const showShortcutPanel = ref(false);
 const showDisclaimerPanel = ref(false);
 const showAboutPanel = ref(false);
@@ -1116,10 +1120,12 @@ function applyFindBookTheme(next: AppShellTheme) {
 }
 
 function onToggleTheme() {
+  if (colorSchemePanelRef.value?.isThemeLocked()) return;
   applyFindBookTheme(currentTheme.value === "vs" ? "vs-dark" : "vs");
 }
 
 function onColorSchemeChangeTheme(theme: string) {
+  if (colorSchemePanelRef.value?.isThemeLocked()) return;
   applyFindBookTheme(theme === "vs-dark" ? "vs-dark" : "vs");
 }
 
@@ -2097,12 +2103,14 @@ function onBack() {
     />
 
     <ColorSchemePanel
+      ref="colorSchemePanelRef"
       v-model="showColorSchemePanel"
       :current-theme="currentTheme"
-      :reader-surface-light="colorSchemeSurfaceLight"
-      :reader-surface-dark="colorSchemeSurfaceDark"
       :reader-palette-color-enabled="colorSchemeColorEnabled"
       :reader-palette-user-presets="colorSchemeUserPresets"
+      :reader-palette-selected-id-light="colorSchemeSelectedIdLight"
+      :reader-palette-selected-id-dark="colorSchemeSelectedIdDark"
+      :reader-background="colorSchemeBackground"
       :monaco-font-family="colorSchemeFontFamily"
       :visible-tabs="['reader']"
       @apply="onApplyColorScheme"

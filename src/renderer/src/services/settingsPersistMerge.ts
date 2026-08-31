@@ -121,6 +121,8 @@ export function mergeLocalPatchOntoDiskSettings(options: {
   delete next.readerPaletteColorEnabledOverridesLight;
   delete next.readerPaletteColorEnabledOverridesDark;
   delete next.readerPaletteSelectedPresetId;
+  delete next.readerPaletteOverridesLight;
+  delete next.readerPaletteOverridesDark;
 
   return { next, writtenKeys };
 }

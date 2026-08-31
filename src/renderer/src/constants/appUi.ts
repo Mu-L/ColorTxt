@@ -16,7 +16,6 @@ export {
   mergeReaderPaletteColorEnabled,
   mergeReaderSurfacePalette,
   overridesFromColorEnabled,
-  overridesFromFullPalette,
   parseReaderPaletteColorEnabledOverrides,
   parseReaderPaletteColorEnabledOverridesFromPersisted,
   parseReaderPaletteOverrides,
@@ -27,6 +26,22 @@ export {
   READER_SURFACE_TABLE_ROWS,
   resolveEffectiveReaderPalette,
 } from "./readerPalette";
+
+export type {
+  ReaderBackgroundBlend,
+  ReaderBackgroundPosition,
+  ReaderBackgroundSize,
+  ReaderBackgroundState,
+  ReaderCustomBackground,
+} from "./readerBackground";
+export {
+  applyReaderBackgroundToDocument,
+  applyReaderBackgroundForPalettes,
+  cloneReaderBackgroundState,
+  defaultReaderBackgroundState,
+  parseReaderBackgroundState,
+  serializeReaderBackgroundState,
+} from "./readerBackground";
 
 export {
   APP_DISPLAY_NAME,

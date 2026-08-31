@@ -129,9 +129,14 @@ import {
   skipUnloadPersistenceSessionKey,
   APP_DISPLAY_NAME,
   type ChapterTitleBlankMode,
-  type ReaderSurfacePalette,
+  type ReaderBackgroundState,
 } from "../constants/appUi";
 import {
+  parseReaderBackgroundState,
+  serializeReaderBackgroundState,
+} from "../constants/readerBackground";
+import {
+  parseReaderPaletteSelectedId,
   parseReaderPaletteUserPresets,
   serializeReaderPaletteUserPresets,
   type ReaderPalettePreset,
@@ -286,12 +291,13 @@ export function useAppPersistence(deps: {
   fileMetaRecords: Ref<FileMetaRecord[]>;
   shortcutBindings: Ref<ShortcutBindingMap>;
   defaultShortcutBindings: ShortcutBindingMap;
-  readerPaletteOverridesLight: Ref<Partial<ReaderSurfacePalette>>;
-  readerPaletteOverridesDark: Ref<Partial<ReaderSurfacePalette>>;
   readerPaletteColorEnabledOverrides: Ref<
     Partial<import("../constants/readerPalette").ReaderSurfaceColorEnabled>
   >;
   readerPaletteUserPresets: Ref<ReaderPalettePreset[]>;
+  readerPaletteSelectedIdLight: Ref<string>;
+  readerPaletteSelectedIdDark: Ref<string>;
+  readerBackground: Ref<ReaderBackgroundState>;
   highlightColorsLight: Ref<string[]>;
   highlightColorsDark: Ref<string[]>;
   lineationColorsLight: Ref<string[]>;
@@ -434,18 +440,20 @@ export function useAppPersistence(deps: {
         deps.defaultShortcutBindings,
         deps.shortcutBindings.value,
       ),
-      // 空对象也要写入：合并落盘时若用 undefined 会跳过，磁盘上旧覆盖无法清除（恢复默认失效）
-      readerPaletteOverridesLight: {
-        ...deps.readerPaletteOverridesLight.value,
-      },
-      readerPaletteOverridesDark: {
-        ...deps.readerPaletteOverridesDark.value,
-      },
       readerPaletteColorEnabledOverrides: {
         ...deps.readerPaletteColorEnabledOverrides.value,
       },
       readerPaletteUserPresets: serializeReaderPaletteUserPresets(
         deps.readerPaletteUserPresets.value,
+      ),
+      readerPaletteSelectedIdLight: parseReaderPaletteSelectedId(
+        deps.readerPaletteSelectedIdLight.value,
+      ),
+      readerPaletteSelectedIdDark: parseReaderPaletteSelectedId(
+        deps.readerPaletteSelectedIdDark.value,
+      ),
+      readerBackground: serializeReaderBackgroundState(
+        deps.readerBackground.value,
       ),
       // 始终写入完整数组：PersistPayload 在与默认相同时返回 undefined，合并会跳过并保留磁盘旧表
       highlightColorsLight: [...deps.highlightColorsLight.value],
@@ -1400,20 +1408,23 @@ export function useAppPersistence(deps: {
       data.shortcutBindings,
     );
 
-    deps.readerPaletteOverridesLight.value = data.readerPaletteOverridesLight
-      ? { ...data.readerPaletteOverridesLight }
-      : {};
-    deps.readerPaletteOverridesDark.value = data.readerPaletteOverridesDark
-      ? { ...data.readerPaletteOverridesDark }
-      : {};
     deps.readerPaletteColorEnabledOverrides.value =
       data.readerPaletteColorEnabledOverrides
         ? { ...data.readerPaletteColorEnabledOverrides }
         : {};
+    deps.readerBackground.value = parseReaderBackgroundState(
+      data.readerBackground,
+    );
     const loadedUserPresets = parseReaderPaletteUserPresets(
       data.readerPaletteUserPresets,
     );
     deps.readerPaletteUserPresets.value = loadedUserPresets;
+    deps.readerPaletteSelectedIdLight.value = parseReaderPaletteSelectedId(
+      data.readerPaletteSelectedIdLight,
+    );
+    deps.readerPaletteSelectedIdDark.value = parseReaderPaletteSelectedId(
+      data.readerPaletteSelectedIdDark,
+    );
 
     const parsedHL = parseHighlightColorsArray(data.highlightColorsLight);
     deps.highlightColorsLight.value = mergeHighlightColors(

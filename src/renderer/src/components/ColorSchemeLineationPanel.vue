@@ -76,7 +76,7 @@ function straightStyle(hex: string) {
 <template>
   <div class="colorSchemeLineation" role="tabpanel">
     <div ref="tableScrollEl" class="schemePanelTableScroll">
-      <table class="lineationTable" :class="{ hasScrollBar: rows.length >= 7 }">
+      <table class="lineationTable" :class="{ hasScrollBar: rows.length >= 8 }">
         <tbody ref="tableBodyRef">
           <tr v-for="(row, rowIdx) in rows" :key="row.id">
             <td class="lnColLabel colorSchemeRowLabel">

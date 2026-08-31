@@ -80,6 +80,8 @@
   flex: 0 0 auto;
   height: 100%;
   min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .sidebarPaneWrap--fullscreen {
@@ -106,9 +108,9 @@
   /* overflow: hidden; */
 }
 
-.app.fullscreen .layout,
-.app.chromeHidden .layout {
-  background: var(--reader-bg);
+.app.fullscreen .layout.readerSurfaceBg,
+.app.chromeHidden .layout.readerSurfaceBg {
+  background-color: var(--reader-bg);
 }
 
 /*
@@ -137,6 +139,7 @@
 
 .readerPaneWrap {
   position: relative;
+  z-index: 1;
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
@@ -201,8 +204,15 @@
   pointer-events: none;
   padding: 24px;
   font-size: 12px;
-  color: var(--secondary);
+  color: var(--fg);
   text-align: center;
+  /* 蒙住整块阅读区：用当前阅读器底色半透明盖住背景图，字用界面前景色 */
+  background: color-mix(in srgb, var(--reader-bg) 78%, transparent);
+}
+
+.readerIdleHint p {
+  margin: 6px 0 0;
+  opacity: 0.7;
 }
 
 .readerBusyHintLine {

@@ -498,6 +498,7 @@ export default defineConfig({
         input: {
           index: resolve(__electronViteConfigDir, "src/renderer/index.html"),
           "find-book": resolve(__electronViteConfigDir, "src/renderer/find-book.html"),
+          eyedropper: resolve(__electronViteConfigDir, "src/renderer/eyedropper.html"),
         },
       },
     },

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, useTemplateRef } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, useTemplateRef, watch } from "vue";
 import {
   READER_SURFACE_LABELS,
   READER_SURFACE_PRESET_CARD_SWATCH_KEYS,
 } from "../constants/appUi";
 import { icons } from "../icons";
+import IconButton from "./IconButton.vue";
 
 export type ColorSchemePresetListRow = {
   key: string;
@@ -13,6 +14,7 @@ export type ColorSchemePresetListRow = {
   bodyText: string;
   swatches: string[];
   custom: boolean;
+  textureStyle?: Record<string, string>;
 };
 
 const props = defineProps<{
@@ -22,6 +24,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [key: string];
+  rename: [key: string];
+  remove: [key: string];
 }>();
 
 const rootRef = useTemplateRef<HTMLElement>("root");
@@ -29,6 +33,16 @@ const rootRef = useTemplateRef<HTMLElement>("root");
 function swatchTitle(index: number): string {
   const key = READER_SURFACE_PRESET_CARD_SWATCH_KEYS[index];
   return key ? READER_SURFACE_LABELS[key] : "";
+}
+
+function emitCardAction(
+  e: MouseEvent,
+  type: "rename" | "remove",
+  key: string,
+) {
+  const t = e.currentTarget;
+  if (t instanceof HTMLElement) t.blur();
+  emit(type, key);
 }
 
 function scrollParent(el: HTMLElement): HTMLElement | null {
@@ -78,6 +92,23 @@ async function scheduleScrollActiveIntoView() {
     });
   });
 }
+
+watch(
+  () => props.activeKey,
+  async () => {
+    await nextTick();
+    const root = rootRef.value;
+    if (!root) return;
+    const focused = document.activeElement;
+    if (!(focused instanceof HTMLElement) || !root.contains(focused)) return;
+    if (!focused.closest(".presetCard")) return;
+    const selected = root.querySelector(
+      `[data-preset-key="${CSS.escape(props.activeKey)}"] .presetCard`,
+    );
+    if (!(selected instanceof HTMLElement) || selected === focused) return;
+    selected.focus({ preventScroll: true });
+  },
+);
 
 defineExpose({ scrollActiveIntoView, scheduleScrollActiveIntoView });
 
@@ -134,6 +165,12 @@ onBeforeUnmount(() => {
         :style="{ backgroundColor: row.bg, color: row.bodyText }"
         @click="emit('select', row.key)"
       >
+        <span
+          v-if="row.textureStyle"
+          class="presetCardTexture"
+          :style="row.textureStyle"
+          aria-hidden="true"
+        />
         <span class="presetCardName">{{ row.name }}</span>
         <span class="presetCardSwatches" aria-hidden="true">
           <span
@@ -145,6 +182,25 @@ onBeforeUnmount(() => {
           />
         </span>
       </button>
+      <div
+        v-if="row.custom"
+        class="presetCardActions"
+        @click.stop
+      >
+        <IconButton
+          :icon-html="icons.edit"
+          title="重命名"
+          :aria-label="`重命名 ${row.name}`"
+          @click="emitCardAction($event, 'rename', row.key)"
+        />
+        <IconButton
+          :icon-html="icons.remove"
+          title="删除"
+          :aria-label="`删除 ${row.name}`"
+          danger
+          @click="emitCardAction($event, 'remove', row.key)"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -163,6 +219,9 @@ onBeforeUnmount(() => {
 }
 
 .presetCard {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   box-sizing: border-box;
   width: 100%;
   min-height: 92px;
@@ -181,6 +240,13 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
+.presetCardTexture {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .presetCard:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
 }
@@ -193,11 +259,18 @@ onBeforeUnmount(() => {
   outline: none;
 }
 
-.presetCard:focus-visible {
+.presetCard:focus-visible:not(.presetCard--active) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.presetCard--active:focus-visible {
   border-color: var(--accent);
 }
 
 .presetCardName {
+  position: relative;
+  z-index: 1;
   max-width: 100%;
   font-size: 14px;
   font-weight: 600;
@@ -208,6 +281,8 @@ onBeforeUnmount(() => {
 }
 
 .presetCardSwatches {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -239,5 +314,32 @@ onBeforeUnmount(() => {
   width: 16px;
   height: 16px;
   display: block;
+}
+
+.presetCardActions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.presetCardWrap:hover .presetCardActions,
+.presetCardActions:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.presetCardActions :deep(.iconBtn) {
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
 }
 </style>

@@ -64,6 +64,8 @@ import { registerBookSourceIpcHandlers } from "./bookSource/registerBookSourceIp
 import { registerWebDavIpcHandlers } from "./webdav/registerWebDavIpc";
 import { registerDictionaryIpcHandlers } from "./dictionary/registerDictionaryIpc";
 import { registerTranslationIpcHandlers } from "./translation/registerTranslationIpc";
+import { registerReaderBackgroundIpc } from "./readerBackgroundIpc";
+import { registerEyedropperIpc } from "./eyedropper";
 import { createFindBookDesktopShortcut } from "./findBookLaunch";
 import {
   focusOrOpenFindBookWindow,
@@ -1071,4 +1073,6 @@ function unknownQuoteAttributions(
   registerWebDavIpcHandlers();
   registerDictionaryIpcHandlers();
   registerTranslationIpcHandlers();
+  registerReaderBackgroundIpc();
+  registerEyedropperIpc();
 }

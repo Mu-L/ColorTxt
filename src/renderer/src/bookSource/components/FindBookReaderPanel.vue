@@ -89,6 +89,7 @@ import {
   persistKey,
   persistedSettingsChangedEvent,
   applyReaderSurfaceToDocument,
+  applyReaderBackgroundForPalettes,
 } from "../../constants/appUi";
 import {
   loadPersistedSettingsData,
@@ -262,6 +263,9 @@ const {
   canDecreaseLineHeight,
   persistReaderUiPrefs,
   syncSharedSettingsFromMain,
+  readerBackground,
+  readerSurfaceLight,
+  readerSurfaceDark,
 } = settings;
 
 const {
@@ -371,9 +375,11 @@ function onOpenTextReplace() {
 }
 
 const fullscreenSidebarPopoversSuppressCollapse = ref(false);
+const readerEditMode = ref(false);
 const chrome = useAppReaderChrome({
   readerRef,
   fullscreenSidebarPopoversSuppressCollapse,
+  readerEditMode,
 });
 const {
   readerHudTipVisible,
@@ -716,7 +722,6 @@ const {
   readerContentKey,
   lastChapterBody,
   totalLineCount,
-  readerEditMode,
   readerChapterSaving,
   loading,
   showChapterLoadingUi,
@@ -745,6 +750,7 @@ const {
   getPhysicalLineContent,
 } = useFindBookChapterSession({
   readerRef,
+  readerEditMode,
   detail: () => props.detail,
   item: () => props.item,
   displayChapters,
@@ -861,6 +867,11 @@ watch(showFullscreenSidebar, (visible) => {
   if (visible && chromeAutoHide.value) {
     pulseChapterListCenter();
   }
+});
+
+watch(chromeAutoHide, (hidden, wasHidden) => {
+  if (!wasHidden || hidden) return;
+  pulseChapterListCenter();
 });
 
 function toggleChapterSort() {
@@ -1683,6 +1694,12 @@ function applyReaderAppearance() {
     effectiveReaderSurfaceLight.value,
     effectiveReaderSurfaceDark.value,
   );
+  void applyReaderBackgroundForPalettes(
+    currentTheme.value,
+    readerBackground.value,
+    readerSurfaceLight.value,
+    readerSurfaceDark.value,
+  );
   readerRef.value?.setTheme(currentTheme.value);
   readerRef.value?.setFontSize(readerFontSize.value);
   readerRef.value?.setLineHeightMultiple(readerLineHeightMultiple.value);
@@ -1714,11 +1731,15 @@ watch(
     effectiveReaderSurfaceLight,
     effectiveReaderSurfaceDark,
     currentTheme,
+    readerBackground,
+    readerSurfaceLight,
+    readerSurfaceDark,
   ],
   () => {
     if (!modelValue.value) return;
     applyReaderAppearance();
   },
+  { deep: true },
 );
 
 watch(
@@ -2113,6 +2134,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
 
       <div
         class="findBookReaderBody"
+        :class="{ readerSurfaceBg: chromeAutoHide }"
         @pointerdown.capture="onLayoutMouseDown"
         @contextmenu="onFullscreenLayoutContextMenu"
         @wheel.capture="onLayoutWheel"
@@ -2449,9 +2471,9 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   cursor: none !important;
 }
 
-.findBookReaderShell.fullscreen .findBookReaderBody,
-.findBookReaderShell.chromeHidden .findBookReaderBody {
-  background: var(--reader-bg);
+.findBookReaderShell.fullscreen .findBookReaderBody.readerSurfaceBg,
+.findBookReaderShell.chromeHidden .findBookReaderBody.readerSurfaceBg {
+  background-color: var(--reader-bg);
 }
 
 .findBookReaderFooterWrap {
@@ -2667,6 +2689,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
 }
 .findBookReaderSidebar {
   position: relative;
+  z-index: 1;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
   background: var(--panel);
@@ -2755,6 +2778,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   display: flex;
   flex-direction: column;
   position: relative;
+  z-index: 1;
 }
 .findBookReaderMainWrap > :deep(.voiceReadToolbarLayer) {
   z-index: 100;
@@ -2771,12 +2795,12 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   justify-content: center;
   margin: 0;
   padding: 0;
-  font-size: 14px;
-  color: var(--muted);
+  font-size: 12px;
+  color: var(--fg);
   text-align: center;
   z-index: 2;
   pointer-events: none;
-  background: var(--reader-bg);
+  background: color-mix(in srgb, var(--reader-bg) 78%, transparent);
 }
 .findBookReaderLoadingHint {
   display: inline-flex;
@@ -2802,7 +2826,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
   word-break: break-word;
   z-index: 2;
   pointer-events: auto;
-  background: var(--reader-bg, transparent);
+  background-color: var(--reader-bg, transparent);
   user-select: text;
 }
 .findBookReaderErrorMain {

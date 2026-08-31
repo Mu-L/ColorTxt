@@ -1,4 +1,4 @@
-import { nextTick, onBeforeUnmount, onMounted, type Ref } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, watch, type Ref } from "vue";
 import type ReaderMain from "../components/ReaderMain.vue";
 import { isSupportedBookPath } from "../ebook/ebookFormat";
 import {
@@ -162,6 +162,23 @@ export function useAppWindowBindings(deps: {
   onVoiceReadPlayNextLine?: () => void;
 }) {
   const unsubscribers: Array<() => void> = [];
+  const flushChapterListAfterChromeLayoutMs = 50;
+
+  function pulseChapterListAfterChromeLayout() {
+    void nextTick(() => {
+      requestAnimationFrame(() => {
+        window.setTimeout(() => {
+          deps.pulseChapterListCenter(false);
+        }, flushChapterListAfterChromeLayoutMs);
+      });
+    });
+  }
+
+  /** 退出极简（或 chrome 自动隐藏）后侧栏回到文档流，VirtualList 高度变了，需再居中当前章 */
+  watch(deps.chromeAutoHide, (hidden, wasHidden) => {
+    if (!wasHidden || hidden) return;
+    pulseChapterListAfterChromeLayout();
+  });
 
   onMounted(async () => {
     deps.readerRef.value?.setTheme(deps.currentTheme.value);
@@ -173,8 +190,6 @@ export function useAppWindowBindings(deps: {
     deps.readerRef.value?.setLetterSpacingPx(deps.readerLetterSpacingPx.value);
     deps.readerRef.value?.setFontFamily(deps.monacoFontFamily.value);
 
-    const flushChapterListAfterFullscreenMs = 50;
-
     const onFullscreenChange = (payload: { isFullscreen: boolean }) => {
       const inFs = payload.isFullscreen;
       deps.isFullscreenView.value = inFs;
@@ -184,21 +199,13 @@ export function useAppWindowBindings(deps: {
             deps.readerRef.value?.focusEditor?.();
             window.setTimeout(() => {
               deps.pulseChapterListCenter(false);
-            }, flushChapterListAfterFullscreenMs);
+            }, flushChapterListAfterChromeLayoutMs);
           });
         });
         return;
       }
-      if (!inFs) {
-        deps.dismissFullscreenChromeForNativeExit();
-        void nextTick(() => {
-          requestAnimationFrame(() => {
-            window.setTimeout(() => {
-              deps.pulseChapterListCenter(false);
-            }, flushChapterListAfterFullscreenMs);
-          });
-        });
-      }
+      deps.dismissFullscreenChromeForNativeExit();
+      pulseChapterListAfterChromeLayout();
     };
     unsubscribers.push(window.colorTxt.onFullscreenChanged(onFullscreenChange));
 

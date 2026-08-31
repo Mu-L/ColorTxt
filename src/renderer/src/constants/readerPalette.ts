@@ -1,6 +1,6 @@
 /**
  * 阅读器表面色（背景、章节标题、正文、Monaco txtr.* token）。
- * 默认值与历史 readerInlineDecorations / style.css 一致；用户自定义通过 Partial 合并。
+ * 默认值与历史 readerInlineDecorations / style.css 一致。当前阅读器色值按选中方案 id 从方案列表取出，不另存覆盖。
  */
 export type ReaderSurfacePalette = {
   readerBg: string;
@@ -71,7 +71,7 @@ export function isReaderSurfaceOptionalColorKey(
   return (READER_SURFACE_OPTIONAL_COLOR_KEYS as readonly string[]).includes(key);
 }
 
-/** 配色表一行：双列；「背景色」单独一行 */
+/** 配色表一行：双列；「背景色」单独一行；「背景图」在表末另起一行 */
 export type ReaderSurfaceTableRow =
   | readonly [keyof ReaderSurfacePalette, keyof ReaderSurfacePalette]
   | readonly [keyof ReaderSurfacePalette];
@@ -149,20 +149,6 @@ export function mergeReaderSurfacePalette(
 ): ReaderSurfacePalette {
   if (!partial) return { ...base };
   return { ...base, ...partial };
-}
-
-/** 与默认比较，得到应持久化的覆盖片段（与默认相同则不写入） */
-export function overridesFromFullPalette(
-  draft: ReaderSurfacePalette,
-  defaults: ReaderSurfacePalette,
-): Partial<ReaderSurfacePalette> {
-  const out: Partial<ReaderSurfacePalette> = {};
-  for (const key of READER_SURFACE_KEYS) {
-    if (draft[key].toLowerCase() !== defaults[key].toLowerCase()) {
-      (out as Record<string, string>)[key] = draft[key];
-    }
-  }
-  return out;
 }
 
 export function mergeReaderPaletteColorEnabled(

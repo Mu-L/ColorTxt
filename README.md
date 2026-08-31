@@ -322,6 +322,7 @@ ColorTxt/
 ## 相关
 
 - 应用图标由 [豆包](https://www.doubao.com/) 生成
+- 内置背景图由 [ChatGPT Images 2.0](https://chatgpt.com/images/) 生成
 - 页面里的图标来自 [iconfont](https://www.iconfont.cn/)
 - 内置的 `京華老宋体` 仅供学习交流使用，商用请购买正版字体
 - 内容上色灵感来源于 VS Code 插件 [vscode-txt-syntax](https://github.com/xshrim/vscode-txt-syntax)

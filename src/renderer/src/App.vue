@@ -130,6 +130,7 @@ import {
 } from "./stores/fileMetaStore";
 import {
   applyReaderSurfaceToDocument,
+  applyReaderBackgroundForPalettes,
   defaultCompressBlankKeepOneBlank,
   defaultChapterTitleBlankMode,
   defaultCompressBlankLines,
@@ -165,12 +166,11 @@ import {
   clampLetterSpacingPx,
   defaultReaderHorizontalInsetPx,
   clampReaderHorizontalInsetPx,
-  defaultReaderPaletteDark,
-  defaultReaderPaletteLight,
+  defaultReaderBackgroundState,
+  cloneReaderBackgroundState,
   defaultReaderTheme,
   defaultRecentFilesHistoryLimit,
   mergeReaderPaletteColorEnabled,
-  mergeReaderSurfacePalette,
   resolveEffectiveReaderPalette,
   defaultRestoreSessionOnStartup,
   defaultSyncCurrentFile,
@@ -195,10 +195,10 @@ import {
   APP_DISPLAY_NAME,
   type ChapterTitleBlankMode,
   type ReaderSurfaceColorEnabled,
-  type ReaderSurfacePalette,
 } from "./constants/appUi";
 import {
   toPersistedReaderPaletteState,
+  resolveReaderPaletteBySelectedId,
   type ReaderPalettePreset,
 } from "./constants/readerPalettePresets";
 import {
@@ -267,6 +267,7 @@ import {
 } from "./constants/fileCategories";
 
 const readerRef = ref<InstanceType<typeof ReaderMain> | null>(null);
+const readerEditMode = ref(false);
 /** 全屏侧栏文件列表 Teleport 弹层（分类/筛选下拉、右键菜单等） */
 const fullscreenFileListPopoversOpen = ref(false);
 /** AI 阅读助手：历史/导出/模型菜单等 Teleport；与文件列表合并后交给全屏侧栏收起逻辑 */
@@ -284,6 +285,7 @@ const fullscreenSidebarPopoversSuppressCollapse = computed(
 const chrome = useAppReaderChrome({
   readerRef,
   fullscreenSidebarPopoversSuppressCollapse,
+  readerEditMode,
 });
 const {
   readerHudTipVisible,
@@ -741,23 +743,28 @@ const ebookConversionSourcePath = ref<string | null>(null);
 /** PDF 转换页进度（底栏 / 蒙层「转换中 12/480」） */
 const ebookConvertProgressText = ref("");
 
-const readerPaletteOverridesLight = ref<Partial<ReaderSurfacePalette>>({});
-const readerPaletteOverridesDark = ref<Partial<ReaderSurfacePalette>>({});
 const readerPaletteColorEnabledOverrides = ref<
   Partial<ReaderSurfaceColorEnabled>
 >({});
 const readerPaletteUserPresets = ref<ReaderPalettePreset[]>([]);
+const readerPaletteSelectedIdLight = ref("");
+const readerPaletteSelectedIdDark = ref("");
+const readerBackground = ref(
+  cloneReaderBackgroundState(defaultReaderBackgroundState),
+);
 
 const readerSurfaceLight = computed(() =>
-  mergeReaderSurfacePalette(
-    defaultReaderPaletteLight,
-    readerPaletteOverridesLight.value,
+  resolveReaderPaletteBySelectedId(
+    readerPaletteSelectedIdLight.value,
+    "light",
+    readerPaletteUserPresets.value,
   ),
 );
 const readerSurfaceDark = computed(() =>
-  mergeReaderSurfacePalette(
-    defaultReaderPaletteDark,
-    readerPaletteOverridesDark.value,
+  resolveReaderPaletteBySelectedId(
+    readerPaletteSelectedIdDark.value,
+    "dark",
+    readerPaletteUserPresets.value,
   ),
 );
 
@@ -901,7 +908,6 @@ const currentFileIsMarkdown = computed(() => {
 /** 当前文件是否已完成加载与阅读位置同步；无打开文件时为 true，打开/重置会话后为 false，流结束并完成滚动后为 true */
 const readingProgressSynced = ref(true);
 
-const readerEditMode = ref(false);
 const readerEditorDirty = ref(false);
 
 const { effectiveClickMode, clickModeAltHeld } = useReaderClickModeAltHold({
@@ -1157,10 +1163,11 @@ const persistence = useAppPersistence({
   fileMetaRecords,
   shortcutBindings,
   defaultShortcutBindings,
-  readerPaletteOverridesLight,
-  readerPaletteOverridesDark,
   readerPaletteColorEnabledOverrides,
   readerPaletteUserPresets,
+  readerPaletteSelectedIdLight,
+  readerPaletteSelectedIdDark,
+  readerBackground,
   highlightColorsLight,
   highlightColorsDark,
   lineationColorsLight,
@@ -3104,6 +3111,12 @@ function applyReaderAppearanceFromSettings() {
     readerSurfaceLight.value,
     readerSurfaceDark.value,
   );
+  void applyReaderBackgroundForPalettes(
+    currentTheme.value,
+    readerBackground.value,
+    readerSurfaceLight.value,
+    readerSurfaceDark.value,
+  );
   readerRef.value?.setTheme(currentTheme.value);
   readerRef.value?.setFontSize(readerFontSize.value);
   readerRef.value?.setLineHeightMultiple(readerLineHeightMultiple.value);
@@ -3119,17 +3132,28 @@ function refreshReaderSurfaceAfterPaletteChange() {
     readerSurfaceLight.value,
     readerSurfaceDark.value,
   );
+  void applyReaderBackgroundForPalettes(
+    currentTheme.value,
+    readerBackground.value,
+    readerSurfaceLight.value,
+    readerSurfaceDark.value,
+  );
   readerRef.value?.setTheme(currentTheme.value);
 }
 
 function onApplyColorScheme(payload: ColorSchemeApplyPayload) {
   if (payload.reader) {
     const persisted = toPersistedReaderPaletteState(payload.reader);
-    readerPaletteOverridesLight.value = persisted.readerPaletteOverridesLight;
-    readerPaletteOverridesDark.value = persisted.readerPaletteOverridesDark;
     readerPaletteColorEnabledOverrides.value =
       persisted.readerPaletteColorEnabledOverrides;
     readerPaletteUserPresets.value = persisted.readerPaletteUserPresets;
+    readerPaletteSelectedIdLight.value = persisted.readerPaletteSelectedIdLight;
+    readerPaletteSelectedIdDark.value = persisted.readerPaletteSelectedIdDark;
+    if (payload.reader.background) {
+      readerBackground.value = cloneReaderBackgroundState(
+        payload.reader.background,
+      );
+    }
   }
   if (payload.highlight) {
     highlightColorsLight.value = mergeHighlightColors(
@@ -3465,6 +3489,11 @@ async function applySettings(payload: SettingsApplyPayload) {
 /** 来自主进程的跨窗口主题同步，避免再发 theme:set 造成循环 */
 const skipNextThemeNativeIpc = ref(false);
 
+function applyShellTheme(theme: string) {
+  if (appOverlaysRef.value?.isColorSchemeThemeLocked()) return;
+  currentTheme.value = theme === "vs-dark" ? "vs-dark" : "vs";
+}
+
 useAppWindowBindings({
   readerRef,
   stream,
@@ -3492,7 +3521,7 @@ useAppWindowBindings({
   enterOrExitFullscreenView,
   toggleMinimalistView,
   toggleTheme: () => {
-    currentTheme.value = currentTheme.value === "vs" ? "vs-dark" : "vs";
+    applyShellTheme(currentTheme.value === "vs" ? "vs-dark" : "vs");
   },
   pulseChapterListCenter,
   syncChaptersAfterViewportSettled,
@@ -3578,6 +3607,7 @@ useAppShellThemeWatch({
   readerRef,
   readerSurfaceLight,
   readerSurfaceDark,
+  readerBackground,
   skipNextThemeNativeIpc,
   persistSettings,
   showChapterCounts,
@@ -3652,7 +3682,7 @@ useAppShellThemeWatch({
         @pin-click="onPinClick"
         @bookmark-click="onBookmarkClick"
         @go-back-from-pin="onGoBackFromPin"
-        @change-theme="currentTheme = $event"
+        @change-theme="applyShellTheme"
         @toggle-sidebar="showSidebar = !showSidebar"
         @toggle-minimalist="toggleMinimalistView"
         @toggle-fullscreen="enterOrExitFullscreenView"
@@ -3709,6 +3739,7 @@ useAppShellThemeWatch({
 
     <div
       class="layout"
+      :class="{ readerSurfaceBg: chromeAutoHide }"
       @pointerdown.capture="onLayoutMouseDown"
       @contextmenu="onLayoutContextMenu"
       @wheel.capture="onLayoutWheel"
@@ -4223,10 +4254,11 @@ useAppShellThemeWatch({
       :shortcut-bindings="shortcutBindings"
       :default-shortcut-bindings="defaultShortcutBindings"
       :current-theme="currentTheme"
-      :reader-surface-light="readerSurfaceLight"
-      :reader-surface-dark="readerSurfaceDark"
       :reader-palette-color-enabled="readerPaletteColorEnabled"
       :reader-palette-user-presets="readerPaletteUserPresets"
+      :reader-palette-selected-id-light="readerPaletteSelectedIdLight"
+      :reader-palette-selected-id-dark="readerPaletteSelectedIdDark"
+      :reader-background="readerBackground"
       :monaco-font-family="monacoFontFamily"
       :highlight-colors-light="highlightColorsLight"
       :highlight-colors-dark="highlightColorsDark"
@@ -4257,7 +4289,7 @@ useAppShellThemeWatch({
       "
       @confirm-remove-active-bookmark="confirmRemoveActiveBookmark"
       @apply-color-scheme="onApplyColorScheme"
-      @change-theme="currentTheme = $event"
+      @change-theme="applyShellTheme"
       @open-reading-data="openReadingDataPanel"
       @open-dictionary-manage="showDictionaryManagePanel = true"
       @open-web-search-manage="showWebSearchManagePanel = true"

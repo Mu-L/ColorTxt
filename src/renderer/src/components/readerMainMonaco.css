@@ -44,13 +44,16 @@
 }
 
 /*
- * 圆角选区内角：Monaco 在列重叠的多行选区旁多铺 10px `.selected-text`，
- * 再用 `.cslr.monaco-editor-background` 按编辑器底色抠出内凹圆角。
- * 阅读器 `editor.background` 为透明（透出 `--reader-bg`），抠图层也透明，
- * 内角切不掉，选区会连成一块。只给这块 overlay 铺阅读底色，不要改整个编辑器背景。
+ * 编辑器表面透明：底色/纹理只画在最外层 `.readerSurfaceBg`，
+ * 全屏两侧留白才能与正文共用同一张图。
  */
-.monaco-editor .lines-content .cslr.monaco-editor-background {
-  background-color: var(--reader-bg) !important;
+.readerPane .monaco-editor,
+.readerPane .monaco-editor .overflow-guard,
+.readerPane .monaco-editor .monaco-scrollable-element,
+.readerPane .monaco-editor .editor-scrollable,
+.readerPane .monaco-editor .margin,
+.readerPane .monaco-editor .monaco-editor-background {
+  background-color: transparent !important;
 }
 
 /*
@@ -379,14 +382,15 @@ body > .overflowingContentWidgets
 }
 
 /*
- * 滚动条轨道与小地图同色；概览尺 Canvas 在上层绘制光标/装饰标记。
+ * 滚动条轨道：只读透明以露出背景图；编辑模式与小地图一样用实心 `--reader-bg`。
+ * 勿对 `.scrollbar` 设 pointer-events: none，轨道点击跳转与滑块拖动依赖该层。
  */
 .readerPane .monaco-editor .monaco-scrollable-element > .scrollbar.vertical,
 .readerPane
   .monaco-editor
   .monaco-scrollable-element
   > .scrollbar.vertical.visible {
-  background: var(--vscode-scrollbar-background) !important;
+  background: transparent !important;
   z-index: 10;
 }
 
@@ -395,7 +399,55 @@ body > .overflowingContentWidgets
   .monaco-editor
   .monaco-scrollable-element
   > .scrollbar.horizontal.visible {
-  background: var(--vscode-scrollbar-background) !important;
+  background: transparent !important;
+}
+
+.readerPane.content--readerEdit
+  .monaco-editor
+  .monaco-scrollable-element
+  > .scrollbar.vertical,
+.readerPane.content--readerEdit
+  .monaco-editor
+  .monaco-scrollable-element
+  > .scrollbar.vertical.visible,
+.readerPane.content--readerEdit
+  .monaco-editor
+  .monaco-scrollable-element
+  > .scrollbar.horizontal,
+.readerPane.content--readerEdit
+  .monaco-editor
+  .monaco-scrollable-element
+  > .scrollbar.horizontal.visible {
+  background: var(--reader-bg) !important;
+}
+
+/*
+ * 全屏 / 极简只读：竖条与概览尺随系统光标一起藏（`.fullscreen--cursorHidden`）。
+ * Monaco 竖条保持 `visible`，不再自己淡出。拖滑块时不要藏，以免按住不动时条消失。
+ */
+.chromeHidden
+  .readerPane:not(.content--readerEdit)
+  .monaco-editor
+  .monaco-scrollable-element
+  > .scrollbar.vertical,
+.chromeHidden
+  .readerPane:not(.content--readerEdit)
+  .monaco-editor
+  .decorationsOverviewRuler {
+  transition: opacity 0.25s ease;
+}
+
+.chromeHidden.fullscreen--cursorHidden
+  .readerPane:not(.content--readerEdit)
+  .monaco-editor
+  .monaco-scrollable-element
+  > .scrollbar.vertical:not(:has(.slider.active)),
+.chromeHidden.fullscreen--cursorHidden
+  .readerPane:not(.content--readerEdit)
+  .monaco-editor
+  .decorationsOverviewRuler {
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .readerPane .monaco-editor .monaco-scrollable-element > .scrollbar > .slider {
@@ -535,6 +587,21 @@ body > .overflowingContentWidgets
  */
 .content:not(.content--readerEdit) .monaco-editor .native-edit-context {
   overflow: hidden !important;
+}
+
+/*
+ * 全局 `textarea` / `:focus` 会给输入层加上 1px 强调色边框。
+ * 编辑态 EditContext 把该层拉成当前行，看起来像光标行蓝框。
+ * 同时藏掉原生 caret，只留 Monaco 绘制的光标（否则会闪两个）。
+ */
+.monaco-editor textarea.inputarea,
+.monaco-editor .native-edit-context {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: transparent !important;
+  caret-color: transparent !important;
 }
 
 .monaco-editor .view-lines .view-line span.readerAnnotationNoteOnly {

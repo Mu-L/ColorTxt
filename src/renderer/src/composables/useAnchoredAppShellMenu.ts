@@ -4,7 +4,9 @@ import {
   onBeforeUnmount,
   onMounted,
   ref,
+  toValue,
   watch,
+  type MaybeRefOrGetter,
   type Ref,
 } from "vue";
 import {
@@ -17,7 +19,7 @@ export type UseAnchoredAppShellMenuOptions = {
   /** 未传则 composable 内部管理 */
   open?: Ref<boolean>;
   anchor: Ref<HTMLElement | null>;
-  placement: AnchoredMenuPlacement;
+  placement: MaybeRefOrGetter<AnchoredMenuPlacement>;
   /** 首次布局前用于 below-end 的宽度估算 */
   widthPx?: number;
   gap?: number;
@@ -51,7 +53,7 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
   function availableHeightForAnchor(rect: DOMRect): number {
     const gap = opts.gap ?? 4;
     const margin = opts.margin ?? 8;
-    const placement = opts.placement;
+    const placement = toValue(opts.placement);
     if (placement.startsWith("above")) {
       return Math.max(80, rect.top - gap - margin - PANEL_PAD_Y);
     }
@@ -77,7 +79,7 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
     const pos = computeAnchoredMenuPosition(
       rect,
       { width: w, height: h },
-      opts.placement,
+      toValue(opts.placement),
       { gap: opts.gap, margin: opts.margin },
     );
     left.value = pos.left;
@@ -111,7 +113,8 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
     if (panelRef.value?.contains(target)) return true;
     if (
       target instanceof Element &&
-      target.closest("[data-header-float-panel]")
+      (target.closest("[data-header-float-panel]") ||
+        target.closest(".customSelectPanel"))
     ) {
       return true;
     }

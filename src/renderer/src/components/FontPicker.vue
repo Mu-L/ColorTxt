@@ -312,7 +312,7 @@ watch(
         <div class="fontMenuListFooter">
           <div class="fontMenuDivider"></div>
 
-          <button class="fontMenuItem" @click="openOtherFonts">其他字体</button>
+          <button class="fontMenuItem" @click="openOtherFonts">系统字体</button>
         </div>
       </div>
 

@@ -53,7 +53,7 @@ defineExpose({ scrollToBottom });
 <template>
   <div class="colorSchemeHighlight" role="tabpanel">
     <div ref="tableScrollEl" class="schemePanelTableScroll">
-      <table class="highlightTable" :class="{ 'hasScrollBar': rows.length >= 7 }">
+      <table class="highlightTable" :class="{ 'hasScrollBar': rows.length >= 8 }">
         <tbody ref="tableBodyRef">
           <tr v-for="(row, rowIdx) in rows" :key="row.id">
             <td class="hlColLabel colorSchemeRowLabel">

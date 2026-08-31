@@ -7,6 +7,7 @@ import enterFullscreenIcon from "./assets/enter_fullscreen.svg?raw";
 import leaveFullscreenIcon from "./assets/leave_fullscreen.svg?raw";
 import paletteIcon from "./assets/palette.svg?raw";
 import switchIcon from "./assets/switch.svg?raw";
+import optionsIcon from "./assets/options.svg?raw";
 import moreIcon from "./assets/more.svg?raw";
 import mindmapIcon from "./assets/mindmap.svg?raw";
 import wordcloudIcon from "./assets/wordcloud.svg?raw";
@@ -128,6 +129,7 @@ import webDavUploadIcon from "./assets/WebDAV_upload.svg?raw";
 import webDavDownloadIcon from "./assets/WebDAV_download.svg?raw";
 import selectModeIcon from "./assets/select_mode.svg?raw";
 import clickModeIcon from "./assets/click_mode.svg?raw";
+import eyedropperIcon from "./assets/eyedropper.svg?raw";
 
 /** 角色卡「语音」播放动画帧：speak_0 → speak_1 → speak */
 export const speakIconAnimFrames = [
@@ -148,6 +150,8 @@ export const icons = {
   leaveFullscreen: leaveFullscreenIcon,
   palette: paletteIcon,
   switch: switchIcon,
+  /** 阅读区背景图「选项」 */
+  options: optionsIcon,
   more: moreIcon,
   /** 书源列表行「登录」 */
   user: userIcon,
@@ -320,4 +324,6 @@ export const icons = {
   selectMode: selectModeIcon,
   /** 阅读器「点击模式」（左/右键翻页） */
   clickMode: clickModeIcon,
+  /** 拾色器全屏取色 */
+  eyedropper: eyedropperIcon,
 } as const;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import type { StyleValue } from "vue";
 import AppModal from "./AppModal.vue";
 import ColorSchemeHighlightPanel, {
@@ -11,34 +11,42 @@ import ColorSchemeLineationPanel, {
 import ColorSchemeReaderPanel, {
   type ColorSchemeReaderPane,
 } from "./ColorSchemeReaderPanel.vue";
-import ColorSchemePresetList, {
-  type ColorSchemePresetListRow,
-} from "./ColorSchemePresetList.vue";
+import ColorSchemePresetList from "./ColorSchemePresetList.vue";
 import ColorSchemeTabBar, {
   type ColorSchemeTabId,
 } from "./ColorSchemeTabBar.vue";
+import AppShellMenuTeleport from "./AppShellMenuTeleport.vue";
+import RangeSlider from "./RangeSlider.vue";
+import RadioGroup from "./RadioGroup.vue";
+import SwitchToggle from "./SwitchToggle.vue";
+import AppCustomSelect, { type CustomSelectItem } from "./AppCustomSelect.vue";
+import ColorSchemeBackgroundAlignPad from "./ColorSchemeBackgroundAlignPad.vue";
+import { useAnchoredAppShellMenu } from "../composables/useAnchoredAppShellMenu";
+import { useColorSchemeBackgroundDraft } from "../composables/useColorSchemeBackgroundDraft";
+import { useColorSchemePackIo } from "../composables/useColorSchemePackIo";
+import { useColorSchemePresetDraft } from "../composables/useColorSchemePresetDraft";
 import {
   defaultReaderPaletteColorEnabled,
   defaultReaderPaletteDark,
   defaultReaderPaletteLight,
   mergeReaderPaletteColorEnabled,
-  READER_SURFACE_PRESET_CARD_SWATCH_KEYS,
   resolveEffectiveReaderPalette,
+  type ReaderBackgroundState,
   type ReaderSurfaceColorEnabled,
   type ReaderSurfacePalette,
 } from "../constants/appUi";
 import {
-  BUILTIN_READER_PALETTE_PRESETS,
-  cloneReaderPaletteSnapshot,
-  DEFAULT_READER_PALETTE_PRESET_ID,
-  DEFAULT_USER_READER_PALETTE_PRESET_NAME,
-  ensureMatchedReaderPalettePreset,
-  findNamedReaderPalettePreset,
-  newUserReaderPalettePresetId,
-  resolveNamedReaderPalettePreset,
+  cloneReaderBackgroundState,
+  defaultReaderBackgroundState,
+  READER_BACKGROUND_BLEND_OPTIONS,
+  READER_BACKGROUND_SIZE_OPTIONS,
+  isReaderBackgroundEnabled,
+} from "../constants/readerBackground";
+import { READER_BACKGROUND_NONE_ID } from "../constants/readerBuiltins";
+import {
   serializeReaderPaletteUserPresets,
   type ReaderPalettePreset,
-  type ReaderPalettePresetSnapshot,
+  type ReaderPaletteWithTexture,
 } from "../constants/readerPalettePresets";
 import {
   DEFAULT_HIGHLIGHT_COLORS_DARK,
@@ -51,24 +59,16 @@ import {
   MIN_LINEATION_COLORS,
 } from "../constants/lineationColors";
 import { icons } from "../icons";
-import { appConfirm, appPrompt } from "../services/appDialog";
-import { appToast } from "../services/appToast";
-import { pickAndReadJsonFile } from "../utils/readerAnnotationExport";
-import {
-  buildColorSchemeExportPayload,
-  COLOR_SCHEME_EXPORT_DEFAULT_NAME,
-  parseColorSchemeExportJson,
-  stringifyColorSchemeExport,
-  type ColorSchemeExportV1,
-} from "../utils/readerColorSchemeExport";
+import { appConfirm } from "../services/appDialog";
 
 /** 配色「应用」一次提交；字段随 visibleTabs 出现 */
 export type ColorSchemeApplyPayload = {
   reader?: {
-    light: ReaderSurfacePalette;
-    dark: ReaderSurfacePalette;
     colorEnabled: ReaderSurfaceColorEnabled;
     userPresets: ReaderPalettePreset[];
+    selectedIdLight: string;
+    selectedIdDark: string;
+    background: ReaderBackgroundState;
   };
   highlight?: { light: string[]; dark: string[] };
   lineation?: { light: string[]; dark: string[] };
@@ -77,8 +77,6 @@ export type ColorSchemeApplyPayload = {
 const props = withDefaults(
   defineProps<{
     currentTheme: string;
-    readerSurfaceLight: ReaderSurfacePalette;
-    readerSurfaceDark: ReaderSurfacePalette;
     readerPaletteColorEnabled: ReaderSurfaceColorEnabled;
     monacoFontFamily: string;
     highlightColorsLight?: string[];
@@ -86,6 +84,9 @@ const props = withDefaults(
     lineationColorsLight?: string[];
     lineationColorsDark?: string[];
     readerPaletteUserPresets?: ReaderPalettePreset[];
+    readerPaletteSelectedIdLight?: string;
+    readerPaletteSelectedIdDark?: string;
+    readerBackground?: ReaderBackgroundState;
     /** 显示的标签；找书窗口仅传 `['reader']` */
     visibleTabs?: ColorSchemeTabId[];
   }>(),
@@ -95,6 +96,9 @@ const props = withDefaults(
     lineationColorsLight: () => [...DEFAULT_LINEATION_COLORS_LIGHT],
     lineationColorsDark: () => [...DEFAULT_LINEATION_COLORS_DARK],
     readerPaletteUserPresets: () => [],
+    readerPaletteSelectedIdLight: "",
+    readerPaletteSelectedIdDark: "",
+    readerBackground: () => cloneReaderBackgroundState(defaultReaderBackgroundState),
     visibleTabs: () => ["reader", "highlight", "lineation"],
   },
 );
@@ -114,16 +118,156 @@ function ensureActiveTabInVisible() {
   }
 }
 
-const draftLight = ref<ReaderSurfacePalette>({ ...defaultReaderPaletteLight });
-const draftDark = ref<ReaderSurfacePalette>({ ...defaultReaderPaletteDark });
+const draftLight = ref<ReaderPaletteWithTexture>({
+  ...defaultReaderPaletteLight,
+  textureId: READER_BACKGROUND_NONE_ID,
+});
+const draftDark = ref<ReaderPaletteWithTexture>({
+  ...defaultReaderPaletteDark,
+  textureId: READER_BACKGROUND_NONE_ID,
+});
 const draftColorEnabled = ref<ReaderSurfaceColorEnabled>({
   ...defaultReaderPaletteColorEnabled,
 });
+let closingAfterApply = false;
 
 const readerPane = ref<ColorSchemeReaderPane>("list");
-const activePresetKey = ref(DEFAULT_READER_PALETTE_PRESET_ID);
-const draftUserPresets = ref<ReaderPalettePreset[]>([]);
+
+function openBackgroundPane() {
+  readerPane.value = "bg";
+}
+
+function onReaderPaneBack() {
+  if (readerPane.value === "bg") {
+    readerPane.value = "colors";
+    return;
+  }
+  readerPane.value = "list";
+}
+
+const readerPaneBackLabel = computed(() =>
+  readerPane.value === "bg" ? "返回配色" : "返回",
+);
+
+const {
+  draftBackground,
+  backgroundCustomUrlById,
+  currentBackgroundTextureId,
+  canEditBgOptions,
+  bgOptionsBtnTitle,
+  canDuplicateBackground,
+  previewTextureStyle,
+  overlayStyleForTexture,
+  bgBlendSelectLabel,
+  bgOpacityPercent,
+  bgSizeModel,
+  bgPositionModel,
+  bgRepeatModel,
+  bgBlendModel,
+  syncFromApplied: syncBackgroundFromApplied,
+  persistFiles: persistBackgroundFiles,
+  discardSessionImports,
+  refreshCustomUrls: refreshBackgroundCustomUrls,
+  onSelectBackground,
+  onBlendSelect,
+  onBackgroundEnabledUpdate,
+  importBackground,
+  duplicateBackground,
+  deleteBackground,
+  installPackTextures,
+  mergeGallery: mergeImportedBackgroundGallery,
+} = useColorSchemeBackgroundDraft({
+  currentTheme: () => props.currentTheme,
+  readerPane,
+  draftLight,
+  draftDark,
+  onManualEdit: () => markManualEdit(),
+  closeOptionsMenu: () => closeBgOptionsMenu(),
+  onGalleryChanged: async () => {
+    await nextTick();
+    await readerPanelRef.value?.scrollBackgroundToBottom();
+  },
+});
+
+const highlightPanelRef = ref<{ scrollToBottom: () => void | Promise<void> } | null>(
+  null,
+);
+const lineationPanelRef = ref<{ scrollToBottom: () => void | Promise<void> } | null>(
+  null,
+);
+const presetListRef = ref<{
+  scheduleScrollActiveIntoView: () => Promise<void>;
+} | null>(null);
+const readerPanelRef = ref<{
+  scrollBackgroundToBottom: () => void | Promise<void>;
+  bgOptionsTableBtnEl: HTMLElement | null;
+} | null>(null);
+
+const {
+  draftUserPresets,
+  activePresetKeyLight,
+  activePresetKeyDark,
+  activePresetKey,
+  isUserPreset,
+  canOpenColorEditor,
+  colorEditorBtnTitle,
+  createSchemeBtnLabel,
+  presetListRows,
+  isEditingUserPreset,
+  writeDraftIntoUserPreset,
+  flushSelectedUserPresetPalettes,
+  markManualEdit,
+  syncFromProps: syncPresetDraftFromApplied,
+  syncSelection,
+  mergeImportedUserPresets,
+  cloneNamedPreset,
+  isBuiltinSelected,
+  onSelectPreset,
+  onRenamePreset,
+  onCreateScheme,
+  onDeletePreset,
+} = useColorSchemePresetDraft({
+  currentTheme: () => props.currentTheme,
+  draftLight,
+  draftDark,
+  readerPane,
+  overlayStyleForTexture,
+  presetListRef,
+});
+
 let draftBaselineJson = "";
+
+const bgOptionsFooterBtnRef = ref<HTMLElement | null>(null);
+const bgOptionsBtnRef = ref<HTMLElement | null>(null);
+const {
+  open: bgOptionsOpen,
+  left: bgOptionsLeft,
+  top: bgOptionsTop,
+  toggleMenu: toggleBgOptionsMenu,
+  closeMenu: closeBgOptionsMenu,
+  panelRef: bgOptionsPanelRef,
+} = useAnchoredAppShellMenu({
+  anchor: bgOptionsBtnRef,
+  placement: "above-center",
+  widthPx: 300,
+  gap: 6,
+  zIndex: 7300,
+  disabled: computed(() => !canEditBgOptions.value),
+});
+
+function bindBgOptionsPanel(el: HTMLElement | null) {
+  bgOptionsPanelRef.value = el;
+}
+
+const bgBlendSelectRef = ref<{ closePanel: () => void } | null>(null);
+const bgBlendSelectItems: CustomSelectItem[] = READER_BACKGROUND_BLEND_OPTIONS.map(
+  (opt) => ({ kind: "item", id: opt.id, label: opt.label }),
+);
+const emptySelectItems: CustomSelectItem[] = [];
+
+watch(bgOptionsOpen, (open) => {
+  if (!open) bgBlendSelectRef.value?.closePanel();
+});
 
 let highlightRowIdSeq = 0;
 
@@ -161,24 +305,24 @@ const draftLineationDark = ref<LineationColorRow[]>(
   lineationColorsToDraftRows(DEFAULT_LINEATION_COLORS_DARK),
 );
 
+const pickerLive = ref<Partial<Record<keyof ReaderSurfacePalette, string>>>({});
+
+const highlightPickerLive = ref<Partial<Record<number, string>>>({});
+const lineationPickerLive = ref<Partial<Record<number, string>>>({});
+
 const isLightShell = computed(() => props.currentTheme === "vs");
 
 const activeDraft = computed(() =>
   isLightShell.value ? draftLight.value : draftDark.value,
 );
 
-const pickerLive = ref<Partial<Record<keyof ReaderSurfacePalette, string>>>({});
-
-const highlightPickerLive = ref<Partial<Record<number, string>>>({});
-const lineationPickerLive = ref<Partial<Record<number, string>>>({});
-
-type ColorSchemeListPanelExpose = { scrollToBottom: () => void | Promise<void> };
-type ColorSchemePresetListExpose = {
-  scheduleScrollActiveIntoView: () => Promise<void>;
-};
-const highlightPanelRef = ref<ColorSchemeListPanelExpose | null>(null);
-const lineationPanelRef = ref<ColorSchemeListPanelExpose | null>(null);
-const presetListRef = ref<ColorSchemePresetListExpose | null>(null);
+function toggleBgOptionsFrom(kind: "footer" | "table") {
+  bgOptionsBtnRef.value =
+    kind === "table"
+      ? (readerPanelRef.value?.bgOptionsTableBtnEl ?? null)
+      : bgOptionsFooterBtnRef.value;
+  void toggleBgOptionsMenu();
+}
 
 const displaySurface = computed((): ReaderSurfacePalette => {
   const palette = {
@@ -228,157 +372,6 @@ const bodyTextForHighlightPreview = computed(
   () => displaySurface.value.bodyText,
 );
 
-function snapshotFromDraft(): ReaderPalettePresetSnapshot {
-  return {
-    light: { ...draftLight.value },
-    dark: { ...draftDark.value },
-  };
-}
-
-function applyPaletteToDraft(snap: Pick<ReaderPalettePresetSnapshot, "light" | "dark">) {
-  draftLight.value = { ...snap.light };
-  draftDark.value = { ...snap.dark };
-}
-
-function isEditingUserPreset(): boolean {
-  return draftUserPresets.value.some((p) => p.id === activePresetKey.value);
-}
-
-const isUserPreset = computed(() => isEditingUserPreset());
-
-function syncSelectionFromColors() {
-  const matched = ensureMatchedReaderPalettePreset(
-    snapshotFromDraft(),
-    draftUserPresets.value,
-  );
-  draftUserPresets.value = matched.userPresets;
-  activePresetKey.value = matched.selected.id;
-}
-
-function writeDraftIntoUserPreset(id: string) {
-  const idx = draftUserPresets.value.findIndex((p) => p.id === id);
-  if (idx < 0) return;
-  const current = draftUserPresets.value[idx]!;
-  const next = [...draftUserPresets.value];
-  next[idx] = {
-    ...current,
-    ...cloneReaderPaletteSnapshot(snapshotFromDraft()),
-  };
-  draftUserPresets.value = next;
-}
-
-function markManualEdit() {
-  if (isEditingUserPreset()) {
-    writeDraftIntoUserPreset(activePresetKey.value);
-  }
-}
-
-function presetListRowFromPalette(
-  key: string,
-  name: string,
-  palette: ReaderSurfacePalette,
-  custom: boolean,
-): ColorSchemePresetListRow {
-  return {
-    key,
-    name,
-    bg: palette.readerBg,
-    bodyText: palette.bodyText,
-    swatches: READER_SURFACE_PRESET_CARD_SWATCH_KEYS.map((k) => palette[k]),
-    custom,
-  };
-}
-
-const presetListRows = computed((): ColorSchemePresetListRow[] => {
-  const isLight = isLightShell.value;
-  const rows: ColorSchemePresetListRow[] = [];
-  for (const p of BUILTIN_READER_PALETTE_PRESETS) {
-    const pal = isLight ? p.light : p.dark;
-    rows.push(presetListRowFromPalette(p.id, p.name, pal, false));
-  }
-  for (const p of draftUserPresets.value) {
-    const pal = isLight ? p.light : p.dark;
-    rows.push(presetListRowFromPalette(p.id, p.name, pal, true));
-  }
-  return rows;
-});
-
-function onSelectPreset(key: string) {
-  const named = findNamedReaderPalettePreset(key, draftUserPresets.value);
-  if (!named) return;
-  applyPaletteToDraft(named);
-  activePresetKey.value = named.id;
-}
-
-async function onRenamePreset(id: string) {
-  const idx = draftUserPresets.value.findIndex((p) => p.id === id);
-  if (idx < 0) return;
-  const current = draftUserPresets.value[idx]!;
-  const input = await appPrompt("", {
-    title: "方案名称",
-    defaultValue: current.name,
-    placeholder: DEFAULT_USER_READER_PALETTE_PRESET_NAME,
-  });
-  if (input === null) return;
-  const name = input.trim() || DEFAULT_USER_READER_PALETTE_PRESET_NAME;
-  const next = [...draftUserPresets.value];
-  next[idx] = { ...current, name };
-  draftUserPresets.value = next;
-}
-
-async function onDuplicatePreset(id: string) {
-  const source = findNamedReaderPalettePreset(id, draftUserPresets.value);
-  if (!source) return;
-  const defaultName = `${source.name} 副本`;
-  const input = await appPrompt("", {
-    title: "方案名称",
-    defaultValue: defaultName,
-    placeholder: defaultName,
-  });
-  if (input === null) return;
-  const name = input.trim() || defaultName;
-  const snap =
-    activePresetKey.value === id
-      ? snapshotFromDraft()
-      : cloneReaderPaletteSnapshot(source);
-  const copy: ReaderPalettePreset = {
-    id: newUserReaderPalettePresetId(),
-    name,
-    ...cloneReaderPaletteSnapshot(snap),
-  };
-  const userIdx = draftUserPresets.value.findIndex((p) => p.id === id);
-  const next = [...draftUserPresets.value];
-  if (userIdx >= 0) next.splice(userIdx + 1, 0, copy);
-  else next.push(copy);
-  draftUserPresets.value = next;
-  applyPaletteToDraft(copy);
-  activePresetKey.value = copy.id;
-  // 进入编辑前先按选中项居中（末项会停在底部）；列表 v-show 会保留 scrollTop
-  await presetListRef.value?.scheduleScrollActiveIntoView();
-  readerPane.value = "colors";
-}
-
-function onCreateScheme() {
-  void onDuplicatePreset(activePresetKey.value);
-}
-
-async function onDeletePreset(id: string) {
-  const current = draftUserPresets.value.find((p) => p.id === id);
-  if (!current) return;
-  const ok = await appConfirm(`确定要删除配色方案「${current.name}」吗？`);
-  if (!ok) return;
-  const wasActive = activePresetKey.value === id;
-  draftUserPresets.value = draftUserPresets.value.filter((p) => p.id !== id);
-  if (wasActive) {
-    const fallback = resolveNamedReaderPalettePreset(
-      DEFAULT_READER_PALETTE_PRESET_ID,
-      draftUserPresets.value,
-    );
-    applyPaletteToDraft(fallback);
-    activePresetKey.value = fallback.id;
-    readerPane.value = "list";
-  }
-}
 
 function captureDraftBaseline() {
   draftBaselineJson = serializeDraftForCompare();
@@ -392,6 +385,9 @@ function serializeDraftForCompare(): string {
           dark: draftDark.value,
           colorEnabled: draftColorEnabled.value,
           userPresets: draftUserPresets.value,
+          selectedIdLight: activePresetKeyLight.value,
+          selectedIdDark: activePresetKeyDark.value,
+          background: draftBackground.value,
         }
       : null,
     highlight: props.visibleTabs.includes("highlight")
@@ -422,19 +418,18 @@ async function confirmDiscardIfDirty(): Promise<boolean> {
 }
 
 function syncDraftFromProps() {
-  draftLight.value = { ...props.readerSurfaceLight };
-  draftDark.value = { ...props.readerSurfaceDark };
   draftColorEnabled.value = mergeReaderPaletteColorEnabled(
     props.readerPaletteColorEnabled,
   );
+  syncBackgroundFromApplied(props.readerBackground);
 }
 
 function syncPresetDraftFromProps() {
-  draftUserPresets.value = serializeReaderPaletteUserPresets(
+  syncPresetDraftFromApplied(
     props.readerPaletteUserPresets,
+    props.readerPaletteSelectedIdLight,
+    props.readerPaletteSelectedIdDark,
   );
-  syncSelectionFromColors();
-  readerPane.value = "list";
 }
 
 function syncHighlightDraftFromProps() {
@@ -484,11 +479,14 @@ function onColorEnabledUpdate(
 function onApplyAll() {
   const payload: ColorSchemeApplyPayload = {};
   if (props.visibleTabs.includes("reader")) {
+    const background = persistBackgroundFiles(props.readerBackground);
+    flushSelectedUserPresetPalettes();
     payload.reader = {
-      light: { ...draftLight.value },
-      dark: { ...draftDark.value },
       colorEnabled: { ...draftColorEnabled.value },
       userPresets: serializeReaderPaletteUserPresets(draftUserPresets.value),
+      selectedIdLight: activePresetKeyLight.value,
+      selectedIdDark: activePresetKeyDark.value,
+      background,
     };
   }
   if (props.visibleTabs.includes("highlight")) {
@@ -504,12 +502,16 @@ function onApplyAll() {
     };
   }
   emit("apply", payload);
+  closingAfterApply = true;
   modelValue.value = false;
 }
 
 function onCancel() {
   void confirmDiscardIfDirty().then((ok) => {
-    if (ok) modelValue.value = false;
+    if (ok) {
+      discardSessionImports(props.readerBackground.custom);
+      modelValue.value = false;
+    }
   });
 }
 
@@ -655,112 +657,65 @@ function onResetLineationDefaults() {
   );
 }
 
-async function onExportColorScheme() {
-  const payload = buildColorSchemeExportPayload({
-    ...(props.visibleTabs.includes("reader")
-      ? {
-          reader: {
-            light: { ...draftLight.value },
-            dark: { ...draftDark.value },
-            colorEnabled: { ...draftColorEnabled.value },
-            userPresets: draftUserPresets.value,
-          },
-        }
-      : {}),
-    ...(props.visibleTabs.includes("highlight")
-      ? {
-          highlight: {
-            light: draftHighlightLight.value.map((r) => r.color),
-            dark: draftHighlightDark.value.map((r) => r.color),
-          },
-        }
-      : {}),
-    ...(props.visibleTabs.includes("lineation")
-      ? {
-          lineation: {
-            light: draftLineationLight.value.map((r) => r.color),
-            dark: draftLineationDark.value.map((r) => r.color),
-          },
-        }
-      : {}),
-  });
-  const save = await window.colorTxt.showSaveDialog({
-    title: "导出配色",
-    defaultPath: COLOR_SCHEME_EXPORT_DEFAULT_NAME,
-    filters: [{ name: "JSON", extensions: ["json"] }],
-  });
-  if (save.canceled || !save.filePath) return;
-  const written = await window.colorTxt.writeTextFile(
-    save.filePath,
-    stringifyColorSchemeExport(payload),
-    "utf8",
-  );
-  if (!written.ok) {
-    appToast(written.message || "导出失败", { kind: "warning" });
-    return;
-  }
-  appToast("已导出配色", { kind: "success" });
-}
-
-function applyImportedColorScheme(data: ColorSchemeExportV1) {
-  let applied = 0;
-  if (data.reader && props.visibleTabs.includes("reader")) {
-    draftLight.value = { ...data.reader.light };
-    draftDark.value = { ...data.reader.dark };
-    draftColorEnabled.value = { ...data.reader.colorEnabled };
-    draftUserPresets.value = serializeReaderPaletteUserPresets(
-      data.reader.userPresets,
-    );
-    syncSelectionFromColors();
-    pickerLive.value = {};
-    applied += 1;
-  }
-  if (data.highlight && props.visibleTabs.includes("highlight")) {
-    draftHighlightLight.value = colorsToDraftRows(data.highlight.light);
-    draftHighlightDark.value = colorsToDraftRows(data.highlight.dark);
+const {
+  onExportCurrentColorScheme,
+  onExportAllColorSchemes,
+  onImportColorScheme,
+} = useColorSchemePackIo({
+  visibleTabs: () => props.visibleTabs,
+  isUserPreset,
+  isEditingUserPreset,
+  writeDraftIntoUserPreset,
+  activePresetKey,
+  activePresetKeyLight,
+  activePresetKeyDark,
+  cloneNamedPreset,
+  isBuiltinSelected,
+  draftLight,
+  draftDark,
+  draftColorEnabled,
+  draftUserPresets,
+  draftBackground,
+  mergeImportedUserPresets,
+  syncSelection,
+  installPackTextures,
+  mergeGallery: mergeImportedBackgroundGallery,
+  refreshCustomUrls: refreshBackgroundCustomUrls,
+  applyImportedHighlight: (light, dark) => {
+    draftHighlightLight.value = colorsToDraftRows(light);
+    draftHighlightDark.value = colorsToDraftRows(dark);
     highlightPickerLive.value = {};
-    applied += 1;
-  }
-  if (data.lineation && props.visibleTabs.includes("lineation")) {
-    draftLineationLight.value = lineationColorsToDraftRows(data.lineation.light);
-    draftLineationDark.value = lineationColorsToDraftRows(data.lineation.dark);
+  },
+  applyImportedLineation: (light, dark) => {
+    draftLineationLight.value = lineationColorsToDraftRows(light);
+    draftLineationDark.value = lineationColorsToDraftRows(dark);
     lineationPickerLive.value = {};
-    applied += 1;
-  }
-  return applied;
-}
+  },
+  highlightColors: () => ({
+    light: draftHighlightLight.value.map((r) => r.color),
+    dark: draftHighlightDark.value.map((r) => r.color),
+  }),
+  lineationColors: () => ({
+    light: draftLineationLight.value.map((r) => r.color),
+    dark: draftLineationDark.value.map((r) => r.color),
+  }),
+  clearReaderPickerLive: () => {
+    pickerLive.value = {};
+  },
+});
 
-async function onImportColorScheme() {
-  const picked = await pickAndReadJsonFile("导入配色", "JSON");
-  if (picked.ok) {
-    const data = parseColorSchemeExportJson(picked.text);
-    if (!data) {
-      appToast("无法解析配色文件", { kind: "warning" });
-      return;
-    }
-    const ok = await appConfirm(
-      "导入将替换当前配色草稿（点「应用」后才会保存），是否继续？",
-    );
-    if (!ok) return;
-    const applied = applyImportedColorScheme(data);
-    if (!applied) {
-      appToast("文件中没有可导入到当前面板的配色", { kind: "warning" });
-      return;
-    }
-    appToast("已导入配色（点「应用」后生效）", { kind: "success" });
-    return;
-  }
-  if ("error" in picked) {
-    appToast(picked.error || "读取文件失败", { kind: "warning" });
-  }
-}
 
 watch(modelValue, (open) => {
   if (!open) {
+    closeBgOptionsMenu();
     // 保留 activeTab：同窗口再次打开配色时回到上次标签（不持久化）
     pickerLive.value = {};
     highlightPickerLive.value = {};
     lineationPickerLive.value = {};
+    if (!closingAfterApply) {
+      discardSessionImports(props.readerBackground.custom);
+    }
+    closingAfterApply = false;
     return;
   }
   ensureActiveTabInVisible();
@@ -777,9 +732,12 @@ watch(activeTab, (tab) => {
   if (tab !== "lineation") lineationPickerLive.value = {};
 });
 
-watch(readerPane, (pane) => {
-  if (pane !== "list") return;
-  void presetListRef.value?.scheduleScrollActiveIntoView();
+watch(readerPane, () => {
+  closeBgOptionsMenu();
+});
+
+watch(canEditBgOptions, (ok) => {
+  if (!ok) closeBgOptionsMenu();
 });
 
 function clearPickerLive() {
@@ -792,14 +750,29 @@ watch(
   () => props.currentTheme,
   () => {
     clearPickerLive();
+    if (readerPane.value === "list") {
+      void presetListRef.value?.scheduleScrollActiveIntoView();
+    }
   },
 );
 
+const themeLocked = computed(
+  () =>
+    modelValue.value &&
+    activeTab.value === "reader" &&
+    (readerPane.value === "colors" || readerPane.value === "bg"),
+);
+
 function onChangeTheme(theme: "vs" | "vs-dark") {
+  if (themeLocked.value) return;
   if ((theme === "vs") === isLightShell.value) return;
   clearPickerLive();
   emit("changeTheme", theme);
 }
+
+defineExpose({
+  isThemeLocked: () => themeLocked.value,
+});
 </script>
 
 <template>
@@ -819,24 +792,41 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
         :visible-tabs="visibleTabs"
         :current-theme="currentTheme"
         :panel-open="modelValue"
+        :theme-locked="themeLocked"
+        :can-export-current-scheme="isUserPreset"
         @update:active-tab="activeTab = $event"
         @change-theme="onChangeTheme"
-        @export-color-scheme="void onExportColorScheme()"
+        @export-current-color-scheme="void onExportCurrentColorScheme()"
+        @export-all-color-schemes="void onExportAllColorSchemes()"
         @import-color-scheme="void onImportColorScheme()"
       />
 
       <div class="colorSchemeScroll">
         <ColorSchemeReaderPanel
           v-show="activeTab === 'reader'"
+          ref="readerPanelRef"
           :display-surface="displaySurface"
           :editing-surface="activeDraft"
           :color-enabled="draftColorEnabled"
           :preview-box-style="previewBoxStyle"
+          :preview-texture-style="previewTextureStyle"
           :reader-pane="readerPane"
+          :background-texture-id="currentBackgroundTextureId"
+          :background-custom="draftBackground.custom"
+          :background-custom-url-by-id="backgroundCustomUrlById"
+          :background-enabled="isReaderBackgroundEnabled(draftBackground)"
+          :can-edit-bg-options="canEditBgOptions"
+          :bg-options-btn-title="bgOptionsBtnTitle"
+          :bg-options-open="bgOptionsOpen"
           @update-surface-key="onPickerUpdate"
           @update-color-enabled="onColorEnabledUpdate"
+          @update-background-enabled="onBackgroundEnabledUpdate"
           @draft-hex="onPickerDraftHex"
           @draft-end="onPickerDraftEnd"
+          @select-background="onSelectBackground"
+          @delete-background="void deleteBackground($event)"
+          @open-background="openBackgroundPane"
+          @toggle-bg-options="toggleBgOptionsFrom('table')"
         >
           <template #presetList>
             <ColorSchemePresetList
@@ -844,6 +834,8 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
               :rows="presetListRows"
               :active-key="activePresetKey"
               @select="onSelectPreset"
+              @rename="onRenamePreset"
+              @remove="onDeletePreset"
             />
           </template>
         </ColorSchemeReaderPanel>
@@ -890,14 +882,14 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
             type="button"
             class="btn"
             size="large"
-            @click="readerPane = 'list'"
+            @click="onReaderPaneBack"
           >
             <span
               class="colorSchemeFooterBtnIcon"
               aria-hidden="true"
               v-html="icons.back"
             />
-            退出编辑
+            {{ readerPaneBackLabel }}
           </button>
           <template v-else>
             <button
@@ -911,14 +903,14 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
                 aria-hidden="true"
                 v-html="icons.switch"
               />
-              编辑开关
+              开关
             </button>
             <button
               type="button"
               class="btn btnIconColorful"
               size="large"
-              :disabled="!isUserPreset"
-              :title="isUserPreset ? undefined : '内置方案不支持改色，请通过「新增配色方案」来创建自定义方案'"
+              :disabled="!canOpenColorEditor"
+              :title="colorEditorBtnTitle"
               @click="readerPane = 'colors'"
             >
               <span
@@ -926,7 +918,7 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
                 aria-hidden="true"
                 v-html="icons.palette"
               />
-              编辑配色
+              配色
             </button>
             <button
               type="button"
@@ -939,35 +931,60 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
                 aria-hidden="true"
                 v-html="icons.add"
               />
-              新增配色方案
+              {{ createSchemeBtnLabel }}
             </button>
           </template>
-          <template v-if="readerPane === 'colors' && isUserPreset">
+          <template v-if="readerPane === 'bg'">
+            <div class="colorSchemeBgOptionsWrap">
+              <button
+                ref="bgOptionsFooterBtnRef"
+                type="button"
+                class="btn"
+                size="large"
+                aria-haspopup="dialog"
+                :aria-expanded="bgOptionsOpen"
+                :aria-pressed="bgOptionsOpen"
+                :disabled="!canEditBgOptions"
+                :title="bgOptionsBtnTitle"
+                @click="toggleBgOptionsFrom('footer')"
+              >
+                <span
+                  class="colorSchemeFooterBtnIcon"
+                  aria-hidden="true"
+                  v-html="icons.options"
+                />
+                选项
+              </button>
+            </div>
             <button
               type="button"
               class="btn"
               size="large"
-              @click="onRenamePreset(activePresetKey)"
+              :disabled="!canDuplicateBackground"
+              :title="
+                canDuplicateBackground ? undefined : '请先选择一张背景图'
+              "
+              @click="void duplicateBackground()"
             >
               <span
                 class="colorSchemeFooterBtnIcon"
                 aria-hidden="true"
-                v-html="icons.edit"
+                v-html="icons.copy"
               />
-              重命名
+              生成副本
             </button>
             <button
               type="button"
-              class="btn danger"
+              class="btn"
               size="large"
-              @click="onDeletePreset(activePresetKey)"
+              @click="void importBackground()"
             >
               <span
                 class="colorSchemeFooterBtnIcon"
                 aria-hidden="true"
-                v-html="icons.remove"
+                v-html="icons.add"
               />
-              删除
+              导入图片
             </button>
           </template>
         </div>
@@ -1033,6 +1050,65 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
             应用
           </button>
         </div>
+        <AppShellMenuTeleport
+          v-model:open="bgOptionsOpen"
+          :left="bgOptionsLeft"
+          :top="bgOptionsTop"
+          :z-index="7300"
+          :width="280"
+          aria-label="背景图选项"
+          :on-panel-mount="bindBgOptionsPanel"
+        >
+          <div class="bgOptionsPanel">
+            <div class="bgOptionsRow">
+              <span class="bgOptionsLabel">混合模式</span>
+              <AppCustomSelect
+                ref="bgBlendSelectRef"
+                class="bgOptionsSelect"
+                :model-value="bgBlendModel"
+                :display-label="bgBlendSelectLabel"
+                :fixed-top-items="emptySelectItems"
+                :scroll-items="bgBlendSelectItems"
+                :fixed-bottom-items="emptySelectItems"
+                :scroll-max-height="220"
+                :panel-z-index="7400"
+                ariaLabel="背景图混合模式"
+                @update:model-value="onBlendSelect"
+              />
+            </div>
+            <div class="bgOptionsRow">
+              <span class="bgOptionsLabel">不透明度</span>
+              <RangeSlider
+                v-model="bgOpacityPercent"
+                :min="0"
+                :max="100"
+                :step="5"
+                aria-label="背景图不透明度"
+              />
+            </div>
+            <div class="bgOptionsRow">
+              <span class="bgOptionsLabel">填充方式</span>
+              <RadioGroup
+                v-model="bgSizeModel"
+                size="sm"
+                aria-label="背景图填充方式"
+                :options="READER_BACKGROUND_SIZE_OPTIONS"
+              />
+            </div>
+            <div class="bgOptionsRow">
+              <span class="bgOptionsLabel">平铺方式</span>
+              <SwitchToggle
+                v-model="bgRepeatModel"
+                size="sm"
+                aria-label="背景图平铺"
+              />
+            </div>
+            <div class="bgOptionsRow bgOptionsRow--align">
+              <span class="bgOptionsLabel">对齐方式</span>
+              <ColorSchemeBackgroundAlignPad v-model="bgPositionModel" />
+            </div>
+          </div>
+        </AppShellMenuTeleport>
       </div>
     </template>
   </AppModal>
@@ -1071,6 +1147,10 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
   flex-wrap: wrap;
 }
 
+.colorSchemeBgOptionsWrap {
+  position: relative;
+}
+
 .colorSchemeFooterBtnIcon {
   display: inline-flex;
   align-items: center;
@@ -1086,6 +1166,49 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
   display: block;
 }
 
+.bgOptionsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 8px 8px;
+  min-width: 0;
+}
+
+.bgOptionsRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bgOptionsLabel {
+  flex: 0 0 68px;
+  font-size: 13px;
+  color: var(--fg);
+}
+
+.bgOptionsRow :deep(.rangeSlider) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.bgOptionsRow :deep(.radioGroup) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.bgOptionsSelect {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.bgOptionsRow--align {
+  align-items: flex-start;
+}
+
+.bgOptionsRow--align .bgOptionsLabel {
+  padding-top: 6px;
+}
+
 .colorSchemePanelFooterEnd {
   display: flex;
   align-items: center;
@@ -1096,7 +1219,7 @@ function onChangeTheme(theme: "vs" | "vs-dark") {
 
 <style>
 .colorSchemePanel {
-  height: 560px;
-  min-height: 560px;
+  height: 608px;
+  min-width: 610px;
 }
 </style>

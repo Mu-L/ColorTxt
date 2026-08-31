@@ -1,5 +1,6 @@
 import { BrowserWindow } from "electron";
 import { isBackstageWebViewWindow } from "./bookSource/engine/backstageWebView";
+import { isEyedropperWindow } from "./eyedropper";
 import type { CreateMainWindow } from "./windowFactory";
 
 /** 可读主窗口：排除找书窗与后台 webView */
@@ -10,7 +11,8 @@ export function listMainReaderWindows(
     (w) =>
       !w.isDestroyed() &&
       !findBookWindowByWindowId.get(w.id) &&
-      !isBackstageWebViewWindow(w),
+      !isBackstageWebViewWindow(w) &&
+      !isEyedropperWindow(w),
   );
 }
 

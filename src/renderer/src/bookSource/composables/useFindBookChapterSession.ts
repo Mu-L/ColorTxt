@@ -71,6 +71,7 @@ export type FindBookChapterSessionDeps = {
   exitVoiceRead: () => void;
   /** 进入编辑前停止定时滚动（可晚绑定） */
   stopTimedScroll: () => void;
+  readerEditMode: Ref<boolean>;
 };
 
 /**
@@ -82,7 +83,7 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
   const lastChapterTitle = ref("");
   const lastChapterBody = ref("");
   const totalLineCount = ref(0);
-  const readerEditMode = ref(false);
+  const readerEditMode = deps.readerEditMode;
   const readerEditorDirty = ref(false);
   /** 章节保存 / 局部编辑写缓存中 */
   const readerChapterSaving = ref(false);

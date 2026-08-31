@@ -62,6 +62,7 @@ import {
 } from "../monaco/txtrTextMonarch";
 import { installReaderScrollKeyHandler } from "../monaco/readerKeyScroll";
 import { installReaderReadOnlyImeGuard } from "../monaco/readerReadOnlyImeGuard";
+import { scheduleReaderBackgroundStickyAlign } from "../constants/readerBackground";
 import {
   applyLeadIndentFullWidth,
   chapterTitleForDisplay,
@@ -3618,6 +3619,7 @@ function restoreEditorViewState(state: unknown): boolean {
   beginProgrammaticScroll();
   try {
     e.restoreViewState(state as monaco.editor.ICodeEditorViewState);
+    scheduleReaderBackgroundStickyAlign();
     return true;
   } catch {
     return false;
@@ -4006,7 +4008,12 @@ onMounted(() => {
     }
     const d1 = e.onDidScrollChange(() => {
       emitProbeLine(true);
+      scheduleReaderBackgroundStickyAlign();
     });
+    const dLayout = e.onDidLayoutChange(() => {
+      scheduleReaderBackgroundStickyAlign();
+    });
+    window.addEventListener("resize", scheduleReaderBackgroundStickyAlign);
     const d2 = e.onDidChangeCursorPosition(() => {
       emitProbeLine(false);
       syncMinimapCursorLineDecoration();
@@ -4182,6 +4189,8 @@ onMounted(() => {
     window.addEventListener("keydown", onFindNavigateKeyCapture, true);
     onBeforeUnmount(() => {
       d1.dispose();
+      dLayout.dispose();
+      window.removeEventListener("resize", scheduleReaderBackgroundStickyAlign);
       d2.dispose();
       dSel.dispose();
       d3.dispose();
@@ -4366,7 +4375,7 @@ watch(smartFormatReviewActive, (active) => {
 <template>
   <main
     ref="contentRootEl"
-    class="content"
+    class="content readerSurfaceBg"
     :class="{
       'content--readerEdit': readerEditMode,
       'content--readerEditMinimap': readerEditMode && readerEditMinimap,
@@ -4521,7 +4530,7 @@ watch(smartFormatReviewActive, (active) => {
 <style scoped>
 .content {
   height: 100%;
-  background: var(--reader-bg);
+  background-color: var(--reader-bg);
   overflow: hidden;
   min-height: 0;
   user-select: text;
@@ -4529,6 +4538,7 @@ watch(smartFormatReviewActive, (active) => {
 
 .editorShell {
   position: relative;
+  z-index: 1;
   height: 100%;
   width: 100%;
   min-height: 0;
@@ -4604,6 +4614,7 @@ watch(smartFormatReviewActive, (active) => {
   width: 100%;
   overflow: hidden;
   user-select: text;
+  background-color: transparent;
 }
 
 .hlFloatRoot {

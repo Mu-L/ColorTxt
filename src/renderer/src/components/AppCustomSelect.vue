@@ -85,12 +85,15 @@ const props = withDefaults(
     searchPlaceholder?: string;
     /** 下拉最小宽度（px），默认与触发器同宽 */
     minPanelWidth?: number;
+    /** 下拉 Teleport 面板 z-index；嵌套在其它浮层内时需高于父面板 */
+    panelZIndex?: number;
     /** 为 true 时用左侧 3px 色块表示分类色（排序项带 prefixHtml 时不显示色块） */
     categoryColorMarks?: boolean;
   }>(),
   {
     scrollMaxHeight: 220,
     minPanelWidth: 0,
+    panelZIndex: 7200,
     triggerPrefixHtml: "",
     categoryColorMarks: false,
     placeholder: "",
@@ -453,6 +456,7 @@ const triggerMainText = computed(() => {
           left: `${posLeft}px`,
           top: `${posTop}px`,
           width: `${panelWidth}px`,
+          zIndex: panelZIndex,
         }"
         @click.stop
       >

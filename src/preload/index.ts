@@ -8,6 +8,19 @@ import {
 } from "@shared/aiDataPaths";
 import { APP_DISPLAY_NAME } from "@shared/packageDerived";
 import type {
+  ReaderBackgroundDeleteResult,
+  ReaderBackgroundImportResult,
+  ReaderBackgroundImportBytesPayload,
+  ReaderBackgroundInstallFilePayload,
+  ReaderBackgroundInstallFileResult,
+} from "@shared/readerBackground";
+import {
+  EYEDROPPER_IPC,
+  type EyedropperFormat,
+  type EyedropperInitPayload,
+  type EyedropperPointerPayload,
+} from "@shared/eyedropperIpc";
+import type {
   AIAgentRendererEvent,
   AIAgentStartPayload,
   AIChunkRecord,
@@ -486,6 +499,65 @@ const api = {
       ipcRenderer.invoke("characterPortrait:copyFileTo", payload) as Promise<
         { ok: true } | { ok: false; error: string }
       >,
+  },
+  readerBackground: {
+    importFromPath: (sourcePath: string) =>
+      ipcRenderer.invoke(
+        "readerBackground:importFromPath",
+        sourcePath,
+      ) as Promise<ReaderBackgroundImportResult>,
+    importFromBytes: (payload: ReaderBackgroundImportBytesPayload) =>
+      ipcRenderer.invoke(
+        "readerBackground:importFromBytes",
+        payload,
+      ) as Promise<ReaderBackgroundImportResult>,
+    installFile: (payload: ReaderBackgroundInstallFilePayload) =>
+      ipcRenderer.invoke(
+        "readerBackground:installFile",
+        payload,
+      ) as Promise<ReaderBackgroundInstallFileResult>,
+    deleteFile: (fileName: string) =>
+      ipcRenderer.invoke(
+        "readerBackground:deleteFile",
+        fileName,
+      ) as Promise<ReaderBackgroundDeleteResult>,
+  },
+  /** 全屏取色：冻结截屏 + 覆盖层；取消或失败返回 `null` */
+  eyedropperPick: () =>
+    ipcRenderer.invoke(EYEDROPPER_IPC.pick) as Promise<string | null>,
+  eyedropperOnInit: (cb: (payload: EyedropperInitPayload) => void) => {
+    const fn = (_: unknown, payload: EyedropperInitPayload) => cb(payload);
+    ipcRenderer.on(EYEDROPPER_IPC.init, fn);
+    return () => ipcRenderer.off(EYEDROPPER_IPC.init, fn);
+  },
+  eyedropperReady: () => ipcRenderer.send(EYEDROPPER_IPC.ready),
+  eyedropperSubmit: (hex: string) =>
+    ipcRenderer.send(EYEDROPPER_IPC.submit, hex),
+  eyedropperCancel: () => ipcRenderer.send(EYEDROPPER_IPC.cancel),
+  eyedropperCopy: () => ipcRenderer.send(EYEDROPPER_IPC.copy),
+  eyedropperSample: (text: string) =>
+    ipcRenderer.send(EYEDROPPER_IPC.sample, text),
+  eyedropperOnCopied: (cb: () => void) => {
+    const fn = () => cb();
+    ipcRenderer.on(EYEDROPPER_IPC.copied, fn);
+    return () => ipcRenderer.off(EYEDROPPER_IPC.copied, fn);
+  },
+  eyedropperToggleFormat: () => ipcRenderer.send(EYEDROPPER_IPC.toggleFormat),
+  eyedropperOnFormat: (cb: (format: EyedropperFormat) => void) => {
+    const fn = (_: unknown, format: EyedropperFormat) => cb(format);
+    ipcRenderer.on(EYEDROPPER_IPC.format, fn);
+    return () => ipcRenderer.off(EYEDROPPER_IPC.format, fn);
+  },
+  eyedropperOnPointer: (cb: (payload: EyedropperPointerPayload) => void) => {
+    const fn = (_: unknown, payload: EyedropperPointerPayload) => cb(payload);
+    ipcRenderer.on(EYEDROPPER_IPC.pointer, fn);
+    return () => ipcRenderer.off(EYEDROPPER_IPC.pointer, fn);
+  },
+  eyedropperHover: () => ipcRenderer.send(EYEDROPPER_IPC.hover),
+  eyedropperOnInactive: (cb: () => void) => {
+    const fn = () => cb();
+    ipcRenderer.on(EYEDROPPER_IPC.inactive, fn);
+    return () => ipcRenderer.off(EYEDROPPER_IPC.inactive, fn);
   },
   streamFile: (filePath: string, options?: { sessionFilePath?: string }) =>
     ipcRenderer.send("file:stream", {

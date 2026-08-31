@@ -1,4 +1,5 @@
 import { app, BrowserWindow, globalShortcut } from "electron";
+import { isEyedropperWindow } from "./eyedropper";
 
 /** Ctrl+`；各平台均使用 Control 键（非 Mac Cmd） */
 const DEFAULT_TOGGLE_VISIBILITY_ACCELERATOR = "Control+`" as const;
@@ -15,7 +16,9 @@ let currentToggleVisibilityAccelerator: string =
 let globalShortcutSuspendedForRecording = false;
 
 function allMainWindows(): BrowserWindow[] {
-  return BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed());
+  return BrowserWindow.getAllWindows().filter(
+    (w) => !w.isDestroyed() && !isEyedropperWindow(w),
+  );
 }
 
 /** macOS：与隐身状态同步 `app.dock.hide` / `show`（不使用 setActivationPolicy）。 */

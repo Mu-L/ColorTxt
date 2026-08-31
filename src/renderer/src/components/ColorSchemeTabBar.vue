@@ -14,17 +14,24 @@ const props = withDefaults(
     currentTheme: string;
     /** 配色弹窗关闭时收起「更多」菜单 */
     panelOpen?: boolean;
+    /** 编辑配色或背景图时不可切换主题 */
+    themeLocked?: boolean;
+    /** 当前选中的是用户方案时才能导出当前方案 */
+    canExportCurrentScheme?: boolean;
   }>(),
   {
     visibleTabs: () => ["reader", "highlight", "lineation"],
     panelOpen: true,
+    themeLocked: false,
+    canExportCurrentScheme: false,
   },
 );
 
 const emit = defineEmits<{
   "update:activeTab": [value: ColorSchemeTabId];
   changeTheme: [theme: "vs" | "vs-dark"];
-  exportColorScheme: [];
+  exportCurrentColorScheme: [];
+  exportAllColorSchemes: [];
   importColorScheme: [];
 }>();
 
@@ -38,7 +45,7 @@ const moreBtnRef = ref<HTMLElement | null>(null);
 const moreMenu = useAnchoredAppShellMenu({
   anchor: moreBtnRef,
   placement: "below-end",
-  widthPx: 160,
+  widthPx: 200,
   gap: 6,
   zIndex: 7300,
 });
@@ -62,9 +69,15 @@ watch(
   },
 );
 
-function onExport() {
+function onExportCurrent() {
+  if (!props.canExportCurrentScheme) return;
   closeMoreMenu();
-  emit("exportColorScheme");
+  emit("exportCurrentColorScheme");
+}
+
+function onExportAll() {
+  closeMoreMenu();
+  emit("exportAllColorSchemes");
 }
 
 function onImport() {
@@ -93,13 +106,18 @@ function onImport() {
       <IconButton
         class="tabBarIconBtn"
         :icon-html="currentTheme === 'vs' ? icons.light : icons.dark"
+        :disabled="themeLocked"
         :title="
-          currentTheme === 'vs'
-            ? '当前亮色，点击切换暗色'
-            : '当前暗色，点击切换亮色'
+          themeLocked
+            ? '编辑配色或背景时不可切换主题'
+            : currentTheme === 'vs'
+              ? '当前亮色，点击切换暗色'
+              : '当前暗色，点击切换亮色'
         "
         aria-label="切换主题色"
-        @click="emit('changeTheme', currentTheme === 'vs' ? 'vs-dark' : 'vs')"
+        @click="
+          emit('changeTheme', currentTheme === 'vs' ? 'vs-dark' : 'vs')
+        "
       />
       <div ref="moreBtnRef" class="tabBarMoreWrap">
         <IconButton
@@ -125,7 +143,7 @@ function onImport() {
             type="button"
             class="appShellMenuItem"
             role="menuitem"
-            @click="onExport"
+            @click="onExportAll"
           >
             <span class="appShellMenuIconSlot" v-html="icons.export" />
             <span class="appShellMenuLabel">导出配色</span>
@@ -138,6 +156,17 @@ function onImport() {
           >
             <span class="appShellMenuIconSlot" v-html="icons.import" />
             <span class="appShellMenuLabel">导入配色</span>
+          </button>
+          <div class="appShellMenuDivider" role="separator" />
+          <button
+            type="button"
+            class="appShellMenuItem"
+            role="menuitem"
+            :disabled="!canExportCurrentScheme"
+            @click="onExportCurrent"
+          >
+            <span class="appShellMenuIconSlot" v-html="icons.export" />
+            <span class="appShellMenuLabel">导出当前配色方案</span>
           </button>
         </AppShellMenuTeleport>
       </div>
@@ -196,7 +225,7 @@ function onImport() {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  gap: 4px;
+  gap: 8px;
   margin-bottom: 2px;
 }
 

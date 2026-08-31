@@ -65,12 +65,15 @@ function nodeIsUnderFullscreenPanel(panel: HTMLElement, start: Node | null) {
  * - 有可点外关闭的弹出菜单时：移出面板不收起；菜单关掉后若指针已不在面板上再收起；
  * - `.layout` 捕获阶段 `pointerdown`：收起顶栏/底栏/侧栏（点击落在已展开侧栏内除外；须捕获以便点击模式在阅读区截断冒泡前仍能收起）；
  * - 快捷键等非边缘唤起侧栏（`revealFullscreenSidebar`）：指针尚未进入侧栏前，mousemove 不因「不在侧栏上」而收起（点阅读区仍收起）；
+ * - 全屏 / 极简：指针静止约 2 秒后隐藏系统光标（顶/底/侧栏浮出或拖侧栏时不藏；**编辑模式光标常显**）；
  * - Esc：输入框聚焦时只失焦（入口 `escapeBlurTextField` 捕获，含菜单 / 蒙版内）；再关蒙版与弹出菜单；再收浮动顶/底/侧栏；全屏再连按两次才退出。
  */
 export function useAppReaderChrome(deps: {
   readerRef: ReaderRef;
   /** 全屏侧栏：Teleport 浮层打开（文件列表下拉、AI 助手历史/导出/模型菜单、header「更多」等）；为真时移出侧栏不立刻收起 */
   fullscreenSidebarPopoversSuppressCollapse: Ref<boolean>;
+  /** 编辑模式光标常显，不走空闲隐藏 */
+  readerEditMode: Ref<boolean>;
 }) {
   const isFullscreenView = ref(false);
   const isMinimalistView = ref(defaultIsMinimalistView);
@@ -131,6 +134,7 @@ export function useAppReaderChrome(deps: {
     clearFullscreenCursorHideTimer();
     if (
       !chromeAutoHide.value ||
+      deps.readerEditMode.value ||
       resizingSidebar.value ||
       anyFullscreenBarVisible()
     ) {
@@ -142,10 +146,14 @@ export function useAppReaderChrome(deps: {
     }, FULLSCREEN_CURSOR_HIDE_IDLE_MS);
   }
 
-  /** 全屏 / 极简下指针移动时调用：显示光标并重新开始空闲计时 */
+  /** 全屏 / 极简下指针移动时调用：显示光标并重新开始空闲计时（编辑模式不藏） */
   function bumpFullscreenCursorIdle() {
     if (!chromeAutoHide.value || resizingSidebar.value) return;
     fullscreenCursorHidden.value = false;
+    if (deps.readerEditMode.value) {
+      clearFullscreenCursorHideTimer();
+      return;
+    }
     armFullscreenCursorHideTimer();
   }
 
@@ -153,13 +161,14 @@ export function useAppReaderChrome(deps: {
     () =>
       [
         chromeAutoHide.value,
+        deps.readerEditMode.value,
         resizingSidebar.value,
         showFullscreenHeader.value,
         showFullscreenFooter.value,
         showFullscreenSidebar.value,
       ] as const,
-    ([hidden, rs, header, footer, sidebar]) => {
-      if (!hidden) {
+    ([hidden, edit, rs, header, footer, sidebar]) => {
+      if (!hidden || edit) {
         clearFullscreenCursorHideTimer();
         fullscreenCursorHidden.value = false;
         return;

@@ -11,7 +11,7 @@ import type { VoiceReadSettings } from "../constants/voiceRead";
 import type { TimedScrollSettings } from "../constants/timedScroll";
 import type { PomodoroSettings } from "../constants/pomodoro";
 import type { VoiceReadProfile } from "@shared/voiceReadProfiles";
-import type { ChapterTitleBlankMode } from "../constants/appUi";
+import type { ChapterTitleBlankMode, ReaderBackgroundState } from "../constants/appUi";
 import type { CharacterRosterEntry } from "@shared/characterTypes";
 import { bookmarkNoteInputRefKey } from "../injectionKeys";
 import type { FileBookmarkItem } from "../stores/fileMetaStore";
@@ -35,7 +35,6 @@ import type { WebSearchSettings } from "@shared/webSearchTypes";
 import type { TranslationSettings } from "@shared/translationTypes";
 import ShortcutPanel from "./ShortcutPanel.vue";
 import type { ShortcutBindingMap } from "../services/shortcutRegistry";
-import type { ReaderSurfacePalette } from "../constants/appUi";
 import type { ReaderSurfaceColorEnabled } from "../constants/readerPalette";
 import type { ReaderPalettePreset } from "../constants/readerPalettePresets";
 import { readerEbookConvertingHintText, readerBookPackUnpackingHintText } from "../constants/appUi";
@@ -101,10 +100,11 @@ const props = defineProps<{
   shortcutBindings: ShortcutBindingMap;
   defaultShortcutBindings: ShortcutBindingMap;
   currentTheme: string;
-  readerSurfaceLight: ReaderSurfacePalette;
-  readerSurfaceDark: ReaderSurfacePalette;
   readerPaletteColorEnabled: ReaderSurfaceColorEnabled;
   readerPaletteUserPresets: ReaderPalettePreset[];
+  readerPaletteSelectedIdLight: string;
+  readerPaletteSelectedIdDark: string;
+  readerBackground: ReaderBackgroundState;
   monacoFontFamily: string;
   highlightColorsLight: string[];
   highlightColorsDark: string[];
@@ -213,9 +213,14 @@ const bookmarkNoteInput = defineModel<string>("bookmarkNoteInput", {
 });
 
 const appUpdateFlowRef = ref<InstanceType<typeof AppUpdateFlow> | null>(null);
+const colorSchemePanelRef = ref<InstanceType<typeof ColorSchemePanel> | null>(
+  null,
+);
 
 defineExpose({
   checkForUpdates: () => appUpdateFlowRef.value?.checkForUpdates(),
+  isColorSchemeThemeLocked: () =>
+    colorSchemePanelRef.value?.isThemeLocked() === true,
 });
 
 function bindBookmarkInput(el: Element | ComponentPublicInstance | null) {
@@ -354,12 +359,14 @@ const busyOverlayText = computed(() => {
   />
 
   <ColorSchemePanel
+    ref="colorSchemePanelRef"
     v-model="showColorSchemePanel"
     :current-theme="currentTheme"
-    :reader-surface-light="readerSurfaceLight"
-    :reader-surface-dark="readerSurfaceDark"
     :reader-palette-color-enabled="readerPaletteColorEnabled"
     :reader-palette-user-presets="readerPaletteUserPresets"
+    :reader-palette-selected-id-light="readerPaletteSelectedIdLight"
+    :reader-palette-selected-id-dark="readerPaletteSelectedIdDark"
+    :reader-background="readerBackground"
     :monaco-font-family="monacoFontFamily"
     :highlight-colors-light="highlightColorsLight"
     :highlight-colors-dark="highlightColorsDark"
