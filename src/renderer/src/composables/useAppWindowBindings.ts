@@ -17,7 +17,7 @@ import {
   VOICE_READ_SCROLL_BLOCKED_ACTIONS,
 } from "../services/shortcutService";
 import { hasModalOrEscBeforeModalLayer } from "../utils/modalStack";
-import { keyboardEventFromReaderSidebar } from "../utils/readerSidebarKeyboard";
+import { shouldDeferShortcutForReaderSidebar } from "../utils/readerSidebarKeyboard";
 import { useAppFileSession } from "./useAppFileSession";
 import { useTxtStreamPipeline } from "./useTxtStreamPipeline";
 import type { ShortcutBindingMap } from "../services/shortcutRegistry";
@@ -280,8 +280,9 @@ export function useAppWindowBindings(deps: {
           scrollPageDown: deps.scrollPageDown,
         },
         () => deps.shortcutBindings.value,
-        (ev) => !keyboardEventFromReaderSidebar(ev),
+        undefined,
         (action, ev) => {
+          if (shouldDeferShortcutForReaderSidebar(action, ev)) return true;
           if (
             hasModalOrEscBeforeModalLayer() &&
             READER_SCROLL_SHORTCUT_ACTIONS.has(action)

@@ -3091,6 +3091,9 @@ function beginClickModePointerGesture(ev: MouseEvent): boolean {
   if (!readerClickTurnPageActive.value) return false;
   if (ev.button !== 0 && ev.button !== 2) return false;
   if (clickModeGesture) return true;
+  // 点击模式会 preventDefault，浏览器不会把焦点交给阅读区；
+  // 不主动聚焦的话，侧栏列表 tabindex 会一直吃方向键 / 翻页 / 空格。
+  focusEditor();
   const pointerId = clickModeGesturePointerId(ev);
   let captureEl: Element | null = null;
   const el = ev.currentTarget;

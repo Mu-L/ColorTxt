@@ -19,7 +19,7 @@ import {
   getModalStackDepth,
   hasEscBeforeModalLayers,
 } from "../../utils/modalStack";
-import { keyboardEventFromReaderSidebar } from "../../utils/readerSidebarKeyboard";
+import { shouldDeferShortcutForReaderSidebar } from "../../utils/readerSidebarKeyboard";
 
 function keyboardTargetInsideFindWidget(ev: KeyboardEvent): boolean {
   const t = ev.target;
@@ -82,11 +82,8 @@ export function useFindBookReaderShortcuts(deps: {
     );
   }
 
-  function findBookReaderShortcutsShouldHandle(ev: KeyboardEvent): boolean {
-    if (!deps.readerOpen.value) return false;
-    // 与主界面一致：侧栏内按键不接管，交给浏览器（↑/↓ 在章节按钮间移动并滚入视口）
-    if (keyboardEventFromReaderSidebar(ev)) return false;
-    return true;
+  function findBookReaderShortcutsShouldHandle(): boolean {
+    return deps.readerOpen.value;
   }
 
   function findBookReaderHasNestedOverlay(): boolean {
@@ -158,6 +155,7 @@ export function useFindBookReaderShortcuts(deps: {
       () => shortcutBindings.value,
       findBookReaderShortcutsShouldHandle,
       (action, ev) => {
+        if (shouldDeferShortcutForReaderSidebar(action, ev)) return true;
         if (
           findBookReaderHasNestedOverlay() &&
           READER_SCROLL_SHORTCUT_ACTIONS.has(action)
