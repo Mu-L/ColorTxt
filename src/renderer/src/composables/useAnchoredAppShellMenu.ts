@@ -11,6 +11,7 @@ import {
 } from "vue";
 import {
   computeAnchoredMenuPosition,
+  flipAnchoredMenuVertical,
   type AnchoredMenuPlacement,
 } from "../utils/appShellMenuPosition";
 import { syncDismissibleOverlay } from "../utils/dismissibleOverlayStack";
@@ -26,6 +27,11 @@ export type UseAnchoredAppShellMenuOptions = {
   margin?: number;
   zIndex?: number;
   panelMaxHeight?: number;
+  /**
+   * 首选方向剩余高度不足、对侧更宽裕时，在 above/below 之间翻转。
+   * beside-* 不受影响。
+   */
+  autoFlip?: boolean;
   disabled?: Ref<boolean>;
   /** 为 false 时不注册外部点击 / Esc 关闭（悬停子菜单由父级关） */
   enableDismiss?: boolean;
@@ -44,16 +50,21 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
   const left = ref(0);
   const top = ref(0);
   const availableMaxHeight = ref<number | undefined>(undefined);
+  const resolvedPlacement = ref<AnchoredMenuPlacement>(toValue(opts.placement));
 
   syncDismissibleOverlay(open);
 
   /** `.appShellMenuPanel` 上下 padding 各 6px，内层滚动高度需扣掉，避免面板本身溢出窗口 */
   const PANEL_PAD_Y = 12;
+  /** 首选侧短于此时且对侧更宽裕才翻转，避免按钮略偏下就整块翻上去 */
+  const AUTO_FLIP_MIN_PX = 240;
 
-  function availableHeightForAnchor(rect: DOMRect): number {
+  function availableHeightForPlacement(
+    rect: DOMRect,
+    placement: AnchoredMenuPlacement,
+  ): number {
     const gap = opts.gap ?? 4;
     const margin = opts.margin ?? 8;
-    const placement = toValue(opts.placement);
     if (placement.startsWith("above")) {
       return Math.max(80, rect.top - gap - margin - PANEL_PAD_Y);
     }
@@ -66,11 +77,28 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
     );
   }
 
+  function pickPlacement(rect: DOMRect): AnchoredMenuPlacement {
+    const preferred = toValue(opts.placement);
+    if (!opts.autoFlip) return preferred;
+    if (preferred.startsWith("beside")) return preferred;
+    const below = availableHeightForPlacement(rect, "below-center");
+    const above = availableHeightForPlacement(rect, "above-center");
+    if (preferred.startsWith("below") && below < AUTO_FLIP_MIN_PX && above > below) {
+      return flipAnchoredMenuVertical(preferred);
+    }
+    if (preferred.startsWith("above") && above < AUTO_FLIP_MIN_PX && below > above) {
+      return flipAnchoredMenuVertical(preferred);
+    }
+    return preferred;
+  }
+
   async function reposition() {
     const anchor = opts.anchor.value;
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
-    const maxH = opts.panelMaxHeight ?? availableHeightForAnchor(rect);
+    const placement = pickPlacement(rect);
+    resolvedPlacement.value = placement;
+    const maxH = opts.panelMaxHeight ?? availableHeightForPlacement(rect, placement);
     availableMaxHeight.value = maxH;
     await nextTick();
     const panel = panelRef.value;
@@ -79,7 +107,7 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
     const pos = computeAnchoredMenuPosition(
       rect,
       { width: w, height: h },
-      toValue(opts.placement),
+      placement,
       { gap: opts.gap, margin: opts.margin },
     );
     left.value = pos.left;
@@ -187,6 +215,7 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
     left,
     top,
     availableMaxHeight,
+    resolvedPlacement,
     panelStyle,
     openMenu,
     closeMenu,

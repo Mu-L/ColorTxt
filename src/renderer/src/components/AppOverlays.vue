@@ -111,6 +111,7 @@ const props = defineProps<{
   readerPaletteSelectedIdDark: string;
   readerBackground: ReaderBackgroundState;
   monacoFontFamily: string;
+  pinnedOtherFonts: string[];
   highlightColorsLight: string[];
   highlightColorsDark: string[];
   lineationColorsLight: string[];
@@ -141,6 +142,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   applySettings: [payload: SettingsApplyPayload];
+  togglePinOtherFont: [fontName: string];
   applyChapterRules: [payload: { rules: ChapterMatchRule[] }];
   confirmAddBookmark: [];
   updateBookmarkToCurrentViewportLine: [];
@@ -281,6 +283,8 @@ const busyOverlayText = computed(() => {
     :fullscreen-reader-width-percent="fullscreenReaderWidthPercent"
     :fullscreen-show-system-time="fullscreenShowSystemTime"
     :reader-font-size="readerFontSize"
+    :monaco-font-family="monacoFontFamily"
+    :pinned-other-fonts="pinnedOtherFonts"
     :reader-line-height-multiple="readerLineHeightMultiple"
     :reader-line-spacing-px="readerLineSpacingPx"
     :reader-letter-spacing-px="readerLetterSpacingPx"
@@ -325,6 +329,7 @@ const busyOverlayText = computed(() => {
     :character-roster="characterRoster"
     :shortcut-bindings="shortcutBindings"
     @apply="emit('applySettings', $event)"
+    @toggle-pin-other-font="emit('togglePinOtherFont', $event)"
     @open-reading-data="emit('openReadingData')"
     @open-dictionary-manage="emit('openDictionaryManage')"
     @open-web-search-manage="emit('openWebSearchManage')"

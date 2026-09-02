@@ -134,13 +134,22 @@ const fontMenu = useAnchoredAppShellMenu({
   widthPx: 140,
   gap: 6,
   zIndex: props.menuZIndex,
+  autoFlip: true,
   onClose: () => {
     showOtherFontsPanel.value = false;
     otherFontFilter.value = "";
   },
 });
 
-const { panelRef: fontMenuPanelRef, panelStyle: fontMenuPanelStyle } = fontMenu;
+const {
+  panelRef: fontMenuPanelRef,
+  panelStyle: fontMenuPanelStyle,
+  resolvedPlacement: fontMenuPlacement,
+} = fontMenu;
+
+const fontMenuOpensAbove = computed(() =>
+  fontMenuPlacement.value.startsWith("above"),
+);
 
 function toggleFontMenu() {
   if (props.disabled) return;
@@ -254,7 +263,10 @@ watch(
         v-if="fontMenuOpen"
         ref="fontMenuPanelRef"
         class="fontMenu fontMenu--teleport"
-        :class="{ 'fontMenu--other': showOtherFontsPanel }"
+        :class="{
+          'fontMenu--other': showOtherFontsPanel,
+          'fontMenu--above': fontMenuOpensAbove,
+        }"
         data-header-float-panel
         data-fullscreen-header-float
         :style="{
@@ -262,6 +274,7 @@ watch(
           left: fontMenuPanelStyle.left,
           top: fontMenuPanelStyle.top,
           zIndex: fontMenuPanelStyle.zIndex,
+          '--font-menu-max-height': fontMenuPanelStyle.maxHeight,
         }"
         @click.stop
       >
@@ -431,6 +444,23 @@ watch(
   border-bottom: 7px solid var(--bg);
 }
 
+.fontMenu--above::before,
+.fontMenu--above::after {
+  top: auto;
+}
+
+.fontMenu--above::before {
+  bottom: -8px;
+  border-bottom: none;
+  border-top: 8px solid var(--border);
+}
+
+.fontMenu--above::after {
+  bottom: -7px;
+  border-bottom: none;
+  border-top: 7px solid var(--bg);
+}
+
 .fontMenu {
   z-index: 7200;
 }
@@ -448,7 +478,7 @@ watch(
 .fontOtherPanel {
   display: flex;
   flex-direction: column;
-  max-height: 70vh;
+  max-height: var(--font-menu-max-height, 70vh);
   min-height: 0; /* allow inner scroll */
 }
 
@@ -456,7 +486,7 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 70vh;
+  max-height: var(--font-menu-max-height, 70vh);
   min-height: 0;
 }
 

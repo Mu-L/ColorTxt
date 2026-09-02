@@ -3435,13 +3435,16 @@ async function applySettings(payload: SettingsApplyPayload) {
   const nextReaderHorizontalInsetPx = clampReaderHorizontalInsetPx(
     payload.readerHorizontalInsetPx,
   );
+  const nextFontFamily = payload.fontFamily.trim() || monacoFontFamily.value;
   const lineSpacingChanged = readerLineSpacingPx.value !== nextLineSpacingPx;
   readerFontSize.value = nextFontSize;
+  monacoFontFamily.value = nextFontFamily;
   readerLineHeightMultiple.value = nextLineHeightMultiple;
   readerLineSpacingPx.value = nextLineSpacingPx;
   readerLetterSpacingPx.value = nextLetterSpacingPx;
   readerHorizontalInsetPx.value = nextReaderHorizontalInsetPx;
   readerRef.value?.setFontSize(nextFontSize);
+  readerRef.value?.setFontFamily(nextFontFamily);
   readerRef.value?.setLineHeightMultiple(nextLineHeightMultiple);
   if (lineSpacingChanged) {
     // 抑制高度变化中间态换章滚动；恢复视口后强制居中（idx 常不变不会触发 watch）
@@ -4308,6 +4311,7 @@ useAppShellThemeWatch({
       :reader-palette-selected-id-dark="readerPaletteSelectedIdDark"
       :reader-background="readerBackground"
       :monaco-font-family="monacoFontFamily"
+      :pinned-other-fonts="pinnedOtherFonts"
       :highlight-colors-light="highlightColorsLight"
       :highlight-colors-dark="highlightColorsDark"
       :lineation-colors-light="lineationColorsLight"
@@ -4329,6 +4333,7 @@ useAppShellThemeWatch({
       :ai-custom-skills="aiCustomSkills"
       :reading-data-items="readingDataItems"
       @apply-settings="applySettings"
+      @toggle-pin-other-font="togglePinnedOtherFont"
       @apply-shortcut-bindings="applyShortcutBindings"
       @apply-chapter-rules="applyChapterMatchRules"
       @confirm-add-bookmark="confirmAddBookmark"

@@ -115,6 +115,7 @@ import {
 } from "../../utils/defaultCacheDirs";
 import { confirmClearAllChapterCache } from "../services/clearBookChapterCache";
 import { appAlert } from "../../services/appDialog";
+import { READER_EDITOR_DEFAULT_FONT_FAMILY } from "../../monaco/readerEditorOptions";
 import type { CharacterRosterEntry } from "@shared/characterTypes";
 import type { ShortcutBindingMap } from "../../services/shortcutRegistry";
 import "../../styles/settingsPanel.css";
@@ -166,6 +167,7 @@ const draftWebDavUsername = ref("");
 const draftWebDavPassword = ref("");
 const draftWebDavRemoteDir = ref("ColorTxt");
 const draftFontSize = ref(defaultReaderFontSize);
+const draftFontFamily = ref(READER_EDITOR_DEFAULT_FONT_FAMILY);
 const draftLineHeightMultiple = ref(defaultReaderLineHeightMultiple);
 const draftLineSpacingPx = ref(defaultLineSpacingPx);
 const draftLetterSpacingPx = ref(defaultLetterSpacingPx);
@@ -273,8 +275,22 @@ async function loadWebDavPasswordDraft() {
   }
 }
 
+function togglePinOtherFont(fontName: string) {
+  const normalized = fontName.trim();
+  if (!normalized) return;
+  const list = fb.pinnedOtherFonts.value;
+  const idx = list.findIndex((f) => f.trim() === normalized);
+  if (idx >= 0) {
+    fb.pinnedOtherFonts.value = list.filter((_, i) => i !== idx);
+  } else {
+    fb.pinnedOtherFonts.value = [...list, normalized];
+  }
+  fb.persistReaderUiPrefs();
+}
+
 function syncSharedReaderDraftFromStore() {
   draftFontSize.value = fb.readerFontSize.value;
+  draftFontFamily.value = fb.monacoFontFamily.value;
   draftLineHeightMultiple.value = clampFindBookReaderLineHeight(
     fb.readerFontSize.value,
     fb.readerLineHeightMultiple.value,
@@ -383,6 +399,7 @@ function resetWebDavDraft() {
 
 function resetReadingDraft() {
   draftFontSize.value = defaultReaderFontSize;
+  draftFontFamily.value = READER_EDITOR_DEFAULT_FONT_FAMILY;
   draftLineHeightMultiple.value = defaultReaderLineHeightMultiple;
   draftLineSpacingPx.value = defaultLineSpacingPx;
   draftLetterSpacingPx.value = defaultLetterSpacingPx;
@@ -549,6 +566,8 @@ async function onConfirm() {
     password: draftProxyPassword.value,
   };
   fb.readerFontSize.value = draftFontSize.value;
+  fb.monacoFontFamily.value =
+    draftFontFamily.value.trim() || fb.monacoFontFamily.value;
   fb.readerLineHeightMultiple.value = clampFindBookReaderLineHeight(
     draftFontSize.value,
     draftLineHeightMultiple.value,
@@ -711,6 +730,8 @@ watch(draftFontSize, (size) => {
 
             <SettingsReadingPanel
               v-show="activeTab === 'reading'"
+              v-model:draft-font-family="draftFontFamily"
+              :pinned-other-fonts="fb.pinnedOtherFonts.value"
               v-model:draft-font-size="draftFontSize"
               v-model:draft-line-height-multiple="draftLineHeightMultiple"
               v-model:draft-line-spacing-px="draftLineSpacingPx"
@@ -752,6 +773,7 @@ watch(draftFontSize, (size) => {
               :show-ask-ai="false"
               :show-find-book-chapter-advance-option="true"
               :monaco-custom-highlight="fb.monacoCustomHighlight.value"
+              @toggle-pin-other-font="togglePinOtherFont"
               @open-dictionary-manage="showDictionaryManagePanel = true"
               @open-web-search-manage="showWebSearchManagePanel = true"
               @open-translate-manage="openTranslateManageFromSettings"

@@ -105,6 +105,7 @@ import {
   type SelectionToolbarButtons,
 } from "../constants/selectionToolbar";
 import { appAlert } from "../services/appDialog";
+import { READER_EDITOR_DEFAULT_FONT_FAMILY } from "../monaco/readerEditorOptions";
 import { getBuiltinEmbeddingBlockMessage } from "../ai/embeddingReady";
 import { icons } from "../icons";
 import {
@@ -169,6 +170,7 @@ export type SettingsApplyPayload = {
   editAutoRefreshChapterList: boolean;
   aiSmartFormat: AiSmartFormatSettings;
   fontSize: number;
+  fontFamily: string;
   lineHeightMultiple: number;
   lineSpacingPx: number;
   letterSpacingPx: number;
@@ -205,6 +207,8 @@ const props = defineProps<{
   fullscreenReaderWidthPercent: number;
   fullscreenShowSystemTime: boolean;
   readerFontSize: number;
+  monacoFontFamily: string;
+  pinnedOtherFonts: string[];
   readerLineHeightMultiple: number;
   readerLineSpacingPx: number;
   readerLetterSpacingPx: number;
@@ -252,6 +256,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   apply: [payload: SettingsApplyPayload];
+  togglePinOtherFont: [fontName: string];
   openReadingData: [];
   openDictionaryManage: [];
   openWebSearchManage: [];
@@ -284,6 +289,7 @@ const draftChapterMinCharCount = ref(defaultChapterMinCharCount);
 const draftFullscreenReaderWidthPercent = ref(50);
 const draftFullscreenShowSystemTime = ref(defaultFullscreenShowSystemTime);
 const draftFontSize = ref(14);
+const draftFontFamily = ref(READER_EDITOR_DEFAULT_FONT_FAMILY);
 const draftLineHeightMultiple = ref(1.5);
 const draftLineSpacingPx = ref(defaultLineSpacingPx);
 const draftLetterSpacingPx = ref(defaultLetterSpacingPx);
@@ -374,6 +380,7 @@ function syncDraftFromProps() {
   draftFullscreenReaderWidthPercent.value = props.fullscreenReaderWidthPercent;
   draftFullscreenShowSystemTime.value = props.fullscreenShowSystemTime;
   draftFontSize.value = props.readerFontSize;
+  draftFontFamily.value = props.monacoFontFamily;
   draftLineHeightMultiple.value = clampLineHeightMultipleForFontSize(
     props.readerFontSize,
     props.readerLineHeightMultiple,
@@ -593,6 +600,7 @@ function resetGeneralDraft() {
 
 function resetReadingDraft() {
   draftFontSize.value = defaultReaderFontSize;
+  draftFontFamily.value = READER_EDITOR_DEFAULT_FONT_FAMILY;
   draftLineHeightMultiple.value = clampLineHeightMultipleForFontSize(
     defaultReaderFontSize,
     defaultReaderLineHeightMultiple,
@@ -856,6 +864,7 @@ async function onConfirm() {
     editAutoRefreshChapterList: draftEditAutoRefreshChapterList.value,
     aiSmartFormat: { ...draftAiSmartFormat.value },
     fontSize: draftFontSize.value,
+    fontFamily: draftFontFamily.value,
     lineHeightMultiple: draftLineHeightMultiple.value,
     lineSpacingPx: clampLineSpacingPx(draftLineSpacingPx.value),
     letterSpacingPx: clampLetterSpacingPx(draftLetterSpacingPx.value),
@@ -1006,6 +1015,8 @@ async function onClearCache() {
 
             <SettingsReadingPanel
               v-show="activeTab === 'reading'"
+              v-model:draft-font-family="draftFontFamily"
+              :pinned-other-fonts="pinnedOtherFonts"
               v-model:draft-font-size="draftFontSize"
               v-model:draft-line-height-multiple="draftLineHeightMultiple"
               v-model:draft-line-spacing-px="draftLineSpacingPx"
@@ -1070,6 +1081,7 @@ async function onClearCache() {
                 draftSelectionToolbarButtons
               "
               :monaco-custom-highlight="monacoCustomHighlight"
+              @toggle-pin-other-font="emit('togglePinOtherFont', $event)"
               @open-dictionary-manage="emit('openDictionaryManage')"
               @open-web-search-manage="emit('openWebSearchManage')"
               @open-translate-manage="emit('openTranslateManage')"

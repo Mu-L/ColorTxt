@@ -55,11 +55,21 @@ import {
   type SelectionToolbarFindTarget,
 } from "../constants/selectionToolbar";
 import SettingsSelectionToolbarPreview from "./SettingsSelectionToolbarPreview.vue";
+import FontPicker from "./FontPicker.vue";
+import {
+  detectFontPickerSelection,
+  getPresetLabel,
+} from "../utils/presetFontDefinitions";
 import { computed } from "vue";
 import { icons } from "../icons.js";
 
+/** 高于设置弹层（约 6000），避免菜单被挡住 */
+const SETTINGS_FONT_PICKER_MENU_Z = 9000;
+
 const props = withDefaults(
   defineProps<{
+    draftFontFamily: string;
+    pinnedOtherFonts?: string[];
     draftFontSize: number;
     draftLineHeightMultiple: number;
     draftLineSpacingPx: number;
@@ -110,11 +120,14 @@ const props = withDefaults(
     draftFindBookChapterAdvanceEnabled: true,
     showFindBookChapterAdvanceOption: false,
     shortcutBindings: undefined,
+    pinnedOtherFonts: () => [],
   },
 );
 
 defineEmits<{
+  "update:draftFontFamily": [v: string];
   "update:draftFontSize": [v: number];
+  togglePinOtherFont: [fontName: string];
   "update:draftLineHeightMultiple": [v: number];
   "update:draftLineSpacingPx": [v: number];
   "update:draftLetterSpacingPx": [v: number];
@@ -152,6 +165,13 @@ const draftMaxLineHeightMultiple = computed(() =>
   maxLineHeightMultipleForFontSize(props.draftFontSize),
 );
 
+const draftFontDisplayLabel = computed(() => {
+  const sel = detectFontPickerSelection(props.draftFontFamily);
+  return sel.key === "other"
+    ? sel.otherName || "系统字体"
+    : getPresetLabel(sel.key);
+});
+
 const chapterTitleBlankSelectItems = computed<CustomSelectItem[]>(() =>
   CHAPTER_TITLE_BLANK_MODE_OPTIONS.map((o) => ({
     kind: "item" as const,
@@ -181,6 +201,27 @@ const scrollDownShortcutLabel = computed(() =>
 <template>
   <div class="settingsReadingRoot">
     <div class="settingsBody">
+      <div class="settingsRow">
+        <div class="settingsRowMain">
+          <span class="settingsLabel short">字体</span>
+          <div class="settingsFontControl">
+            <span
+              class="settingsFontValue"
+              :style="{ fontFamily: draftFontFamily }"
+              :title="draftFontDisplayLabel"
+              >{{ draftFontDisplayLabel }}</span
+            >
+            <FontPicker
+              :monaco-font-family="draftFontFamily"
+              :pinned-other-fonts="pinnedOtherFonts"
+              :menu-z-index="SETTINGS_FONT_PICKER_MENU_Z"
+              @set-monaco-font="$emit('update:draftFontFamily', $event)"
+              @toggle-pin-other-font="$emit('togglePinOtherFont', $event)"
+            />
+          </div>
+        </div>
+      </div>
+
       <div class="settingsRow">
         <div class="settingsRowMain">
           <span class="settingsLabel short">字号（{{ draftFontSize }} px）</span>
@@ -835,6 +876,25 @@ const scrollDownShortcutLabel = computed(() =>
   font-size: 12px;
   line-height: 1.45;
   color: var(--muted);
+}
+
+.settingsFontControl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 1 1 70%;
+  min-width: 0;
+}
+
+.settingsFontValue {
+  font-size: 13px;
+  color: var(--fg);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .settingsSectionTitle:has(+ .settingsHint) {
