@@ -37,11 +37,15 @@ import {
 } from "../constants/readerPalettePresets";
 import { parseHighlightColorsArray } from "../constants/highlightColors";
 import { parseLineationColorsArray } from "../constants/lineationColors";
+import { sanitizeChatExportTitleForFilename } from "../aiAssistant/aiAssistantExport";
 import { arrayBufferToBase64 } from "./characterRosterPack";
 
 export const COLOR_SCHEME_EXPORT_KIND = "colortxt-color-scheme";
 export const COLOR_SCHEME_EXPORT_SCHEMA_VERSION = 1;
-export const COLOR_SCHEME_EXPORT_DEFAULT_NAME = "配色.zip";
+/** 建议保存扩展（完整后缀，含 .zip），与 `{书名}.characters.zip` 等同形态 */
+export const COLOR_SCHEME_EXPORT_FILE_EXT = "color-scheme.zip";
+/** 「导出配色」默认名（全局包，无方案名前缀） */
+export const COLOR_SCHEME_EXPORT_DEFAULT_NAME = COLOR_SCHEME_EXPORT_FILE_EXT;
 export const COLOR_SCHEME_EXPORT_JSON_NAME = "color-scheme.json";
 export const COLOR_SCHEME_EXPORT_TEXTURES_DIR = "textures/";
 
@@ -414,13 +418,12 @@ export async function readCustomBackgroundFiles(
   return out;
 }
 
+/** 「导出当前配色方案」默认名：`{方案名}.color-scheme.zip`；无名称时回退为全局包名 */
 export function colorSchemeExportZipFileName(label: string): string {
-  const cleaned = label
-    .replace(/[\\/:*?"<>|]/g, "_")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/[. ]+$/g, "");
-  return `${cleaned || "配色方案"}.zip`;
+  const raw = label.trim();
+  if (!raw) return COLOR_SCHEME_EXPORT_DEFAULT_NAME;
+  const stem = sanitizeChatExportTitleForFilename(raw);
+  return `${stem}.${COLOR_SCHEME_EXPORT_FILE_EXT}`;
 }
 
 export async function saveColorSchemeExportZip(
@@ -438,8 +441,12 @@ export async function saveColorSchemeExportZip(
   });
   if (r.canceled || !r.filePath) return { ok: false, cancelled: true };
   let target = r.filePath;
-  if (!target.toLowerCase().endsWith(".zip")) {
-    target = `${target}.zip`;
+  const lower = target.toLowerCase();
+  if (
+    !lower.endsWith(".color-scheme.zip") &&
+    !lower.endsWith(".zip")
+  ) {
+    target = `${target}.${COLOR_SCHEME_EXPORT_FILE_EXT}`;
   }
   try {
     await window.colorTxt.writeBinaryFile(

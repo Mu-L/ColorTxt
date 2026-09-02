@@ -26,6 +26,7 @@ import {
   saveColorSchemeExportZip,
   sliceBackgroundGalleryForExport,
   colorSchemeExportZipFileName,
+  COLOR_SCHEME_EXPORT_DEFAULT_NAME,
   type ColorSchemeExportV1,
 } from "../utils/readerColorSchemeExport";
 
@@ -119,9 +120,10 @@ export function useColorSchemePackIo(opts: {
     const zipBuffer = await buildColorSchemeExportZip(payload, textures);
     const saved = await saveColorSchemeExportZip(zipBuffer, {
       title: scope === "current" ? "导出当前配色方案" : "导出配色",
-      defaultPath: colorSchemeExportZipFileName(
-        scope === "current" ? (named?.name ?? "配色方案") : "配色",
-      ),
+      defaultPath:
+        scope === "current"
+          ? colorSchemeExportZipFileName(named?.name ?? "配色方案")
+          : COLOR_SCHEME_EXPORT_DEFAULT_NAME,
     });
     if ("cancelled" in saved && saved.cancelled) return;
     if (!saved.ok) {
