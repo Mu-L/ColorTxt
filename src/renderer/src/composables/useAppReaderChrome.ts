@@ -237,6 +237,7 @@ export function useAppReaderChrome(deps: {
   }
 
   function toggleMinimalistView() {
+    if (isFullscreenView.value) return;
     isMinimalistView.value = !isMinimalistView.value;
   }
 

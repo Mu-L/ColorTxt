@@ -30,9 +30,6 @@ function bindingLabel(accel: string) {
 const findShortcutLabel = computed(() =>
   bindingLabel(props.shortcutBindings.toggleFind),
 );
-const minimalistShortcutLabel = computed(() =>
-  bindingLabel(props.shortcutBindings.toggleMinimalistView),
-);
 const settingsShortcutLabel = computed(() =>
   bindingLabel(props.shortcutBindings.openSettings),
 );
@@ -48,7 +45,6 @@ const findBookShortcutLabel = computed(() =>
 
 const emit = defineEmits<{
   toggleFind: [];
-  toggleMinimalist: [];
   openGithub: [];
   checkForUpdates: [];
   openShortcuts: [];
@@ -248,11 +244,6 @@ function onOpenFindBook() {
   emit("openFindBook");
 }
 
-function onToggleMinimalist() {
-  closeMoreMenu();
-  emit("toggleMinimalist");
-}
-
 function onOpenNewWindow() {
   closeMoreMenu();
   emit("openNewWindow");
@@ -303,25 +294,6 @@ function onQuit() {
         role="separator"
       ></div>
       <div class="moreMenuItems" @scroll="onMoreMenuItemsScroll">
-      <button
-        class="appShellMenuItem"
-        role="menuitem"
-        @click="onToggleMinimalist"
-      >
-        <span
-          class="appShellMenuIconSlot"
-          v-html="
-            inMinimalist
-              ? icons.leaveMinimalistView
-              : icons.enterMinimalistView
-          "
-        ></span>
-        <span class="appShellMenuLabel">{{
-          inMinimalist ? "退出极简视图" : "极简视图"
-        }}</span>
-        <span class="appShellMenuShortcut">{{ minimalistShortcutLabel }}</span>
-      </button>
-      <div class="appShellMenuDivider" role="separator"></div>
       <button class="appShellMenuItem" role="menuitem" @click="onToggleFind">
         <span class="appShellMenuIconSlot" v-html="icons.find"></span>
         <span class="appShellMenuLabel">查找</span>

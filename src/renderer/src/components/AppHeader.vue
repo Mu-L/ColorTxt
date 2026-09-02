@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import IconButton from "./IconButton.vue";
-import SidebarViewButton from "./SidebarViewButton.vue";
+import MinimalistViewButton from "./MinimalistViewButton.vue";
 import MoreMenu from "./MoreMenu.vue";
 import HeaderFontToolbar from "./HeaderFontToolbar.vue";
 import HeaderFormatToolbar from "./HeaderFormatToolbar.vue";
@@ -27,7 +27,6 @@ export type RecentFileItem = { path: string; progress?: number };
 const props = withDefaults(
   defineProps<{
     currentTheme: string;
-    showSidebar: boolean;
     canIncreaseFont: boolean;
     canDecreaseFont: boolean;
     canIncreaseLineHeight: boolean;
@@ -53,7 +52,7 @@ const props = withDefaults(
     textConvertDigit?: TextConvertWidthMode;
     /** 当前是否处于全屏阅读（全屏浮动顶栏为 true，用于全屏按钮图标与提示） */
     inFullscreen?: boolean;
-    /** 极简视图：侧栏按钮变为退出开关 */
+    /** 当前是否处于极简视图（顶栏极简按钮激活态 / 浮动顶栏浮层标记） */
     inMinimalist?: boolean;
     /** 最近打开的文件（含阅读进度），最多 20 条 */
     recentFiles?: RecentFileItem[];
@@ -128,7 +127,6 @@ const props = withDefaults(
 const emit = defineEmits<{
   openFile: [];
   changeTheme: [theme: string];
-  toggleSidebar: [];
   toggleMinimalist: [];
   toggleFullscreen: [];
   setMonacoFont: [fontFamily: string];
@@ -446,12 +444,10 @@ const showFormatToolbarInMore = computed(() => compactFormatToolbar.value);
         :aria-label="themeToggleTitle"
         @click="$emit('changeTheme', currentTheme === 'vs' ? 'vs-dark' : 'vs')"
       />
-      <SidebarViewButton
-        v-if="!inFullscreen"
-        :show-sidebar="showSidebar"
+      <MinimalistViewButton
         :minimalist="inMinimalist"
+        :disabled="inFullscreen"
         :shortcut-bindings="shortcutBindings"
-        @toggle-sidebar="$emit('toggleSidebar')"
         @toggle-minimalist="$emit('toggleMinimalist')"
       />
       <IconButton
@@ -469,7 +465,6 @@ const showFormatToolbarInMore = computed(() => compactFormatToolbar.value);
           :in-minimalist="inMinimalist"
           :in-fullscreen="inFullscreen"
           @toggle-find="emit('toggleFind')"
-          @toggle-minimalist="emit('toggleMinimalist')"
           @open-github="emit('openGithub')"
           @check-for-updates="emit('checkForUpdates')"
           @open-shortcuts="emit('openShortcuts')"

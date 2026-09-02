@@ -1165,12 +1165,6 @@ const colorSchemeShortcutLabel = computed(() =>
 const findShortcutLabel = computed(() =>
   acceleratorToDisplayText(shortcutBindings.value.toggleFind, isMacPlatform),
 );
-const minimalistShortcutLabel = computed(() =>
-  acceleratorToDisplayText(
-    shortcutBindings.value.toggleMinimalistView,
-    isMacPlatform,
-  ),
-);
 const themeShortcutLabel = computed(() =>
   acceleratorToDisplayText(shortcutBindings.value.toggleTheme, isMacPlatform),
 );
@@ -2076,7 +2070,6 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
         <FindBookReaderHeader
           :in-bookshelf="inBookshelf"
           :current-theme="currentTheme"
-          :show-sidebar="showSidebar"
           :in-fullscreen="isFullscreenView"
           :in-minimalist="isMinimalistView"
           :can-increase-font="canIncreaseFont"
@@ -2102,7 +2095,6 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
           :settings-shortcut-label="settingsShortcutLabel"
           :color-scheme-shortcut-label="colorSchemeShortcutLabel"
           :find-shortcut-label="findShortcutLabel"
-          :minimalist-shortcut-label="minimalistShortcutLabel"
           :theme-shortcut-label="themeShortcutLabel"
           :shortcut-bindings="shortcutBindings"
           :reader-edit-mode="readerEditMode"
@@ -2113,7 +2105,6 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
           :reader-chapter-saving="readerChapterSaving"
           :text-replace-active="textReplaceActive"
           @change-theme="onChangeTheme"
-          @toggle-sidebar="onToggleSidebar"
           @toggle-minimalist="onToggleMinimalist"
           @toggle-fullscreen="toggleFullscreen"
           @set-monaco-font="readerUi.setMonacoFontFamily"

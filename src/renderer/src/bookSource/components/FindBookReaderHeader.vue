@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import IconButton from "../../components/IconButton.vue";
-import SidebarViewButton from "../../components/SidebarViewButton.vue";
+import MinimalistViewButton from "../../components/MinimalistViewButton.vue";
 import HeaderFontToolbar from "../../components/HeaderFontToolbar.vue";
 import HeaderFormatToolbar from "../../components/HeaderFormatToolbar.vue";
 import AppShellMenuTeleport from "../../components/AppShellMenuTeleport.vue";
@@ -29,7 +29,6 @@ import { titleWithShortcut } from "../../services/shortcutUtils";
 const props = withDefaults(
   defineProps<{
     currentTheme: string;
-    showSidebar: boolean;
     inFullscreen?: boolean;
     inMinimalist?: boolean;
     canIncreaseFont: boolean;
@@ -59,8 +58,6 @@ const props = withDefaults(
     colorSchemeShortcutLabel?: string;
     /** 查找菜单项右侧快捷键文案 */
     findShortcutLabel?: string;
-    /** 极简视图菜单项右侧快捷键文案 */
-    minimalistShortcutLabel?: string;
     /** 切换主题色按钮 title 中的快捷键文案（如 F2） */
     themeShortcutLabel?: string;
     readerEditMode?: boolean;
@@ -93,7 +90,6 @@ const props = withDefaults(
     settingsShortcutLabel: "",
     colorSchemeShortcutLabel: "",
     findShortcutLabel: "",
-    minimalistShortcutLabel: "",
     themeShortcutLabel: "",
     readerEditMode: false,
     readerClickMode: false,
@@ -107,7 +103,6 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   changeTheme: [theme: string];
-  toggleSidebar: [];
   toggleMinimalist: [];
   toggleFullscreen: [];
   setMonacoFont: [fontFamily: string];
@@ -236,11 +231,6 @@ function onOpenColorSchemeFromToolbar() {
 function onToggleFindFromToolbar() {
   closeMoreMenu();
   emit("toggleFind");
-}
-
-function onToggleMinimalistFromToolbar() {
-  closeMoreMenu();
-  emit("toggleMinimalist");
 }
 
 function onOpenTextReplace() {
@@ -403,12 +393,10 @@ function onOpenTextReplace() {
           :aria-label="themeToggleTitle"
           @click="emit('changeTheme', currentTheme === 'vs' ? 'vs-dark' : 'vs')"
         />
-        <SidebarViewButton
-          v-if="!inFullscreen"
-          :show-sidebar="showSidebar"
+        <MinimalistViewButton
           :minimalist="inMinimalist"
+          :disabled="inFullscreen"
           :shortcut-bindings="shortcutBindings"
-          @toggle-sidebar="emit('toggleSidebar')"
           @toggle-minimalist="emit('toggleMinimalist')"
         />
         <IconButton
@@ -492,28 +480,6 @@ function onOpenTextReplace() {
         class="appShellMenuDivider"
         role="separator"
       />
-      <button
-        type="button"
-        class="appShellMenuItem"
-        role="menuitem"
-        @click="onToggleMinimalistFromToolbar"
-      >
-        <span
-          class="appShellMenuIconSlot"
-          v-html="
-            inMinimalist
-              ? icons.leaveMinimalistView
-              : icons.enterMinimalistView
-          "
-        />
-        <span class="appShellMenuLabel">{{
-          inMinimalist ? "退出极简视图" : "极简视图"
-        }}</span>
-        <span v-if="minimalistShortcutLabel" class="appShellMenuShortcut">{{
-          minimalistShortcutLabel
-        }}</span>
-      </button>
-      <div class="appShellMenuDivider" role="separator" />
       <button
         type="button"
         class="appShellMenuItem"

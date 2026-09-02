@@ -7,45 +7,40 @@ import { computed } from "vue";
 
 const props = withDefaults(
   defineProps<{
-    showSidebar: boolean;
     minimalist?: boolean;
+    disabled?: boolean;
     shortcutBindings?: ShortcutBindingMap;
   }>(),
   {
     minimalist: false,
+    disabled: false,
   },
 );
 
 const emit = defineEmits<{
-  toggleSidebar: [];
   toggleMinimalist: [];
 }>();
 
 const isMacPlatform = /mac|iphone|ipad|ipod/i.test(navigator.platform || "");
 
 const buttonTitle = computed(() => {
-  const base = props.minimalist ? "退出极简视图" : "切换侧边栏";
-  const action = props.minimalist ? "toggleMinimalistView" : "toggleSidebar";
-  const accel = props.shortcutBindings?.[action];
+  const base = props.minimalist ? "退出极简视图" : "极简视图";
+  if (props.disabled) return `${base}（全屏时不可用）`;
+  const accel = props.shortcutBindings?.toggleMinimalistView;
   return accel ? titleWithShortcut(base, accel, isMacPlatform) : base;
 });
-
-function onButtonClick() {
-  if (props.minimalist) {
-    emit("toggleMinimalist");
-    return;
-  }
-  emit("toggleSidebar");
-}
 </script>
 
 <template>
   <IconButton
-    :icon-html="minimalist ? icons.leaveMinimalistView : icons.sidebar"
-    :active="!minimalist && showSidebar"
-    :pressed="!minimalist && showSidebar"
+    :icon-html="
+      minimalist ? icons.leaveMinimalistView : icons.enterMinimalistView
+    "
+    :active="minimalist"
+    :pressed="minimalist"
+    :disabled="disabled"
     :title="buttonTitle"
     :aria-label="buttonTitle"
-    @click="onButtonClick"
+    @click="emit('toggleMinimalist')"
   />
 </template>

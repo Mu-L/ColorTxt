@@ -3,8 +3,7 @@
 新功能：
 
 - **极简视图**：顶栏 / 侧栏 / 底栏默认隐藏，阅读区撑满窗口；鼠标移到窗口边缘唤起相应面板（交互与全屏模式一致） [#58](https://github.com/ssnangua/ColorTxt/issues/58)
-  - 入口在「更多」菜单中，默认快捷键 `F10`
-  - 进入极简视图后，顶栏「切换侧边栏」按钮变为「退出极简视图」按钮，点击退出
+  - 入口在工具栏「<img src="./src/renderer/src/assets/enter_minimalist_view.svg" width="18" height="18" alt=""> 极简模式」，默认快捷键 `F10`
 - **阅读尺**：适合注意力不容易集中的人（**ADHD**），聚焦阅读行，淡化其他行 [#83](https://github.com/ssnangua/ColorTxt/issues/83)
   - 入口在工具栏「<img src="./src/renderer/src/assets/reading_ruler.svg" width="18" height="18" alt=""> 阅读尺」
   - 「设置 → 阅读 → 阅读尺」可调聚焦行数、非聚焦行不透明度等
