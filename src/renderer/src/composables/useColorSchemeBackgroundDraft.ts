@@ -5,6 +5,7 @@ import {
   getBuiltinReaderTexture,
   isBuiltinReaderTextureId,
   READER_BACKGROUND_NONE_ID,
+  resolveBuiltinReaderTextureUrl,
 } from "../constants/readerBuiltins";
 import {
   cloneReaderBackgroundState,
@@ -332,7 +333,7 @@ export function useColorSchemeBackgroundDraft(opts: {
     >;
     if (builtin?.url) {
       try {
-        const res = await fetch(builtin.url);
+        const res = await fetch(resolveBuiltinReaderTextureUrl(builtin.url));
         if (!res.ok) {
           appToast("无法读取内置背景图", { kind: "warning" });
           return;

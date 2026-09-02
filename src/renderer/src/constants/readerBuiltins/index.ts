@@ -4,6 +4,7 @@ export {
   RETIRED_BUILTIN_TEXTURE_IDS,
   getBuiltinReaderTexture,
   isBuiltinReaderTextureId,
+  resolveBuiltinReaderTextureUrl,
   type ReaderBuiltinTexture,
 } from "./textures";
 export {

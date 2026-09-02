@@ -4,6 +4,7 @@ import { icons } from "../icons";
 import {
   BUILTIN_READER_TEXTURES,
   READER_BACKGROUND_NONE_ID,
+  resolveBuiltinReaderTextureUrl,
 } from "../constants/readerBuiltins";
 import type { ReaderCustomBackground } from "../constants/readerBackground";
 
@@ -130,7 +131,7 @@ defineExpose({ scrollActiveIntoView, scheduleScrollActiveIntoView });
           <span
             v-if="t.id !== READER_BACKGROUND_NONE_ID"
             class="bgPickerThumbFill"
-            :style="thumbStyle(t.url)"
+            :style="thumbStyle(resolveBuiltinReaderTextureUrl(t.url))"
             aria-hidden="true"
           />
           <span class="bgPickerThumbName" :title="t.name">{{ t.name }}</span>

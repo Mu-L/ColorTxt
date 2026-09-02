@@ -9,6 +9,7 @@ import {
   RETIRED_BUILTIN_TEXTURE_IDS,
   getBuiltinReaderTexture,
   isBuiltinReaderTextureId,
+  resolveBuiltinReaderTextureUrl,
 } from "./readerBuiltins/textures";
 
 export type ReaderBackgroundSize = "auto" | "cover" | "contain";
@@ -498,7 +499,7 @@ export function readerBackgroundPreviewUrl(
 ): string {
   if (!textureId || textureId === READER_BACKGROUND_NONE_ID) return "";
   const builtin = getBuiltinReaderTexture(textureId);
-  if (builtin) return builtin.url;
+  if (builtin) return resolveBuiltinReaderTextureUrl(builtin.url);
   return customUrlById[textureId] ?? "";
 }
 
@@ -509,7 +510,10 @@ export async function resolveReaderBackgroundImageCss(
   const id = parseReaderTextureId(textureId);
   if (!id || id === READER_BACKGROUND_NONE_ID) return "none";
   const builtin = getBuiltinReaderTexture(id);
-  if (builtin) return builtin.url ? `url("${builtin.url}")` : "none";
+  if (builtin) {
+    const href = resolveBuiltinReaderTextureUrl(builtin.url);
+    return href ? `url("${href}")` : "none";
+  }
   const custom = state.custom.find((c) => c.id === id);
   if (!custom) return "none";
   try {
