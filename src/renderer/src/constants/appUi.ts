@@ -282,10 +282,50 @@ export const defaultStickyChapterTitleEnabled = true;
  * 仅只读阅读生效；编辑模式始终可选。
  */
 export const defaultReaderClickMode = false;
+
+/** 阅读尺：聚焦视觉行、淡化其余行（默认关闭） */
+export const defaultReadingRulerEnabled = false;
+export const defaultReadingRulerFocusLines = 1;
+export const minReadingRulerFocusLines = 1;
+export const maxReadingRulerFocusLines = 10;
+export const defaultReadingRulerDimOpacity = 0.2;
+export const minReadingRulerDimOpacity = 0;
+export const maxReadingRulerDimOpacity = 1;
+export const readingRulerFocusLinesStep = 1;
+export const readingRulerDimOpacityStep = 0.05;
+/** 阅读尺开启时是否淡化顶部粘性章节标题（默认淡化） */
+export const defaultReadingRulerDimStickyTitle = true;
+/** 阅读尺焦点行切换时的过渡动画（默认开启） */
+export const defaultReadingRulerTransitionEnabled = true;
+
+export function clampReadingRulerFocusLines(n: number): number {
+  if (!Number.isFinite(n)) return defaultReadingRulerFocusLines;
+  return Math.min(
+    maxReadingRulerFocusLines,
+    Math.max(minReadingRulerFocusLines, Math.round(n)),
+  );
+}
+
+export function clampReadingRulerDimOpacity(n: number): number {
+  if (!Number.isFinite(n)) return defaultReadingRulerDimOpacity;
+  const stepped =
+    Math.round(n / readingRulerDimOpacityStep) * readingRulerDimOpacityStep;
+  return Math.min(
+    maxReadingRulerDimOpacity,
+    Math.max(minReadingRulerDimOpacity, Number(stepped.toFixed(2))),
+  );
+}
+
+export const readingRulerButtonTitle =
+  "阅读尺\n\n适合注意力不容易集中的人，聚焦阅读行，淡化其他行";
 export const readerSelectModeButtonTitle =
   "当前为「可选模式」，点击切换「点击模式」\n\n可选模式：可选中文本进行标记、记笔记等操作\n点击模式：左键下一屏，右键上一屏，按下可拖动\n\n按住 Alt 可临时切换模式";
 export const readerClickModeButtonTitle =
   "当前为「点击模式」，点击切换「可选模式」\n\n可选模式：可选中文本进行标记、记笔记等操作\n点击模式：左键下一屏，右键上一屏，按下可拖动\n\n按住 Alt 可临时切换模式";
+export const readerSelectModeButtonTitleWithRuler =
+  "当前为「可选模式（阅读尺）」，点击切换「点击模式（阅读尺）」\n\n可选模式（阅读尺）：可选中文本进行标记、记笔记等操作\n点击模式（阅读尺）：左键按聚焦行数下移阅读尺，右键按聚焦行数上移阅读尺；按下可拖动\n\n按住 Alt 可临时切换模式";
+export const readerClickModeButtonTitleWithRuler =
+  "当前为「点击模式（阅读尺）」，点击切换「可选模式（阅读尺）」\n\n可选模式（阅读尺）：可选中文本进行标记、记笔记等操作\n点击模式（阅读尺）：左键按聚焦行数下移阅读尺，右键按聚焦行数上移阅读尺；按下可拖动\n\n按住 Alt 可临时切换模式";
 /** 主界面阅读区底部「上一章 / 下一章」工具栏（默认关闭） */
 export const defaultChapterNavToolbarEnabled = false;
 /** 编辑模式下 Monaco 是否显示行号（只读模式始终关闭） */

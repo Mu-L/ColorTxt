@@ -29,6 +29,13 @@ import {
   clampReaderHorizontalInsetPx,
   defaultStickyChapterTitleEnabled,
   defaultReaderClickMode,
+  defaultReadingRulerEnabled,
+  defaultReadingRulerFocusLines,
+  defaultReadingRulerDimOpacity,
+  defaultReadingRulerDimStickyTitle,
+  defaultReadingRulerTransitionEnabled,
+  clampReadingRulerFocusLines,
+  clampReadingRulerDimOpacity,
   defaultTxtrDelimitedMatchCrossLine,
   FIND_BOOK_SIDEBAR_MIN_WIDTH,
   normalizeLineHeightMultiple,
@@ -208,6 +215,11 @@ export type SharedReaderSettingsSnapshot = {
   fastScrollSensitivity: number;
   stickyChapterTitleEnabled: boolean;
   readerClickMode: boolean;
+  readingRulerEnabled: boolean;
+  readingRulerFocusLines: number;
+  readingRulerDimOpacity: number;
+  readingRulerDimStickyTitle: boolean;
+  readingRulerTransitionEnabled: boolean;
   chapterNavToolbarEnabled: boolean;
   findBookChapterAdvanceEnabled: boolean;
   readerEditShowLineNumbers: boolean;
@@ -311,6 +323,28 @@ export function sharedReaderSettingsFromMainData(
       typeof data.readerClickMode === "boolean"
         ? data.readerClickMode
         : defaultReaderClickMode,
+    readingRulerEnabled:
+      typeof data.readingRulerEnabled === "boolean"
+        ? data.readingRulerEnabled
+        : defaultReadingRulerEnabled,
+    readingRulerFocusLines: clampReadingRulerFocusLines(
+      typeof data.readingRulerFocusLines === "number"
+        ? data.readingRulerFocusLines
+        : defaultReadingRulerFocusLines,
+    ),
+    readingRulerDimOpacity: clampReadingRulerDimOpacity(
+      typeof data.readingRulerDimOpacity === "number"
+        ? data.readingRulerDimOpacity
+        : defaultReadingRulerDimOpacity,
+    ),
+    readingRulerDimStickyTitle:
+      typeof data.readingRulerDimStickyTitle === "boolean"
+        ? data.readingRulerDimStickyTitle
+        : defaultReadingRulerDimStickyTitle,
+    readingRulerTransitionEnabled:
+      typeof data.readingRulerTransitionEnabled === "boolean"
+        ? data.readingRulerTransitionEnabled
+        : defaultReadingRulerTransitionEnabled,
     chapterNavToolbarEnabled:
       typeof data.chapterNavToolbarEnabled === "boolean"
         ? data.chapterNavToolbarEnabled
@@ -375,6 +409,11 @@ export function snapshotSharedReaderSettingsForMain(
     fastScrollSensitivity: state.fastScrollSensitivity,
     stickyChapterTitleEnabled: state.stickyChapterTitleEnabled,
     readerClickMode: state.readerClickMode,
+    readingRulerEnabled: state.readingRulerEnabled,
+    readingRulerFocusLines: state.readingRulerFocusLines,
+    readingRulerDimOpacity: state.readingRulerDimOpacity,
+    readingRulerDimStickyTitle: state.readingRulerDimStickyTitle,
+    readingRulerTransitionEnabled: state.readingRulerTransitionEnabled,
     chapterNavToolbarEnabled: state.chapterNavToolbarEnabled,
     findBookChapterAdvanceEnabled: state.findBookChapterAdvanceEnabled,
     readerEditShowLineNumbers: state.readerEditShowLineNumbers,

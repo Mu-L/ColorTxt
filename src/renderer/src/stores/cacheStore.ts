@@ -141,6 +141,16 @@ export type PersistedSettingsData = {
   stickyChapterTitleEnabled?: boolean;
   /** 阅读器点击翻页模式（false = 可选模式） */
   readerClickMode?: boolean;
+  /** 阅读尺：聚焦视觉行、淡化其余行 */
+  readingRulerEnabled?: boolean;
+  /** 阅读尺聚焦视觉行数（1–10） */
+  readingRulerFocusLines?: number;
+  /** 阅读尺非聚焦行不透明度（0–1，步进 0.05） */
+  readingRulerDimOpacity?: number;
+  /** 阅读尺开启时是否淡化粘性章节标题 */
+  readingRulerDimStickyTitle?: boolean;
+  /** 阅读尺焦点行切换过渡动画 */
+  readingRulerTransitionEnabled?: boolean;
   /** 阅读区底部「上一章 / 下一章」工具栏 */
   chapterNavToolbarEnabled?: boolean;
   /** 找书阅读器边界滚动切章 */
@@ -465,6 +475,27 @@ export function loadPersistedSettingsData(
   }
   if (typeof obj.readerClickMode === "boolean") {
     data.readerClickMode = obj.readerClickMode;
+  }
+  if (typeof obj.readingRulerEnabled === "boolean") {
+    data.readingRulerEnabled = obj.readingRulerEnabled;
+  }
+  if (
+    typeof obj.readingRulerFocusLines === "number" &&
+    Number.isFinite(obj.readingRulerFocusLines)
+  ) {
+    data.readingRulerFocusLines = obj.readingRulerFocusLines;
+  }
+  if (
+    typeof obj.readingRulerDimOpacity === "number" &&
+    Number.isFinite(obj.readingRulerDimOpacity)
+  ) {
+    data.readingRulerDimOpacity = obj.readingRulerDimOpacity;
+  }
+  if (typeof obj.readingRulerDimStickyTitle === "boolean") {
+    data.readingRulerDimStickyTitle = obj.readingRulerDimStickyTitle;
+  }
+  if (typeof obj.readingRulerTransitionEnabled === "boolean") {
+    data.readingRulerTransitionEnabled = obj.readingRulerTransitionEnabled;
   }
   if (typeof obj.chapterNavToolbarEnabled === "boolean") {
     data.chapterNavToolbarEnabled = obj.chapterNavToolbarEnabled;

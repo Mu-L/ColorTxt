@@ -117,6 +117,8 @@ import {
   minChapterMinCharCount,
   clampMouseWheelScrollSensitivity,
   clampFastScrollSensitivity,
+  clampReadingRulerFocusLines,
+  clampReadingRulerDimOpacity,
   defaultMouseWheelScrollSensitivity,
   defaultFastScrollSensitivity,
   fileListKey,
@@ -275,6 +277,11 @@ export function useAppPersistence(deps: {
   fastScrollSensitivity: Ref<number>;
   stickyChapterTitleEnabled: Ref<boolean>;
   readerClickMode: Ref<boolean>;
+  readingRulerEnabled: Ref<boolean>;
+  readingRulerFocusLines: Ref<number>;
+  readingRulerDimOpacity: Ref<number>;
+  readingRulerDimStickyTitle: Ref<boolean>;
+  readingRulerTransitionEnabled: Ref<boolean>;
   chapterNavToolbarEnabled: Ref<boolean>;
   readerEditShowLineNumbers: Ref<boolean>;
   readerEditMinimap: Ref<boolean>;
@@ -421,6 +428,11 @@ export function useAppPersistence(deps: {
       fastScrollSensitivity: deps.fastScrollSensitivity.value,
       stickyChapterTitleEnabled: deps.stickyChapterTitleEnabled.value,
       readerClickMode: deps.readerClickMode.value,
+      readingRulerEnabled: deps.readingRulerEnabled.value,
+      readingRulerFocusLines: deps.readingRulerFocusLines.value,
+      readingRulerDimOpacity: deps.readingRulerDimOpacity.value,
+      readingRulerDimStickyTitle: deps.readingRulerDimStickyTitle.value,
+      readingRulerTransitionEnabled: deps.readingRulerTransitionEnabled.value,
       chapterNavToolbarEnabled: deps.chapterNavToolbarEnabled.value,
       readerEditShowLineNumbers: deps.readerEditShowLineNumbers.value,
       readerEditMinimap: deps.readerEditMinimap.value,
@@ -1348,6 +1360,32 @@ export function useAppPersistence(deps: {
       }
       if (typeof data.readerClickMode === "boolean") {
         deps.readerClickMode.value = data.readerClickMode;
+      }
+      if (typeof data.readingRulerEnabled === "boolean") {
+        deps.readingRulerEnabled.value = data.readingRulerEnabled;
+      }
+      if (
+        typeof data.readingRulerFocusLines === "number" &&
+        Number.isFinite(data.readingRulerFocusLines)
+      ) {
+        deps.readingRulerFocusLines.value = clampReadingRulerFocusLines(
+          data.readingRulerFocusLines,
+        );
+      }
+      if (
+        typeof data.readingRulerDimOpacity === "number" &&
+        Number.isFinite(data.readingRulerDimOpacity)
+      ) {
+        deps.readingRulerDimOpacity.value = clampReadingRulerDimOpacity(
+          data.readingRulerDimOpacity,
+        );
+      }
+      if (typeof data.readingRulerDimStickyTitle === "boolean") {
+        deps.readingRulerDimStickyTitle.value = data.readingRulerDimStickyTitle;
+      }
+      if (typeof data.readingRulerTransitionEnabled === "boolean") {
+        deps.readingRulerTransitionEnabled.value =
+          data.readingRulerTransitionEnabled;
       }
       if (typeof data.chapterNavToolbarEnabled === "boolean") {
         deps.chapterNavToolbarEnabled.value = data.chapterNavToolbarEnabled;

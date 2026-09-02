@@ -141,6 +141,7 @@ export async function replaceImgAnchorLinesWithViewZones(
       const dom = document.createElement("div");
       dom.className = "readerImageViewZone";
       dom.dataset.colortxtImgUrl = z.url;
+      dom.dataset.colortxtAfterLine = String(afterLineNumber);
       dom.style.display = "block";
       dom.style.overflow = "hidden";
       dom.style.pointerEvents = "none";
@@ -204,6 +205,18 @@ export function syncReaderImageViewZonesLineSpacing(
       accessor.layoutZone(id);
     }
   });
+}
+
+export function forEachReaderImageViewZone(
+  zoneIds: readonly string[],
+  fn: (dom: HTMLElement, afterLineNumber: number) => void,
+): void {
+  for (const id of zoneIds) {
+    const rec = activeImageZones.get(id);
+    const dom = rec?.zone.domNode;
+    if (!(dom instanceof HTMLElement)) continue;
+    fn(dom, rec.zone.afterLineNumber);
+  }
 }
 
 export function removeViewZonesById(

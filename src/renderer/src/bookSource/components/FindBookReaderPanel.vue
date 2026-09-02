@@ -234,6 +234,11 @@ const {
   fastScrollSensitivity,
   stickyChapterTitleEnabled,
   readerClickMode,
+  readingRulerEnabled,
+  readingRulerFocusLines,
+  readingRulerDimOpacity,
+  readingRulerDimStickyTitle,
+  readingRulerTransitionEnabled,
   chapterNavToolbarEnabled,
   findBookChapterAdvanceEnabled,
   selectionToolbarButtons,
@@ -454,7 +459,8 @@ function resetChapterAdvanceWheelAccumulation() {
 
 /**
  * 已在章节边界时，用户再次向下/向上滚动或翻页则切章。
- * 滚轮、空格、PageDown/PageUp、方向键共用；定时滚动和语音朗读仍走各自逻辑。
+ * 阅读尺开启时看尺能否再沿该方向移动；关闭时看视口是否贴边。
+ * 定时滚动和语音朗读续章仍走各自逻辑。
  */
 function tryAdvanceChapterFromOverscroll(direction: 1 | -1): boolean {
   if (!findBookChapterAdvanceEnabled.value) return false;
@@ -467,10 +473,14 @@ function tryAdvanceChapterFromOverscroll(direction: 1 | -1): boolean {
     return false;
   }
   const goingDown = direction === 1;
-  const atBoundary = goingDown
-    ? viewportAtBottom.value && canGoNextChapter.value
-    : viewportTopLine.value <= 1 && canGoPrevChapter.value;
-  if (!atBoundary) return false;
+  const rulerOn = readerRef.value?.isReadingRulerActive?.() === true;
+  const atEdge = rulerOn
+    ? readerRef.value?.readingRulerCannotMove?.(direction) === true
+    : goingDown
+      ? viewportAtBottom.value
+      : viewportTopLine.value <= 1;
+  const canGo = goingDown ? canGoNextChapter.value : canGoPrevChapter.value;
+  if (!atEdge || !canGo) return false;
 
   chapterAdvanceLockTimer = window.setTimeout(() => {
     chapterAdvanceLockTimer = null;
@@ -485,10 +495,6 @@ function tryAdvanceChapterFromOverscroll(direction: 1 | -1): boolean {
     scrollTo: goingDown ? "top" : "bottom",
   });
   return true;
-}
-
-function onFindBookSpacePageDown(): boolean {
-  return tryAdvanceChapterFromOverscroll(1);
 }
 
 /**
@@ -774,6 +780,8 @@ const {
   scrollChapterListToCurrent,
   exitVoiceRead: () => exitVoiceRead(),
   stopTimedScroll: () => stopTimedScroll(),
+  readingRulerEnabled,
+  isVoiceReadActive: () => isVoiceReadActive.value,
 });
 
 async function onReplaceRulesChanged() {
@@ -1140,6 +1148,7 @@ const { shortcutBindings } = useFindBookReaderShortcuts({
   onVoiceReadPlayPrevLine: () => voiceRead.playPrevLine(),
   onVoiceReadPlayNextLine: () => voiceRead.playNextLine(),
   toggleReaderEdit: onToggleReaderEdit,
+  readerEditMode,
   tryAdvanceChapterOnScroll: tryAdvanceChapterFromOverscroll,
 });
 
@@ -1198,6 +1207,12 @@ const canStartTimedScroll = timedScroll.canStartTimedScroll;
 
 function toggleReaderClickMode() {
   readerClickMode.value = !readerClickMode.value;
+  persistReaderUiPrefs();
+}
+
+function toggleReadingRuler() {
+  if (isVoiceReadActive.value) return;
+  readingRulerEnabled.value = !readingRulerEnabled.value;
   persistReaderUiPrefs();
 }
 
@@ -2093,6 +2108,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
           :reader-edit-mode="readerEditMode"
           :reader-click-mode="effectiveClickMode"
           :reader-click-mode-alt-held="clickModeAltHeld"
+          :reading-ruler-enabled="readingRulerEnabled"
           :can-enter-reader-edit-mode="canEnterReaderEditMode"
           :reader-chapter-saving="readerChapterSaving"
           :text-replace-active="textReplaceActive"
@@ -2127,6 +2143,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
           @open-text-replace="onOpenTextReplace"
           @toggle-reader-edit="onToggleReaderEdit"
           @toggle-reader-click-mode="toggleReaderClickMode"
+          @toggle-reading-ruler="toggleReadingRuler"
           @save-reader-chapter="onSaveReaderChapter"
         />
       </div>
@@ -2263,7 +2280,6 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
             class="readerPane findBookReaderMain"
             :stream-loading="readerBootLoading || showChapterLoadingUi"
             :voice-read-scroll-locked="isVoiceReadScrollLocked"
-            :intercept-readonly-space-page-down="onFindBookSpacePageDown"
             :intercept-readonly-page-step="tryAdvanceChapterFromOverscroll"
             :voice-read-paused="isVoiceReadActive && voiceRead.mode.value === 'paused'"
             :voice-read-blocks-find="isVoiceReadBlocksFind"
@@ -2283,6 +2299,11 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
             :fast-scroll-sensitivity="fastScrollSensitivity"
             :sticky-chapter-title-enabled="stickyChapterTitleEnabled"
             :reader-click-mode="effectiveClickMode"
+            :reading-ruler-enabled="readingRulerEnabled"
+            :reading-ruler-focus-lines="readingRulerFocusLines"
+            :reading-ruler-dim-opacity="readingRulerDimOpacity"
+            :reading-ruler-dim-sticky-title="readingRulerDimStickyTitle"
+            :reading-ruler-transition-enabled="readingRulerTransitionEnabled"
             :reader-click-mode-alt-held="clickModeAltHeld"
             :selection-toolbar-buttons="selectionToolbarButtons"
             :dictionary-settings="dictionarySettings"

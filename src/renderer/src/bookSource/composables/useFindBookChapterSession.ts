@@ -72,6 +72,9 @@ export type FindBookChapterSessionDeps = {
   /** 进入编辑前停止定时滚动（可晚绑定） */
   stopTimedScroll: () => void;
   readerEditMode: Ref<boolean>;
+  readingRulerEnabled: Ref<boolean>;
+  /** 晚绑定：朗读中（含暂停）不走阅读尺居中 */
+  isVoiceReadActive?: () => boolean;
 };
 
 /**
@@ -82,6 +85,8 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
   const readerContentKey = ref<string | null>(null);
   const lastChapterTitle = ref("");
   const lastChapterBody = ref("");
+  /** 阅读展示中章节标题所在行（切章阅读尺居中用） */
+  let lastChapterTitleDisplayLine = 1;
   const totalLineCount = ref(0);
   const readerEditMode = deps.readerEditMode;
   const readerEditorDirty = ref(false);
@@ -208,12 +213,26 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
     }
     const reader = deps.readerRef.value;
     if (!reader) return;
-    reader.scrollToDocumentStart(false);
+    const rulerFocus =
+      deps.readingRulerEnabled.value &&
+      !deps.readerEditMode.value &&
+      !deps.isVoiceReadActive?.();
+    const apply = () => {
+      if (rulerFocus) {
+        reader.scrollChapterTitleToRulerFocus?.(
+          lastChapterTitleDisplayLine,
+          false,
+        );
+      } else {
+        reader.scrollToDocumentStart(false);
+      }
+    };
+    apply();
     await nextTick();
     await new Promise<void>((resolve) => {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          reader.scrollToDocumentStart(false);
+          apply();
           reader.refreshChapterStickyScroll?.();
           resolve();
         });
@@ -234,6 +253,13 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
         requestAnimationFrame(() => {
           reader.scrollToBottom?.(false);
           reader.refreshChapterStickyScroll?.();
+          if (
+            deps.readingRulerEnabled.value &&
+            !deps.readerEditMode.value &&
+            !deps.isVoiceReadActive?.()
+          ) {
+            reader.syncReadingRulerToDocumentContentEdge?.(1);
+          }
           resolve();
         });
       });
@@ -295,6 +321,7 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
     if (rawTitle) {
       const lineNumber =
         formatted.chapterTitleDisplayLineByPhysical.get(1) ?? 1;
+      lastChapterTitleDisplayLine = lineNumber;
       reader.setChapters([
         {
           title: rawTitle,
@@ -303,6 +330,7 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
         },
       ]);
     } else {
+      lastChapterTitleDisplayLine = 1;
       reader.setChapters([]);
     }
   }

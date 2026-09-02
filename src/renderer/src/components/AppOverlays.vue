@@ -59,6 +59,11 @@ const props = defineProps<{
   mouseWheelScrollSensitivity: number;
   fastScrollSensitivity: number;
   stickyChapterTitleEnabled: boolean;
+  readingRulerEnabled: boolean;
+  readingRulerFocusLines: number;
+  readingRulerDimOpacity: number;
+  readingRulerDimStickyTitle: boolean;
+  readingRulerTransitionEnabled: boolean;
   chapterNavToolbarEnabled: boolean;
   chapterCharCountExact: boolean;
   readerEditShowLineNumbers: boolean;
@@ -285,6 +290,11 @@ const busyOverlayText = computed(() => {
     :mouse-wheel-scroll-sensitivity="mouseWheelScrollSensitivity"
     :fast-scroll-sensitivity="fastScrollSensitivity"
     :sticky-chapter-title-enabled="stickyChapterTitleEnabled"
+    :reading-ruler-enabled="readingRulerEnabled"
+    :reading-ruler-focus-lines="readingRulerFocusLines"
+    :reading-ruler-dim-opacity="readingRulerDimOpacity"
+    :reading-ruler-dim-sticky-title="readingRulerDimStickyTitle"
+    :reading-ruler-transition-enabled="readingRulerTransitionEnabled"
     :chapter-nav-toolbar-enabled="chapterNavToolbarEnabled"
     :chapter-char-count-exact="chapterCharCountExact"
     :reader-edit-show-line-numbers="readerEditShowLineNumbers"
@@ -313,6 +323,7 @@ const busyOverlayText = computed(() => {
     :voice-read-profiles="voiceReadProfiles"
     :active-voice-read-profile-id="activeVoiceReadProfileId"
     :character-roster="characterRoster"
+    :shortcut-bindings="shortcutBindings"
     @apply="emit('applySettings', $event)"
     @open-reading-data="emit('openReadingData')"
     @open-dictionary-manage="emit('openDictionaryManage')"

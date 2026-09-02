@@ -151,6 +151,13 @@ import {
   clampFastScrollSensitivity,
   defaultStickyChapterTitleEnabled,
   defaultReaderClickMode,
+  defaultReadingRulerEnabled,
+  defaultReadingRulerFocusLines,
+  defaultReadingRulerDimOpacity,
+  defaultReadingRulerDimStickyTitle,
+  defaultReadingRulerTransitionEnabled,
+  clampReadingRulerFocusLines,
+  clampReadingRulerDimOpacity,
   defaultChapterNavToolbarEnabled,
   defaultReaderEditShowLineNumbers,
   defaultReaderEditMinimap,
@@ -642,6 +649,13 @@ const fastScrollSensitivity = ref(defaultFastScrollSensitivity);
 /** 阅读区顶部粘性章节标题 */
 const stickyChapterTitleEnabled = ref(defaultStickyChapterTitleEnabled);
 const readerClickMode = ref(defaultReaderClickMode);
+const readingRulerEnabled = ref(defaultReadingRulerEnabled);
+const readingRulerFocusLines = ref(defaultReadingRulerFocusLines);
+const readingRulerDimOpacity = ref(defaultReadingRulerDimOpacity);
+const readingRulerDimStickyTitle = ref(defaultReadingRulerDimStickyTitle);
+const readingRulerTransitionEnabled = ref(
+  defaultReadingRulerTransitionEnabled,
+);
 const chapterNavToolbarEnabled = ref(defaultChapterNavToolbarEnabled);
 const readerEditShowLineNumbers = ref(defaultReaderEditShowLineNumbers);
 const readerEditMinimap = ref(defaultReaderEditMinimap);
@@ -1147,6 +1161,11 @@ const persistence = useAppPersistence({
   fastScrollSensitivity,
   stickyChapterTitleEnabled,
   readerClickMode,
+  readingRulerEnabled,
+  readingRulerFocusLines,
+  readingRulerDimOpacity,
+  readingRulerDimStickyTitle,
+  readingRulerTransitionEnabled,
   chapterNavToolbarEnabled,
   readerEditShowLineNumbers,
   readerEditMinimap,
@@ -2116,6 +2135,8 @@ const chapterNav = useAppChapterNavigation({
     await nextTick();
     await readerSidebarRef.value?.centerActiveChapterInList?.(false);
   },
+  readingRulerEnabled,
+  isVoiceReadActive: () => isVoiceReadActive.value,
 });
 
 /** 视口已按物理行恢复且 probe 已更新后：重算章节并居中侧栏（加载结束等） */
@@ -2486,6 +2507,12 @@ async function onApplyPartialPhysicalEdit(payload: {
 
 function toggleReaderClickMode() {
   readerClickMode.value = !readerClickMode.value;
+  persistSettings();
+}
+
+function toggleReadingRuler() {
+  if (isVoiceReadActive.value) return;
+  readingRulerEnabled.value = !readingRulerEnabled.value;
   persistSettings();
 }
 
@@ -3320,6 +3347,15 @@ async function applySettings(payload: SettingsApplyPayload) {
     payload.fastScrollSensitivity,
   );
   stickyChapterTitleEnabled.value = payload.stickyChapterTitleEnabled;
+  readingRulerEnabled.value = payload.readingRulerEnabled;
+  readingRulerFocusLines.value = clampReadingRulerFocusLines(
+    payload.readingRulerFocusLines,
+  );
+  readingRulerDimOpacity.value = clampReadingRulerDimOpacity(
+    payload.readingRulerDimOpacity,
+  );
+  readingRulerDimStickyTitle.value = payload.readingRulerDimStickyTitle;
+  readingRulerTransitionEnabled.value = payload.readingRulerTransitionEnabled;
   chapterNavToolbarEnabled.value = payload.chapterNavToolbarEnabled;
   chapterCharCountExact.value = payload.chapterCharCountExact;
   timedScrollSettings.value = mergeTimedScrollSettings(payload.timedScroll);
@@ -3676,6 +3712,7 @@ useAppShellThemeWatch({
         :reader-edit-mode="readerEditMode"
         :reader-click-mode="effectiveClickMode"
         :reader-click-mode-alt-held="clickModeAltHeld"
+        :reading-ruler-enabled="readingRulerEnabled"
         :can-enter-reader-edit-mode="canEnterReaderEditMode"
         :shortcut-bindings="shortcutBindings"
         @open-file="openFileViaDialog"
@@ -3724,6 +3761,7 @@ useAppShellThemeWatch({
         @quit-app="quitApp"
         @toggle-reader-edit="onToggleReaderEdit"
         @toggle-reader-click-mode="toggleReaderClickMode"
+        @toggle-reading-ruler="toggleReadingRuler"
         @save-reader-file="onSaveReaderFile"
         :ai-features-enabled="aiFeaturesEnabled"
         :can-use-ai-smart-format="canUseAiSmartFormat"
@@ -3950,6 +3988,11 @@ useAppShellThemeWatch({
           :fast-scroll-sensitivity="fastScrollSensitivity"
           :sticky-chapter-title-enabled="stickyChapterTitleEnabled"
           :reader-click-mode="effectiveClickMode"
+          :reading-ruler-enabled="readingRulerEnabled"
+          :reading-ruler-focus-lines="readingRulerFocusLines"
+          :reading-ruler-dim-opacity="readingRulerDimOpacity"
+          :reading-ruler-dim-sticky-title="readingRulerDimStickyTitle"
+          :reading-ruler-transition-enabled="readingRulerTransitionEnabled"
           :reader-click-mode-alt-held="clickModeAltHeld"
           :selection-toolbar-buttons="selectionToolbarButtons"
           :dictionary-settings="dictionarySettings"
@@ -4224,6 +4267,11 @@ useAppShellThemeWatch({
       :mouse-wheel-scroll-sensitivity="mouseWheelScrollSensitivity"
       :fast-scroll-sensitivity="fastScrollSensitivity"
       :sticky-chapter-title-enabled="stickyChapterTitleEnabled"
+      :reading-ruler-enabled="readingRulerEnabled"
+      :reading-ruler-focus-lines="readingRulerFocusLines"
+      :reading-ruler-dim-opacity="readingRulerDimOpacity"
+      :reading-ruler-dim-sticky-title="readingRulerDimStickyTitle"
+      :reading-ruler-transition-enabled="readingRulerTransitionEnabled"
       :chapter-nav-toolbar-enabled="chapterNavToolbarEnabled"
       :chapter-char-count-exact="chapterCharCountExact"
       :timed-scroll-settings="timedScrollSettings"

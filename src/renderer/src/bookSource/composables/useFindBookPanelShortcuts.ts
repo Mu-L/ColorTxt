@@ -154,6 +154,9 @@ export function useFindBookPanelShortcuts(deps: {
       (action) =>
         deps.showBookReader.value &&
         !PANEL_ACTIONS_WHEN_READER_OPEN.has(action),
+      undefined,
+      undefined,
+      false,
     );
   }
 

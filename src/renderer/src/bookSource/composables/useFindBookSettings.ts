@@ -59,6 +59,11 @@ function createFindBookSettingsStore() {
   const fastScrollSensitivity = ref(initial.fastScrollSensitivity);
   const stickyChapterTitleEnabled = ref(initial.stickyChapterTitleEnabled);
   const readerClickMode = ref(initial.readerClickMode);
+  const readingRulerEnabled = ref(initial.readingRulerEnabled);
+  const readingRulerFocusLines = ref(initial.readingRulerFocusLines);
+  const readingRulerDimOpacity = ref(initial.readingRulerDimOpacity);
+  const readingRulerDimStickyTitle = ref(initial.readingRulerDimStickyTitle);
+  const readingRulerTransitionEnabled = ref(initial.readingRulerTransitionEnabled);
   const chapterNavToolbarEnabled = ref(initial.chapterNavToolbarEnabled);
   const findBookChapterAdvanceEnabled = ref(initial.findBookChapterAdvanceEnabled);
   const readerEditShowLineNumbers = ref(initial.readerEditShowLineNumbers);
@@ -122,6 +127,11 @@ function createFindBookSettingsStore() {
       fastScrollSensitivity: fastScrollSensitivity.value,
       stickyChapterTitleEnabled: stickyChapterTitleEnabled.value,
       readerClickMode: readerClickMode.value,
+      readingRulerEnabled: readingRulerEnabled.value,
+      readingRulerFocusLines: readingRulerFocusLines.value,
+      readingRulerDimOpacity: readingRulerDimOpacity.value,
+      readingRulerDimStickyTitle: readingRulerDimStickyTitle.value,
+      readingRulerTransitionEnabled: readingRulerTransitionEnabled.value,
       chapterNavToolbarEnabled: chapterNavToolbarEnabled.value,
       findBookChapterAdvanceEnabled: findBookChapterAdvanceEnabled.value,
       readerEditShowLineNumbers: readerEditShowLineNumbers.value,
@@ -205,6 +215,11 @@ function createFindBookSettingsStore() {
     fastScrollSensitivity.value = shared.fastScrollSensitivity;
     stickyChapterTitleEnabled.value = shared.stickyChapterTitleEnabled;
     readerClickMode.value = shared.readerClickMode;
+    readingRulerEnabled.value = shared.readingRulerEnabled;
+    readingRulerFocusLines.value = shared.readingRulerFocusLines;
+    readingRulerDimOpacity.value = shared.readingRulerDimOpacity;
+    readingRulerDimStickyTitle.value = shared.readingRulerDimStickyTitle;
+    readingRulerTransitionEnabled.value = shared.readingRulerTransitionEnabled;
     chapterNavToolbarEnabled.value = shared.chapterNavToolbarEnabled;
     readerEditShowLineNumbers.value = shared.readerEditShowLineNumbers;
     readerEditMinimap.value = shared.readerEditMinimap;
@@ -290,6 +305,11 @@ function createFindBookSettingsStore() {
     fastScrollSensitivity,
     stickyChapterTitleEnabled,
     readerClickMode,
+    readingRulerEnabled,
+    readingRulerFocusLines,
+    readingRulerDimOpacity,
+    readingRulerDimStickyTitle,
+    readingRulerTransitionEnabled,
     chapterNavToolbarEnabled,
     findBookChapterAdvanceEnabled,
     readerEditShowLineNumbers,

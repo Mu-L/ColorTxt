@@ -51,6 +51,13 @@ import {
   defaultReaderHorizontalInsetPx,
   clampReaderHorizontalInsetPx,
   defaultStickyChapterTitleEnabled,
+  defaultReadingRulerEnabled,
+  defaultReadingRulerFocusLines,
+  defaultReadingRulerDimOpacity,
+  defaultReadingRulerDimStickyTitle,
+  defaultReadingRulerTransitionEnabled,
+  clampReadingRulerFocusLines,
+  clampReadingRulerDimOpacity,
   defaultTxtrDelimitedMatchCrossLine,
   defaultChapterNavToolbarEnabled,
   maxLineHeightMultipleForFontSize,
@@ -109,6 +116,7 @@ import {
 import { confirmClearAllChapterCache } from "../services/clearBookChapterCache";
 import { appAlert } from "../../services/appDialog";
 import type { CharacterRosterEntry } from "@shared/characterTypes";
+import type { ShortcutBindingMap } from "../../services/shortcutRegistry";
 import "../../styles/settingsPanel.css";
 
 type SettingsVoiceReadPanelExpose = {
@@ -123,6 +131,7 @@ const modelValue = defineModel<boolean>({ default: false });
 const props = withDefaults(
   defineProps<{
     initialTab?: FindBookSettingsTabId;
+    shortcutBindings?: ShortcutBindingMap;
   }>(),
   { initialTab: "download" },
 );
@@ -168,6 +177,13 @@ const draftMouseWheelScrollSensitivity = ref(
 );
 const draftFastScrollSensitivity = ref(defaultFastScrollSensitivity);
 const draftStickyChapterTitleEnabled = ref(defaultStickyChapterTitleEnabled);
+const draftReadingRulerEnabled = ref(defaultReadingRulerEnabled);
+const draftReadingRulerFocusLines = ref(defaultReadingRulerFocusLines);
+const draftReadingRulerDimOpacity = ref(defaultReadingRulerDimOpacity);
+const draftReadingRulerDimStickyTitle = ref(defaultReadingRulerDimStickyTitle);
+const draftReadingRulerTransitionEnabled = ref(
+  defaultReadingRulerTransitionEnabled,
+);
 const draftChapterNavToolbarEnabled = ref(defaultChapterNavToolbarEnabled);
 const draftFindBookChapterAdvanceEnabled = ref(fbReaderSettings.findBookChapterAdvanceEnabled.value);
 const draftReaderEditShowLineNumbers = ref(defaultReaderEditShowLineNumbers);
@@ -279,6 +295,16 @@ function syncSharedReaderDraftFromStore() {
     fb.fastScrollSensitivity.value,
   );
   draftStickyChapterTitleEnabled.value = fb.stickyChapterTitleEnabled.value;
+  draftReadingRulerEnabled.value = fb.readingRulerEnabled.value;
+  draftReadingRulerFocusLines.value = clampReadingRulerFocusLines(
+    fb.readingRulerFocusLines.value,
+  );
+  draftReadingRulerDimOpacity.value = clampReadingRulerDimOpacity(
+    fb.readingRulerDimOpacity.value,
+  );
+  draftReadingRulerDimStickyTitle.value = fb.readingRulerDimStickyTitle.value;
+  draftReadingRulerTransitionEnabled.value =
+    fb.readingRulerTransitionEnabled.value;
   draftChapterNavToolbarEnabled.value = fb.chapterNavToolbarEnabled.value;
   draftFindBookChapterAdvanceEnabled.value = fb.findBookChapterAdvanceEnabled.value;
   draftReaderEditShowLineNumbers.value = fb.readerEditShowLineNumbers.value;
@@ -366,6 +392,12 @@ function resetReadingDraft() {
   draftMouseWheelScrollSensitivity.value = defaultMouseWheelScrollSensitivity;
   draftFastScrollSensitivity.value = defaultFastScrollSensitivity;
   draftStickyChapterTitleEnabled.value = defaultStickyChapterTitleEnabled;
+  draftReadingRulerEnabled.value = defaultReadingRulerEnabled;
+  draftReadingRulerFocusLines.value = defaultReadingRulerFocusLines;
+  draftReadingRulerDimOpacity.value = defaultReadingRulerDimOpacity;
+  draftReadingRulerDimStickyTitle.value = defaultReadingRulerDimStickyTitle;
+  draftReadingRulerTransitionEnabled.value =
+    defaultReadingRulerTransitionEnabled;
   draftChapterNavToolbarEnabled.value = defaultChapterNavToolbarEnabled;
   draftChapterTitleBlankMode.value =
     defaultChapterTitleBlankMode;
@@ -537,6 +569,16 @@ async function onConfirm() {
     draftFastScrollSensitivity.value,
   );
   fb.stickyChapterTitleEnabled.value = draftStickyChapterTitleEnabled.value;
+  fb.readingRulerEnabled.value = draftReadingRulerEnabled.value;
+  fb.readingRulerFocusLines.value = clampReadingRulerFocusLines(
+    draftReadingRulerFocusLines.value,
+  );
+  fb.readingRulerDimOpacity.value = clampReadingRulerDimOpacity(
+    draftReadingRulerDimOpacity.value,
+  );
+  fb.readingRulerDimStickyTitle.value = draftReadingRulerDimStickyTitle.value;
+  fb.readingRulerTransitionEnabled.value =
+    draftReadingRulerTransitionEnabled.value;
   fb.chapterNavToolbarEnabled.value = draftChapterNavToolbarEnabled.value;
   fb.findBookChapterAdvanceEnabled.value = draftFindBookChapterAdvanceEnabled.value;
   fb.readerEditShowLineNumbers.value = draftReaderEditShowLineNumbers.value;
@@ -683,6 +725,12 @@ watch(draftFontSize, (size) => {
               "
               v-model:draft-fast-scroll-sensitivity="draftFastScrollSensitivity"
               v-model:draft-sticky-chapter-title-enabled="draftStickyChapterTitleEnabled"
+              v-model:draft-reading-ruler-enabled="draftReadingRulerEnabled"
+              v-model:draft-reading-ruler-focus-lines="draftReadingRulerFocusLines"
+              v-model:draft-reading-ruler-dim-opacity="draftReadingRulerDimOpacity"
+              v-model:draft-reading-ruler-dim-sticky-title="draftReadingRulerDimStickyTitle"
+              v-model:draft-reading-ruler-transition-enabled="draftReadingRulerTransitionEnabled"
+              :shortcut-bindings="shortcutBindings"
               v-model:draft-chapter-nav-toolbar-enabled="draftChapterNavToolbarEnabled"
               v-model:draft-find-book-chapter-advance-enabled="draftFindBookChapterAdvanceEnabled"
               v-model:draft-chapter-title-blank-mode="draftChapterTitleBlankMode"

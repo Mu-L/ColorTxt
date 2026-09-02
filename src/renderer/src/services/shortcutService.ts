@@ -40,6 +40,7 @@ export type AppShortcutActions = {
 import type { ShortcutBindingMap } from "./shortcutRegistry";
 import { keyboardEventToAccelerator, normalizeAccelerator } from "./shortcutUtils";
 import { hasDismissibleOverlay } from "../utils/dismissibleOverlayStack";
+import { keyboardEventFromReaderSidebar } from "../utils/readerSidebarKeyboard";
 
 type ActionKey = keyof AppShortcutActions;
 
@@ -167,6 +168,57 @@ function keyboardEventBlocksVoiceReadRemap(ev: KeyboardEvent): boolean {
   return role === "slider" || role === "spinbutton" || role === "textbox";
 }
 
+function isUnmodifiedSpaceKey(ev: KeyboardEvent): boolean {
+  if (ev.isComposing || ev.keyCode === 229) return false;
+  if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.shiftKey) return false;
+  return ev.key === " " || ev.code === "Space";
+}
+
+/**
+ * 空格在输入面上应打字，不要翻页。
+ * 只读 Monaco 仍翻页（textarea.inputarea 在 `.monaco-editor` 内）。
+ * 编辑态用 Native EditContext（`div.native-edit-context`），须在 monaco 例外之前让出。
+ */
+function keyboardEventBlocksReaderSpacePageDown(ev: KeyboardEvent): boolean {
+  const t = ev.target;
+  if (!(t instanceof Element)) return false;
+  if (t.closest(".find-widget")) return true;
+  if (t.closest(".native-edit-context")) return true;
+  if (
+    t.closest(".content--readerEdit") &&
+    (t instanceof HTMLInputElement ||
+      t instanceof HTMLTextAreaElement ||
+      (t instanceof HTMLElement && t.isContentEditable) ||
+      t.getAttribute("role") === "textbox")
+  ) {
+    return true;
+  }
+  if (t.closest(".monaco-editor")) return false;
+  if (
+    t instanceof HTMLInputElement ||
+    t instanceof HTMLTextAreaElement ||
+    t instanceof HTMLSelectElement
+  ) {
+    return true;
+  }
+  if (t instanceof HTMLElement && t.isContentEditable) return true;
+  const role = t.getAttribute("role");
+  return role === "slider" || role === "spinbutton" || role === "textbox";
+}
+
+function matchActionFromBindings(
+  bindings: ShortcutBindingMap,
+  eventAccel: string,
+): ActionKey | null {
+  for (const [actionId, binding] of Object.entries(bindings)) {
+    const normalized = normalizeAccelerator(binding);
+    if (!normalized || normalized !== eventAccel) continue;
+    const actionKey = ACTION_BY_ID[actionId];
+    if (actionKey) return actionKey;
+  }
+  return null;
+}
+
 function dispatchVoiceReadReaderKey(
   kind: VoiceReadReaderKeyKind,
   handlers: VoiceReadReaderKeyHandlers,
@@ -183,6 +235,10 @@ export function bindAppShortcuts(
   shouldDeferAction?: (action: ActionKey, ev: KeyboardEvent) => boolean,
   shouldConsumeAction?: (action: ActionKey, ev: KeyboardEvent) => boolean,
   voiceReadReaderKeys?: VoiceReadReaderKeyHandlers,
+  /** 只读空格翻页；找书主面板没有阅读器时应关 */
+  mapUnmodifiedSpaceToPageDown = true,
+  /** 编辑态：空格不翻页；焦点不在输入面时直接吞掉 */
+  isReaderEditMode?: () => boolean,
 ): () => void {
   const onShortcutKeyDown = (ev: KeyboardEvent) => {
     if (windowShortcutRecordingHandler) {
@@ -201,18 +257,49 @@ export function bindAppShortcuts(
         return;
       }
     }
+    if (
+      mapUnmodifiedSpaceToPageDown &&
+      isUnmodifiedSpaceKey(ev) &&
+      !keyboardEventBlocksReaderSpacePageDown(ev)
+    ) {
+      const spaceAccel = keyboardEventToAccelerator(ev);
+      const spaceBound = spaceAccel
+        ? matchActionFromBindings(getBindings(), spaceAccel)
+        : null;
+      // 用户把空格绑到其它动作时走绑定表；未绑定或绑的是下一屏则当翻页。
+      if (!spaceBound || spaceBound === "scrollPageDown") {
+        if (
+          !(
+            voiceReadReaderKeys?.isActive() &&
+            keyboardEventBlocksVoiceReadRemap(ev)
+          )
+        ) {
+          if (isReaderEditMode?.()) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            return;
+          }
+          if (shouldConsumeAction?.("scrollPageDown", ev)) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            return;
+          }
+          // 侧栏列表仍把 PageDown 留给列表翻页；空格不是列表键，点过侧栏后应与顶栏一样翻阅读器。
+          const deferPage =
+            shouldDeferAction?.("scrollPageDown", ev) === true &&
+            !keyboardEventFromReaderSidebar(ev);
+          if (!deferPage) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            void actions.scrollPageDown();
+            return;
+          }
+        }
+      }
+    }
     const eventAccel = keyboardEventToAccelerator(ev);
     if (!eventAccel) return;
-    const bindings = getBindings();
-    let matchedAction: ActionKey | null = null;
-    for (const [actionId, binding] of Object.entries(bindings)) {
-      const normalized = normalizeAccelerator(binding);
-      if (!normalized || normalized !== eventAccel) continue;
-      const actionKey = ACTION_BY_ID[actionId];
-      if (!actionKey) continue;
-      matchedAction = actionKey;
-      break;
-    }
+    const matchedAction = matchActionFromBindings(getBindings(), eventAccel);
     if (!matchedAction) return;
     if (shouldConsumeAction?.(matchedAction, ev)) {
       ev.preventDefault();

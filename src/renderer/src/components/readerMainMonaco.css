@@ -187,6 +187,64 @@
   background: color-mix(in srgb, var(--search-hit-bg) 26%, transparent);
 }
 
+.monaco-editor.reader-reading-ruler .view-line {
+  opacity: var(--reader-ruler-dim, 0.2);
+}
+.monaco-editor.reader-reading-ruler .view-line:has(.readerRulerFocus) {
+  opacity: 1;
+}
+/*
+ * Monaco 装饰变化会 replaceWith 整行 DOM，transition 接不上旧透明度。
+ * 新节点用 animation + fill-mode，才能淡入/淡出。
+ */
+.monaco-editor.reader-reading-ruler.reader-reading-ruler-transition .view-line:has(.readerRulerFocus) {
+  animation: readerRulerFocusIn 0.2s ease backwards;
+}
+.monaco-editor.reader-reading-ruler.reader-reading-ruler-transition .view-line:has(.readerRulerFocusOut) {
+  animation: readerRulerFocusOut 0.2s ease both;
+}
+.monaco-editor.reader-reading-ruler .readerImageViewZone {
+  opacity: var(--reader-ruler-dim, 0.2);
+  transition: opacity 0.2s ease;
+}
+.monaco-editor.reader-reading-ruler .readerImageViewZone.readerRulerFocus,
+.monaco-editor.reader-reading-ruler .readerImageViewZone:hover,
+.monaco-editor.reader-reading-ruler .readerImageViewZone:has(img:hover) {
+  opacity: 1;
+}
+.monaco-editor.reader-reading-ruler.reader-reading-ruler-dim-sticky .sticky-widget .sticky-line-content,
+.monaco-editor.reader-reading-ruler.reader-reading-ruler-dim-sticky .sticky-widget .sticky-line-number {
+  opacity: var(--reader-ruler-dim, 0.2);
+  transition: opacity 0.2s ease;
+}
+@keyframes readerRulerFocusIn {
+  from {
+    opacity: var(--reader-ruler-dim, 0.2);
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes readerRulerFocusOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: var(--reader-ruler-dim, 0.2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .monaco-editor.reader-reading-ruler.reader-reading-ruler-transition .view-line:has(.readerRulerFocus),
+  .monaco-editor.reader-reading-ruler.reader-reading-ruler-transition .view-line:has(.readerRulerFocusOut) {
+    animation: none;
+  }
+  .monaco-editor.reader-reading-ruler .readerImageViewZone,
+  .monaco-editor.reader-reading-ruler.reader-reading-ruler-dim-sticky .sticky-widget .sticky-line-content,
+  .monaco-editor.reader-reading-ruler.reader-reading-ruler-dim-sticky .sticky-widget .sticky-line-number {
+    transition: none;
+  }
+}
+
 /*
  * 溢出挂件容器：零尺寸 fixed 层，不挡点击；子节点恢复 pointer-events。
  * 须同时带 `monaco-editor` + 主题类（见 ReaderMain.ensureReaderMonacoOverflowHost）。
@@ -572,10 +630,10 @@ body > .overflowingContentWidgets
 }
 
 /*
- * 只读：隐藏 textarea IME 合成层（空白框）。查找栏有独立 input，不受影响。
+ * 只读：整层藏掉 textarea（IME 空白框 + 1px 原生选区线）。查找栏有独立 input，不受影响。
  * 根节点 `content--readerEdit` 见 ReaderMain。
  */
-.content:not(.content--readerEdit) .monaco-editor .inputarea.ime-input {
+.content:not(.content--readerEdit) .monaco-editor textarea.inputarea {
   opacity: 0 !important;
   color: transparent !important;
   caret-color: transparent !important;
@@ -593,6 +651,9 @@ body > .overflowingContentWidgets
  * 全局 `textarea` / `:focus` 会给输入层加上 1px 强调色边框。
  * 编辑态 EditContext 把该层拉成当前行，看起来像光标行蓝框。
  * 同时藏掉原生 caret，只留 Monaco 绘制的光标（否则会闪两个）。
+ *
+ * 只读关了 EditContext，Windows 上 textarea 被做成「光标行顶 × 换行宽、高 1px」。
+ * 编辑器背景透明时，原生 `::selection` 会从这 1px 透出来，像选区顶/底一条细线。
  */
 .monaco-editor textarea.inputarea,
 .monaco-editor .native-edit-context {
@@ -602,6 +663,14 @@ body > .overflowingContentWidgets
   background: transparent !important;
   color: transparent !important;
   caret-color: transparent !important;
+  padding: 0 !important;
+}
+
+.monaco-editor textarea.inputarea::selection,
+.monaco-editor textarea.inputarea::-moz-selection,
+.monaco-editor .native-edit-context::selection {
+  background: transparent !important;
+  color: transparent !important;
 }
 
 .monaco-editor .view-lines .view-line span.readerAnnotationNoteOnly {

@@ -58,6 +58,7 @@
 | <img src="./src/renderer/src/assets/dark.svg" width="18" height="18" alt=""> | 主题切换 | 内置明亮 / 暗黑两种主题 |
 | <img src="./src/renderer/src/assets/enter_fullscreen.svg" width="18" height="18" alt=""> | 全屏阅读 | **沉浸式阅读体验**，阅读区域宽度可自由调整 |
 | <img src="./src/renderer/src/assets/enter_minimalist_view.svg" width="18" height="18" alt=""> | 极简视图 | **专注阅读**，阅读区撑满窗口，鼠标移到窗口边缘唤出相应面板 |
+| <img src="./src/renderer/src/assets/reading_ruler.svg" width="18" height="18" alt=""> | 阅读尺 | 适合注意力不容易集中的人（**ADHD**），聚焦阅读行，淡化其他行 |
 |  | 粘性标题栏 | 章节标题会常驻顶部，看到哪里一目了然 |
 |  | 阅读进度恢复 | 自动记录阅读进度，下次打开可以继续阅读 |
 |  | 最近打开记录 | 记录最近打开的文件 |

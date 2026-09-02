@@ -11,6 +11,7 @@ import {
 } from "../../services/shortcutRegistry";
 import {
   bindAppShortcuts,
+  EDIT_MODE_MONACO_DEFERRED_ACTIONS,
   READER_SCROLL_SHORTCUT_ACTIONS,
   VOICE_READ_SCROLL_BLOCKED_ACTIONS,
 } from "../../services/shortcutService";
@@ -24,6 +25,17 @@ import { shouldDeferShortcutForReaderSidebar } from "../../utils/readerSidebarKe
 function keyboardTargetInsideFindWidget(ev: KeyboardEvent): boolean {
   const t = ev.target;
   return t instanceof Element && !!t.closest(".find-widget");
+}
+
+function keyboardTargetInsideReaderMonacoEditor(
+  ev: KeyboardEvent,
+  readerRef: Ref<InstanceType<typeof ReaderMain> | null>,
+): boolean {
+  const t = ev.target;
+  if (!(t instanceof Node)) return false;
+  if (t instanceof Element && t.closest(".content--readerEdit")) return true;
+  const root = readerRef.value?.getReaderEditorDomNode?.() ?? null;
+  return Boolean(root && root.contains(t));
 }
 
 const defaultShortcutBindings = createDefaultShortcutBindings(
@@ -62,6 +74,7 @@ export function useFindBookReaderShortcuts(deps: {
   onVoiceReadPlayPrevLine?: () => void;
   onVoiceReadPlayNextLine?: () => void;
   toggleReaderEdit: () => void | Promise<void>;
+  readerEditMode?: Ref<boolean>;
   /**
    * 已在章节边界时再次翻页/逐行滚动：切章并返回 true，调用方不再滚动正文。
    */
@@ -144,11 +157,9 @@ export function useFindBookReaderShortcuts(deps: {
           deps.readerRef.value?.scrollByLineStep?.(-1);
         },
         scrollPageUp: () => {
-          if (deps.tryAdvanceChapterOnScroll?.(-1)) return;
           deps.readerRef.value?.scrollByPageStep?.(-1);
         },
         scrollPageDown: () => {
-          if (deps.tryAdvanceChapterOnScroll?.(1)) return;
           deps.readerRef.value?.scrollByPageStep?.(1);
         },
       },
@@ -162,9 +173,16 @@ export function useFindBookReaderShortcuts(deps: {
         ) {
           return true;
         }
-        return (
+        if (
           keyboardTargetInsideFindWidget(ev) &&
           (action === "scrollUpLine" || action === "scrollDownLine")
+        ) {
+          return true;
+        }
+        return (
+          deps.readerEditMode?.value === true &&
+          keyboardTargetInsideReaderMonacoEditor(ev, deps.readerRef) &&
+          EDIT_MODE_MONACO_DEFERRED_ACTIONS.has(action)
         );
       },
       (action) =>
@@ -178,6 +196,8 @@ export function useFindBookReaderShortcuts(deps: {
         playPrevLine: () => deps.onVoiceReadPlayPrevLine?.(),
         playNextLine: () => deps.onVoiceReadPlayNextLine?.(),
       },
+      true,
+      () => deps.readerEditMode?.value === true,
     );
   }
 

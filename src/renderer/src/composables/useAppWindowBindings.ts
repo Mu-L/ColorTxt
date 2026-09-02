@@ -37,6 +37,7 @@ function keyboardTargetInsideReaderMonacoEditor(
 ): boolean {
   const t = ev.target;
   if (!(t instanceof Node)) return false;
+  if (t instanceof Element && t.closest(".content--readerEdit")) return true;
   const root = readerRef.value?.getReaderEditorDomNode?.() ?? null;
   return Boolean(root && root.contains(t));
 }
@@ -312,6 +313,8 @@ export function useAppWindowBindings(deps: {
           playPrevLine: () => deps.onVoiceReadPlayPrevLine?.(),
           playNextLine: () => deps.onVoiceReadPlayNextLine?.(),
         },
+        true,
+        () => deps.readerEditMode.value,
       ),
     );
 

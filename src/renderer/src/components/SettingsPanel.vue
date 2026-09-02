@@ -55,6 +55,13 @@ import {
   clampMouseWheelScrollSensitivity,
   clampFastScrollSensitivity,
   defaultStickyChapterTitleEnabled,
+  defaultReadingRulerEnabled,
+  defaultReadingRulerFocusLines,
+  defaultReadingRulerDimOpacity,
+  defaultReadingRulerDimStickyTitle,
+  defaultReadingRulerTransitionEnabled,
+  clampReadingRulerFocusLines,
+  clampReadingRulerDimOpacity,
   defaultChapterNavToolbarEnabled,
   defaultChapterCharCountExact,
   defaultReaderEditShowLineNumbers,
@@ -115,6 +122,7 @@ import {
   voiceReadDashScopeRequiresApiKey,
 } from "../constants/voiceRead";
 import type { VoiceReadProfile } from "@shared/voiceReadProfiles";
+import type { ShortcutBindingMap } from "../services/shortcutRegistry";
 import { migrateVoiceReadFromPersisted, cloneVoiceReadProfiles } from "../services/voiceRead/voiceReadProfileState";
 
 type SettingsVoiceReadPanelExpose = {
@@ -149,6 +157,11 @@ export type SettingsApplyPayload = {
   mouseWheelScrollSensitivity: number;
   fastScrollSensitivity: number;
   stickyChapterTitleEnabled: boolean;
+  readingRulerEnabled: boolean;
+  readingRulerFocusLines: number;
+  readingRulerDimOpacity: number;
+  readingRulerDimStickyTitle: boolean;
+  readingRulerTransitionEnabled: boolean;
   chapterNavToolbarEnabled: boolean;
   chapterCharCountExact: boolean;
   readerEditShowLineNumbers: boolean;
@@ -201,6 +214,11 @@ const props = defineProps<{
   mouseWheelScrollSensitivity: number;
   fastScrollSensitivity: number;
   stickyChapterTitleEnabled: boolean;
+  readingRulerEnabled: boolean;
+  readingRulerFocusLines: number;
+  readingRulerDimOpacity: number;
+  readingRulerDimStickyTitle: boolean;
+  readingRulerTransitionEnabled: boolean;
   chapterNavToolbarEnabled: boolean;
   chapterCharCountExact: boolean;
   readerEditShowLineNumbers: boolean;
@@ -229,6 +247,7 @@ const props = defineProps<{
   voiceReadProfiles: VoiceReadProfile[];
   activeVoiceReadProfileId: string;
   characterRoster: CharacterRosterEntry[];
+  shortcutBindings: ShortcutBindingMap;
 }>();
 
 const emit = defineEmits<{
@@ -276,6 +295,13 @@ const draftMouseWheelScrollSensitivity = ref(
 );
 const draftFastScrollSensitivity = ref(defaultFastScrollSensitivity);
 const draftStickyChapterTitleEnabled = ref(defaultStickyChapterTitleEnabled);
+const draftReadingRulerEnabled = ref(defaultReadingRulerEnabled);
+const draftReadingRulerFocusLines = ref(defaultReadingRulerFocusLines);
+const draftReadingRulerDimOpacity = ref(defaultReadingRulerDimOpacity);
+const draftReadingRulerDimStickyTitle = ref(defaultReadingRulerDimStickyTitle);
+const draftReadingRulerTransitionEnabled = ref(
+  defaultReadingRulerTransitionEnabled,
+);
 const draftChapterNavToolbarEnabled = ref(defaultChapterNavToolbarEnabled);
 const draftChapterCharCountExact = ref(defaultChapterCharCountExact);
 const draftReaderEditShowLineNumbers = ref(defaultReaderEditShowLineNumbers);
@@ -366,6 +392,16 @@ function syncDraftFromProps() {
     props.fastScrollSensitivity,
   );
   draftStickyChapterTitleEnabled.value = props.stickyChapterTitleEnabled;
+  draftReadingRulerEnabled.value = props.readingRulerEnabled;
+  draftReadingRulerFocusLines.value = clampReadingRulerFocusLines(
+    props.readingRulerFocusLines,
+  );
+  draftReadingRulerDimOpacity.value = clampReadingRulerDimOpacity(
+    props.readingRulerDimOpacity,
+  );
+  draftReadingRulerDimStickyTitle.value = props.readingRulerDimStickyTitle;
+  draftReadingRulerTransitionEnabled.value =
+    props.readingRulerTransitionEnabled;
   draftChapterNavToolbarEnabled.value = props.chapterNavToolbarEnabled;
   draftChapterCharCountExact.value = props.chapterCharCountExact;
   draftReaderEditShowLineNumbers.value = props.readerEditShowLineNumbers;
@@ -569,6 +605,12 @@ function resetReadingDraft() {
   draftMouseWheelScrollSensitivity.value = defaultMouseWheelScrollSensitivity;
   draftFastScrollSensitivity.value = defaultFastScrollSensitivity;
   draftStickyChapterTitleEnabled.value = defaultStickyChapterTitleEnabled;
+  draftReadingRulerEnabled.value = defaultReadingRulerEnabled;
+  draftReadingRulerFocusLines.value = defaultReadingRulerFocusLines;
+  draftReadingRulerDimOpacity.value = defaultReadingRulerDimOpacity;
+  draftReadingRulerDimStickyTitle.value = defaultReadingRulerDimStickyTitle;
+  draftReadingRulerTransitionEnabled.value =
+    defaultReadingRulerTransitionEnabled;
   draftChapterNavToolbarEnabled.value = defaultChapterNavToolbarEnabled;
   draftChapterTitleBlankMode.value =
     defaultChapterTitleBlankMode;
@@ -798,6 +840,15 @@ async function onConfirm() {
       draftFastScrollSensitivity.value,
     ),
     stickyChapterTitleEnabled: draftStickyChapterTitleEnabled.value,
+    readingRulerEnabled: draftReadingRulerEnabled.value,
+    readingRulerFocusLines: clampReadingRulerFocusLines(
+      draftReadingRulerFocusLines.value,
+    ),
+    readingRulerDimOpacity: clampReadingRulerDimOpacity(
+      draftReadingRulerDimOpacity.value,
+    ),
+    readingRulerDimStickyTitle: draftReadingRulerDimStickyTitle.value,
+    readingRulerTransitionEnabled: draftReadingRulerTransitionEnabled.value,
     chapterNavToolbarEnabled: draftChapterNavToolbarEnabled.value,
     chapterCharCountExact: draftChapterCharCountExact.value,
     readerEditShowLineNumbers: draftReaderEditShowLineNumbers.value,
@@ -971,6 +1022,20 @@ async function onClearCache() {
               v-model:draft-sticky-chapter-title-enabled="
                 draftStickyChapterTitleEnabled
               "
+              v-model:draft-reading-ruler-enabled="draftReadingRulerEnabled"
+              v-model:draft-reading-ruler-focus-lines="
+                draftReadingRulerFocusLines
+              "
+              v-model:draft-reading-ruler-dim-opacity="
+                draftReadingRulerDimOpacity
+              "
+              v-model:draft-reading-ruler-dim-sticky-title="
+                draftReadingRulerDimStickyTitle
+              "
+              v-model:draft-reading-ruler-transition-enabled="
+                draftReadingRulerTransitionEnabled
+              "
+              :shortcut-bindings="shortcutBindings"
               v-model:draft-chapter-nav-toolbar-enabled="
                 draftChapterNavToolbarEnabled
               "

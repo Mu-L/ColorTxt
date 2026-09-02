@@ -97,7 +97,7 @@ export const BUILTIN_READER_TEXTURES: readonly ReaderBuiltinTexture[] = [
   },
   {
     id: "blue-sky",
-    name: "蓝天",
+    name: "蓝天白云",
     url: "/reader-textures/blue-sky.jpg",
     light: {
       opacity: 0.6,

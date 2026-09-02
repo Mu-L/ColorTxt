@@ -13,8 +13,11 @@ import {
 } from "../../constants/appHeaderLayout";
 import { icons } from "../../icons";
 import {
+  readingRulerButtonTitle,
   readerClickModeButtonTitle,
+  readerClickModeButtonTitleWithRuler,
   readerSelectModeButtonTitle,
+  readerSelectModeButtonTitleWithRuler,
 } from "../../constants/appUi";
 import type {
   TextConvertWidthMode,
@@ -65,6 +68,8 @@ const props = withDefaults(
     readerClickMode?: boolean;
     /** 按住 Alt 临时切换交互模式 */
     readerClickModeAltHeld?: boolean;
+    /** 阅读尺（聚焦行淡化） */
+    readingRulerEnabled?: boolean;
     canEnterReaderEditMode?: boolean;
     /** 保存章节缓存中 */
     readerChapterSaving?: boolean;
@@ -93,6 +98,7 @@ const props = withDefaults(
     readerEditMode: false,
     readerClickMode: false,
     readerClickModeAltHeld: false,
+    readingRulerEnabled: false,
     canEnterReaderEditMode: false,
     readerChapterSaving: false,
     textReplaceActive: false,
@@ -130,6 +136,7 @@ const emit = defineEmits<{
   toggleBookshelf: [];
   toggleReaderEdit: [];
   toggleReaderClickMode: [];
+  toggleReadingRuler: [];
   saveReaderChapter: [];
   openTextReplace: [];
 }>();
@@ -152,6 +159,14 @@ const editModeTitle = computed(() =>
     isMacPlatform,
   ),
 );
+const readingRulerTitle = computed(() =>
+  props.voiceReadActive
+    ? `${readingRulerButtonTitle}\n\n语音朗读中不可使用阅读尺`
+    : readingRulerButtonTitle,
+);
+const readingRulerRuntimeOn = computed(
+  () => props.readingRulerEnabled === true && !props.voiceReadActive,
+);
 const fullscreenTitle = computed(() =>
   titleWithShortcut(
     props.inFullscreen ? "退出全屏" : "全屏阅读",
@@ -161,8 +176,12 @@ const fullscreenTitle = computed(() =>
 );
 const readerClickModeTitle = computed(() =>
   props.readerClickMode
-    ? readerClickModeButtonTitle
-    : readerSelectModeButtonTitle,
+    ? readingRulerRuntimeOn.value
+      ? readerClickModeButtonTitleWithRuler
+      : readerClickModeButtonTitle
+    : readingRulerRuntimeOn.value
+      ? readerSelectModeButtonTitleWithRuler
+      : readerSelectModeButtonTitle,
 );
 const readerClickModeAriaLabel = computed(() => {
   const base = props.readerClickMode
@@ -256,6 +275,21 @@ function onOpenTextReplace() {
         :aria-label="editModeTitle"
         :disabled="!readerEditMode && !canEnterReaderEditMode"
         @click="emit('toggleReaderEdit')"
+      />
+      <span
+        v-if="!readerEditMode"
+        class="toolbarDivider"
+        aria-hidden="true"
+      />
+      <IconButton
+        v-if="!readerEditMode"
+        :icon-html="icons.readingRuler"
+        :active="readingRulerRuntimeOn"
+        :pressed="readingRulerRuntimeOn"
+        :title="readingRulerTitle"
+        aria-label="切换阅读尺"
+        :disabled="voiceReadActive"
+        @click="emit('toggleReadingRuler')"
       />
       <IconButton
         v-if="!readerEditMode"
