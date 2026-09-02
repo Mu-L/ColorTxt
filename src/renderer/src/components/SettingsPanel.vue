@@ -123,7 +123,6 @@ import {
   voiceReadDashScopeRequiresApiKey,
 } from "../constants/voiceRead";
 import type { VoiceReadProfile } from "@shared/voiceReadProfiles";
-import type { ShortcutBindingMap } from "../services/shortcutRegistry";
 import { migrateVoiceReadFromPersisted, cloneVoiceReadProfiles } from "../services/voiceRead/voiceReadProfileState";
 
 type SettingsVoiceReadPanelExpose = {
@@ -251,7 +250,6 @@ const props = defineProps<{
   voiceReadProfiles: VoiceReadProfile[];
   activeVoiceReadProfileId: string;
   characterRoster: CharacterRosterEntry[];
-  shortcutBindings: ShortcutBindingMap;
 }>();
 
 const emit = defineEmits<{
@@ -1046,7 +1044,6 @@ async function onClearCache() {
               v-model:draft-reading-ruler-transition-enabled="
                 draftReadingRulerTransitionEnabled
               "
-              :shortcut-bindings="shortcutBindings"
               v-model:draft-chapter-nav-toolbar-enabled="
                 draftChapterNavToolbarEnabled
               "

@@ -117,7 +117,6 @@ import { confirmClearAllChapterCache } from "../services/clearBookChapterCache";
 import { appAlert } from "../../services/appDialog";
 import { READER_EDITOR_DEFAULT_FONT_FAMILY } from "../../monaco/readerEditorOptions";
 import type { CharacterRosterEntry } from "@shared/characterTypes";
-import type { ShortcutBindingMap } from "../../services/shortcutRegistry";
 import "../../styles/settingsPanel.css";
 
 type SettingsVoiceReadPanelExpose = {
@@ -132,7 +131,6 @@ const modelValue = defineModel<boolean>({ default: false });
 const props = withDefaults(
   defineProps<{
     initialTab?: FindBookSettingsTabId;
-    shortcutBindings?: ShortcutBindingMap;
   }>(),
   { initialTab: "download" },
 );
@@ -751,7 +749,6 @@ watch(draftFontSize, (size) => {
               v-model:draft-reading-ruler-dim-opacity="draftReadingRulerDimOpacity"
               v-model:draft-reading-ruler-dim-sticky-title="draftReadingRulerDimStickyTitle"
               v-model:draft-reading-ruler-transition-enabled="draftReadingRulerTransitionEnabled"
-              :shortcut-bindings="shortcutBindings"
               v-model:draft-chapter-nav-toolbar-enabled="draftChapterNavToolbarEnabled"
               v-model:draft-find-book-chapter-advance-enabled="draftFindBookChapterAdvanceEnabled"
               v-model:draft-chapter-title-blank-mode="draftChapterTitleBlankMode"

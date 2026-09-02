@@ -725,7 +725,8 @@ const horizontalInsetDesired = computed(
 const appliedHorizontalInsetPx = ref(0);
 
 const horizontalInsetActive = computed(
-  () => appliedHorizontalInsetPx.value > 0,
+  () =>
+    appliedHorizontalInsetPx.value > 0 && !smartFormatReviewActive.value,
 );
 
 /** 窗口模式：把竖条 fixed 到窗格右缘时用的视口坐标 */
@@ -5080,9 +5081,13 @@ onMounted(() => {
 watch(smartFormatReviewActive, (active) => {
   removeSmartFormatReviewKeyCapture?.();
   removeSmartFormatReviewKeyCapture = null;
+  void nextTick(() => {
+    setupHorizontalInsetLayout();
+    layoutDiffEditor();
+    editor.value?.layout();
+  });
   if (!active) {
     closeDiffReviewContextMenu();
-    requestAnimationFrame(() => editor.value?.layout());
     void nextTick(() => emitReaderEditCursorStatus());
     return;
   }

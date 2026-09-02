@@ -327,7 +327,6 @@ const busyOverlayText = computed(() => {
     :voice-read-profiles="voiceReadProfiles"
     :active-voice-read-profile-id="activeVoiceReadProfileId"
     :character-roster="characterRoster"
-    :shortcut-bindings="shortcutBindings"
     @apply="emit('applySettings', $event)"
     @toggle-pin-other-font="emit('togglePinOtherFont', $event)"
     @open-reading-data="emit('openReadingData')"

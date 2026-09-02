@@ -2098,7 +2098,6 @@ function onBack() {
     <FindBookSettingsPanel
       v-model="showSettingsPanel"
       :initial-tab="settingsInitialTab"
-      :shortcut-bindings="shortcutBindings"
       @chapter-cache-cleared="onChapterCacheCleared"
       @open-speak-settings="showVoiceReadSpeakSettingsPanel = true"
     />

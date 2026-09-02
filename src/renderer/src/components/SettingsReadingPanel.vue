@@ -35,9 +35,6 @@ import {
   readingRulerDimOpacityStep,
   type ChapterTitleBlankMode,
 } from "../constants/appUi";
-import { createDefaultShortcutBindings } from "../services/shortcutRegistry";
-import type { ShortcutBindingMap } from "../services/shortcutRegistry";
-import { acceleratorToDisplayText } from "../services/shortcutUtils";
 import {
   TIMED_SCROLL_RANGE_OPTIONS,
   maxTimedScrollIntervalMs,
@@ -100,7 +97,6 @@ const props = withDefaults(
     draftReadingRulerDimOpacity: number;
     draftReadingRulerDimStickyTitle: boolean;
     draftReadingRulerTransitionEnabled: boolean;
-    shortcutBindings?: ShortcutBindingMap;
     /** 主界面显示「查找」应用目标；找书窗口无全文搜索侧栏，不展示该项 */
     showFindTargetOption?: boolean;
     /**
@@ -119,7 +115,6 @@ const props = withDefaults(
     showAskAi: true,
     draftFindBookChapterAdvanceEnabled: true,
     showFindBookChapterAdvanceOption: false,
-    shortcutBindings: undefined,
     pinnedOtherFonts: () => [],
   },
 );
@@ -180,22 +175,6 @@ const chapterTitleBlankSelectItems = computed<CustomSelectItem[]>(() =>
   })),
 );
 const selectListsEmpty: CustomSelectItem[] = [];
-
-const isMacPlatform = /mac|iphone|ipad|ipod/i.test(navigator.platform || "");
-const defaultShortcutBindings = createDefaultShortcutBindings(isMacPlatform);
-
-function scrollShortcutLabel(action: "scrollUpLine" | "scrollDownLine"): string {
-  const accel =
-    props.shortcutBindings?.[action] || defaultShortcutBindings[action];
-  const text = acceleratorToDisplayText(accel, isMacPlatform).trim();
-  if (text) return text;
-  return action === "scrollUpLine" ? "↑" : "↓";
-}
-
-const scrollUpShortcutLabel = computed(() => scrollShortcutLabel("scrollUpLine"));
-const scrollDownShortcutLabel = computed(() =>
-  scrollShortcutLabel("scrollDownLine"),
-);
 </script>
 
 <template>
