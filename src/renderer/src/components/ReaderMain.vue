@@ -2634,6 +2634,10 @@ function scheduleReadingRulerOwnedScrollWatch() {
             readingRulerFollowRaf = requestAnimationFrame(tick);
             return;
           }
+          // 居中滚动已到位：不要改锚点，但必须放开跟视口，
+          // 否则下一次拖动仍走「等停稳」而不会按帧跟随。
+          readingRulerSkipFollowResync = false;
+          readingRulerOwnedScrollTop = null;
           return;
         }
         if (stillProgrammatic) {

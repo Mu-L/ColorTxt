@@ -33,7 +33,10 @@
 | <img src="./src/renderer/src/assets/chapter_list.svg" width="18" height="18" alt=""> | 自动章节识别 | 内置常用的章节匹配规则，也支持自定义匹配规则 |
 | <img src="./src/renderer/src/assets/palette.svg" width="18" height="18" alt=""> | **个性内容上色** | 使用一套自定义的高亮规则对内容进行着色，带来 **独特的阅读体验**！ |
 | <img src="./src/renderer/src/assets/highlight.svg" width="18" height="18" alt=""> | **自定义高亮词** | 可选择任意词语进行高亮显示（可用于突出主要角色、关键词语等） |
-| <img src="./src/renderer/src/assets/palette.svg" width="18" height="18" alt=""> | **自定义配色** | 可定制阅读区、高亮词、划线标注的配色 |
+| <img src="./src/renderer/src/assets/palette.svg" width="18" height="18" alt=""> | **自定义配色** | 内置多套配色方案，也可创建自定义方案来定制属于你自己的配色 |
+| <img src="./src/renderer/src/assets/enter_fullscreen.svg" width="18" height="18" alt=""> | 全屏阅读 | 禅模式，**沉浸式阅读体验**，阅读区域宽度可自由调整 |
+| <img src="./src/renderer/src/assets/enter_minimalist_view.svg" width="18" height="18" alt=""> | 极简视图 | **专注阅读**，阅读区撑满窗口，鼠标移到窗口边缘唤出相应面板 |
+| <img src="./src/renderer/src/assets/reading_ruler.svg" width="18" height="18" alt=""> | 阅读尺 | 适合注意力不容易集中的人（**ADHD**），聚焦阅读行，淡化其他行 |
 | <img src="./src/renderer/src/assets/bookmark_active.svg" width="18" height="18" alt=""> | 书签 | 可添加带备注的书签 |
 | <img src="./src/renderer/src/assets/note.svg" width="18" height="18" alt=""> | **划线笔记** | 可选中文本进行划线标注、记笔记 |
 | <img src="./src/renderer/src/assets/edit.svg" width="18" height="18" alt=""> | **编辑模式** | 方便对小说内容进行修改（_错别字坚决不能忍！_） |
@@ -56,9 +59,6 @@
 | <img src="./src/renderer/src/assets/font_family.svg" width="18" height="18" alt=""> | 字体 | 可设置字体 / 字号；内置 `京華老宋体`，也可以选择系统中安装的任意字体 |
 | <img src="./src/renderer/src/assets/line_height_up.svg" width="18" height="18" alt=""> | 排版 | 可设置字间距 / 行间距 / 段间距 / 左右边距 |
 | <img src="./src/renderer/src/assets/dark.svg" width="18" height="18" alt=""> | 主题切换 | 内置明亮 / 暗黑两种主题 |
-| <img src="./src/renderer/src/assets/enter_fullscreen.svg" width="18" height="18" alt=""> | 全屏阅读 | **沉浸式阅读体验**，阅读区域宽度可自由调整 |
-| <img src="./src/renderer/src/assets/enter_minimalist_view.svg" width="18" height="18" alt=""> | 极简视图 | **专注阅读**，阅读区撑满窗口，鼠标移到窗口边缘唤出相应面板 |
-| <img src="./src/renderer/src/assets/reading_ruler.svg" width="18" height="18" alt=""> | 阅读尺 | 适合注意力不容易集中的人（**ADHD**），聚焦阅读行，淡化其他行 |
 |  | 粘性标题栏 | 章节标题会常驻顶部，看到哪里一目了然 |
 |  | 阅读进度恢复 | 自动记录阅读进度，下次打开可以继续阅读 |
 |  | 最近打开记录 | 记录最近打开的文件 |
