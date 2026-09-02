@@ -33,10 +33,11 @@
 | <img src="./src/renderer/src/assets/chapter_list.svg" width="18" height="18" alt=""> | 自动章节识别 | 内置常用的章节匹配规则，也支持自定义匹配规则 |
 | <img src="./src/renderer/src/assets/palette.svg" width="18" height="18" alt=""> | **个性内容上色** | 使用一套自定义的高亮规则对内容进行着色，带来 **独特的阅读体验**！ |
 | <img src="./src/renderer/src/assets/highlight.svg" width="18" height="18" alt=""> | **自定义高亮词** | 可选择任意词语进行高亮显示（可用于突出主要角色、关键词语等） |
-| <img src="./src/renderer/src/assets/palette.svg" width="18" height="18" alt=""> | **自定义配色** | 内置多套配色方案，也可创建自定义方案来定制属于你自己的配色 |
+| <img src="./src/renderer/src/assets/palette.svg" width="18" height="18" alt=""> | **自定义配色** | 内置多套配色方案，也可创建你自己独一无二的配色 |
 | <img src="./src/renderer/src/assets/enter_fullscreen.svg" width="18" height="18" alt=""> | 全屏阅读 | 禅模式，**沉浸式阅读体验**，阅读区域宽度可自由调整 |
 | <img src="./src/renderer/src/assets/enter_minimalist_view.svg" width="18" height="18" alt=""> | 极简视图 | **专注阅读**，阅读区撑满窗口，鼠标移到窗口边缘唤出相应面板 |
 | <img src="./src/renderer/src/assets/reading_ruler.svg" width="18" height="18" alt=""> | 阅读尺 | 适合注意力不容易集中的人（**ADHD**），聚焦阅读行，淡化其他行 |
+| <img src="./src/renderer/src/assets/history.svg" width="18" height="18" alt=""> | **番茄时钟** | 保护眼睛，健康阅读，从你我做起！ |
 | <img src="./src/renderer/src/assets/bookmark_active.svg" width="18" height="18" alt=""> | 书签 | 可添加带备注的书签 |
 | <img src="./src/renderer/src/assets/note.svg" width="18" height="18" alt=""> | **划线笔记** | 可选中文本进行划线标注、记笔记 |
 | <img src="./src/renderer/src/assets/edit.svg" width="18" height="18" alt=""> | **编辑模式** | 方便对小说内容进行修改（_错别字坚决不能忍！_） |
@@ -44,7 +45,6 @@
 | <img src="./src/renderer/src/assets/reading.svg" width="18" height="18" alt=""> | **语音朗读** | 支持旁白 / 对白多音色，配合 AI + 角色卡可实现多角色语音朗读 |
 | <img src="./src/renderer/src/assets/replace.svg" width="18" height="18" alt=""> | **文本替换** | 全局替换文本（可用于替换人名、去广告文本等） |
 | <img src="./src/renderer/src/assets/conver.svg" width="18" height="18" alt=""> | **简繁互转** | 简繁互转，字母 / 数字全半角互转 |
-| <img src="./src/renderer/src/assets/history.svg" width="18" height="18" alt=""> | **番茄时钟** | 保护眼睛，健康阅读，从你我做起！ |
 | <img src="./src/renderer/src/assets/AI_chat.svg" width="18" height="18" alt=""> | **AI 阅读助手** | 可以让 **AI** 帮忙分析剧情、回答小说相关问题（支持生成 <img src="./src/renderer/src/assets/mindmap.svg" width="18" height="18" alt=""> **思维导图** / <img src="./src/renderer/src/assets/wordcloud.svg" width="18" height="18" alt=""> **词云图**） |
 | <img src="./src/renderer/src/assets/character.svg" width="18" height="18" alt=""> | **角色卡生成** | 借助 **AI** 检索小说中角色的相关信息生成摘要，通过 **文生图** 生成角色立绘 |
 | <img src="./src/renderer/src/assets/AI_compose.svg" width="18" height="18" alt=""> | **AI 智能排版** | 让 **AI** 对文本进行排版，可自动处理硬换行、修正标点符号等 |
