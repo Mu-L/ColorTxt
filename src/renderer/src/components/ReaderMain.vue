@@ -5342,6 +5342,9 @@ watch(smartFormatReviewActive, (active) => {
 }
 
 .editorHost {
+  /* 查找栏 tooltip 走 Monaco ContextView（position:absolute 挂在本节点）。
+   * 须自己形成定位包含块，否则会落到带左右 padding 的 .editorShell 上，tips 偏左。 */
+  position: relative;
   flex: 1;
   min-height: 0;
   width: 100%;
