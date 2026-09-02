@@ -33,7 +33,7 @@
 | <img src="./src/renderer/src/assets/chapter_list.svg" width="18" height="18" alt=""> | 自动章节识别 | 内置常用的章节匹配规则，也支持自定义匹配规则 |
 | <img src="./src/renderer/src/assets/palette.svg" width="18" height="18" alt=""> | **个性内容上色** | 使用一套自定义的高亮规则对内容进行着色，带来 **独特的阅读体验**！ |
 | <img src="./src/renderer/src/assets/highlight.svg" width="18" height="18" alt=""> | **自定义高亮词** | 可选择任意词语进行高亮显示（可用于突出主要角色、关键词语等） |
-| <img src="./src/renderer/src/assets/palette.svg" width="18" height="18" alt=""> | **自定义配色** | 内置多套配色方案，也可创建你自己独一无二的配色 |
+| <img src="./src/renderer/src/assets/palette.svg" width="18" height="18" alt=""> | **自定义配色** | 内置多套配色方案，也可以自定义阅读区配色 / 高亮色 / 标注色 |
 | <img src="./src/renderer/src/assets/enter_fullscreen.svg" width="18" height="18" alt=""> | 全屏阅读 | 禅模式，**沉浸式阅读体验**，阅读区域宽度可自由调整 |
 | <img src="./src/renderer/src/assets/enter_minimalist_view.svg" width="18" height="18" alt=""> | 极简视图 | **专注阅读**，阅读区撑满窗口，鼠标移到窗口边缘唤出相应面板 |
 | <img src="./src/renderer/src/assets/reading_ruler.svg" width="18" height="18" alt=""> | 阅读尺 | 适合注意力不容易集中的人（**ADHD**），聚焦阅读行，淡化其他行 |
