@@ -54,7 +54,7 @@
 
 修复：
 
-- 文生图 OpenAI / 兼容接口：`gpt-image-*` 不再发送 `response_format`（DALL·E 仍发 `b64_json`），避免官方与网关 400 [#82](https://github.com/ssnangua/ColorTxt/issues/82)
+- 文生图 OpenAI / 兼容接口：`gpt-image-*` 不再发送 `response_format`（`dall-e-*` 仍发 `b64_json`），避免官方与网关 400 [#82](https://github.com/ssnangua/ColorTxt/issues/82)
 - 点击侧栏文件/章节等列表后，`F5` 等快捷键仍可用（只让出 ↑↓ / 翻页给列表；`F2` 仅文件列表让给重命名）
 - 侧栏虚拟列表连续按 ↑↓ / 翻页不再因行节点回收而失焦、改去滚动阅读区
 - 空格键翻页改为窗口事件（不再因阅读区丢焦点而失效）
