@@ -3,8 +3,9 @@ import { computed, nextTick, ref, watch } from "vue";
 import { icons } from "../icons";
 import { useAnchoredAppShellMenu } from "../composables/useAnchoredAppShellMenu";
 import { useSortableReorder } from "../composables/useSortableReorder";
-import { normalizeHighlightGroup } from "../utils/highlightWords";
+import { normalizeHighlightGroup, parseHighlightInputTerms } from "../utils/highlightWords";
 import AppModal from "./AppModal.vue";
+import AppCheckbox from "./AppCheckbox.vue";
 
 const HL_SWATCH_SIZE = 26;
 const HL_SWATCH_GAP = 8;
@@ -54,6 +55,7 @@ const emit = defineEmits<{
 const draftTerms = ref<string[]>([]);
 const draftColorIndex = ref(0);
 const draftInput = ref("");
+const splitOnCommit = ref(true);
 const inputEl = ref<HTMLInputElement | null>(null);
 const tagInputRef = ref<HTMLElement | null>(null);
 const colorBtnRef = ref<HTMLButtonElement | null>(null);
@@ -138,15 +140,20 @@ watch(open, (v) => {
     maxIdx,
   );
   draftInput.value = "";
+  splitOnCommit.value = true;
   void nextTick(() => inputEl.value?.focus());
 });
 
 function tryCommitInput() {
-  const t = draftInput.value.trim();
-  if (!t) return;
-  if (!draftTerms.value.includes(t)) {
-    draftTerms.value = [...draftTerms.value, t];
+  const parts = parseHighlightInputTerms(draftInput.value, {
+    split: splitOnCommit.value,
+  });
+  if (!parts.length) return;
+  const next = draftTerms.value.slice();
+  for (const t of parts) {
+    if (!next.includes(t)) next.push(t);
   }
+  draftTerms.value = next;
   draftInput.value = "";
 }
 
@@ -156,7 +163,7 @@ function removeTag(index: number) {
 
 function onInputKeydown(ev: KeyboardEvent) {
   if (ev.isComposing) return;
-  if (ev.key === "Enter" || ev.key === ",") {
+  if (ev.key === "Enter" || ev.key === "Tab") {
     ev.preventDefault();
     tryCommitInput();
     return;
@@ -248,7 +255,11 @@ function focusInput() {
           v-model="draftInput"
           class="hlTagField"
           type="text"
-          :placeholder="draftTerms.length ? '' : '输入高亮词，回车添加'"
+          :placeholder="
+            draftTerms.length
+              ? ''
+              : '输入高亮词，回车或 Tab 添加'
+          "
           @keydown="onInputKeydown"
           @blur="onInputBlur"
         />
@@ -305,18 +316,31 @@ function focusInput() {
 
     <template #footer>
       <div class="hlEditFooter">
-        <button class="btn" type="button" size="large" @click="close">
-          取消
-        </button>
-        <button
-          class="btn primary"
-          type="button"
-          size="large"
-          :disabled="!canConfirm"
-          @click="onConfirm"
-        >
-          确定
-        </button>
+        <AppCheckbox v-model="splitOnCommit" class="hlEditSplitCheck">
+          <template #label>
+            按
+            <code class="hlEditSplitCode">、</code>
+            <code class="hlEditSplitCode">,</code>
+            <code class="hlEditSplitCode">，</code>
+            <code class="hlEditSplitCode">;</code>
+            <code class="hlEditSplitCode">；</code>
+            切分
+          </template>
+        </AppCheckbox>
+        <div class="hlEditFooterActions">
+          <button class="btn" type="button" size="large" @click="close">
+            取消
+          </button>
+          <button
+            class="btn primary"
+            type="button"
+            size="large"
+            :disabled="!canConfirm"
+            @click="onConfirm"
+          >
+            确定
+          </button>
+        </div>
       </div>
     </template>
   </AppModal>
@@ -482,9 +506,53 @@ function focusInput() {
 
 .hlEditFooter {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   width: 100%;
+  min-width: 0;
+}
+
+.hlEditSplitCheck {
+  flex: 0 0 auto;
+  width: fit-content;
+  max-width: 100%;
+  font-size: 13px;
+  color: var(--fg);
+}
+
+.hlEditSplitCheck :deep(.appCheckbox) {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.hlEditSplitCheck :deep(.appCheckbox__label) {
+  font-size: 13px;
+  line-height: 1.4;
+  user-select: none;
+}
+
+.hlEditSplitCode {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 0 2px;
+  margin: 0 4px;
+  width: 18px;
+  text-align: center;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--border) 55%, transparent);
+  color: var(--fg);
+  user-select: none;
+}
+
+.hlEditSplitCode + .hlEditSplitCode {
+  margin-left: 0;
+}
+
+.hlEditFooterActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 10px;
 }
 
 .hlEditColorPicker {
