@@ -293,6 +293,7 @@ function turnPrev(paint = true): boolean {
 
 /** 连点合并到下一帧；单帧最多翻 12 页。贴边再翻则切章（本地标记或源窗）。 */
 function requestPageFlip(delta: number): void {
+  nudgeTimedScrollTimer();
   pageFlipQueued += delta;
   if (pageFlipRaf) return;
   const flush = (): void => {
@@ -356,6 +357,7 @@ function scrollByVisualLines(steps: number): void {
 
 function requestLineScroll(dir: number): void {
   if (dir === 0) return;
+  nudgeTimedScrollTimer();
   // 已在文末/文首再滚：切章（对齐找书阅读器贴边再滚）
   if (dir > 0 && pageEnd >= text.length) {
     chapterNext();
@@ -429,6 +431,7 @@ function requestOwnerChapterNav(
 
 /** @param anchor end 仅贴边上滚/翻页切上一章；快捷键保持章首 */
 function chapterPrev(anchor: "start" | "end" = "start"): void {
+  nudgeTimedScrollTimer();
   if (chapters.length > 1) {
     const idx = pickActiveChapterIdx(chapters, currentLine());
     if (idx > 0) {
@@ -450,6 +453,7 @@ function chapterPrev(anchor: "start" | "end" = "start"): void {
 }
 
 function chapterNext(): void {
+  nudgeTimedScrollTimer();
   if (chapters.length > 1) {
     const idx = pickActiveChapterIdx(chapters, currentLine());
     if (idx === -1) {
@@ -509,6 +513,18 @@ function stopTimedScroll(): void {
   clearTimedScrollTimer();
 }
 
+function startTimedScrollTimer(): void {
+  clearTimedScrollTimer();
+  const ms = clampTimedScrollIntervalMs(settings.value.timedScroll.intervalMs);
+  timedScrollTimer = setInterval(timedScrollTick, ms);
+}
+
+/** 手动/自动翻页滚行后重新计满间隔，避免刚操作完立刻再翻。 */
+function nudgeTimedScrollTimer(): void {
+  if (!timedScrollActive.value || chapterLoading.value) return;
+  startTimedScrollTimer();
+}
+
 function timedScrollTick(): void {
   if (!timedScrollActive.value) return;
   if (chapterLoading.value) return;
@@ -521,12 +537,6 @@ function timedScrollTick(): void {
   } else {
     requestPageFlip(1);
   }
-}
-
-function startTimedScrollTimer(): void {
-  clearTimedScrollTimer();
-  const ms = clampTimedScrollIntervalMs(settings.value.timedScroll.intervalMs);
-  timedScrollTimer = setInterval(timedScrollTick, ms);
 }
 
 function startTimedScroll(): void {

@@ -2355,6 +2355,7 @@ const {
   isTimedScrollActive,
   canStartTimedScroll,
   toggleTimedScroll,
+  nudgeTimedScrollTimer,
 } = useAppTimedScroll({
   readerRef,
   timedScrollSettings,
@@ -2364,6 +2365,15 @@ const {
   viewportAtBottom,
   isVoiceReadActive,
 });
+
+function onProbeLineChangeForTimedScroll(
+  probeLine: number,
+  fromReadingScroll?: boolean,
+  fromAnyScroll?: boolean,
+) {
+  onProbeLineChange(probeLine, fromReadingScroll);
+  if (fromAnyScroll === true) nudgeTimedScrollTimer();
+}
 
 function onVoiceReadToggle() {
   if (!isVoiceReadActive.value && isTimedScrollActive.value) return;
@@ -4107,7 +4117,7 @@ useAppShellThemeWatch({
           @ai-smart-format-selection="onAiSmartFormatSelection"
           @smart-format-review-apply="applySmartFormatReview()"
           @smart-format-review-discard="discardSmartFormatReview()"
-          @probe-line-change="onProbeLineChange"
+          @probe-line-change="onProbeLineChangeForTimedScroll"
           @layout-viewport-restored="onLayoutViewportRestored"
           @viewport-top-line-change="onViewportTopLineChange"
           @viewport-end-line-change="onViewportEndLineChange"

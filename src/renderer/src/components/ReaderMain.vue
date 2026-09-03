@@ -663,7 +663,13 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  probeLineChange: [probeLine: number, fromScroll?: boolean];
+  probeLineChange: [
+    probeLine: number,
+    /** 用户阅读滚动（非 jumpTo 等程序性滚动） */
+    fromReadingScroll?: boolean,
+    /** 任意滚动，含侧栏跳转 / 切章 / 定时滚动自身 */
+    fromAnyScroll?: boolean,
+  ];
   viewportTopLineChange: [lineNumber: number];
   viewportEndLineChange: [lineNumber: number];
   viewportVisualProgressChange: [percent: number, atBottom: boolean];
@@ -4433,7 +4439,7 @@ function emitProbeLine(fromScroll = false) {
   const atBottom = maxTop <= 0 ? true : scrollTop >= maxTop - 1;
   const percent =
     maxTop <= 0 ? 100 : floorReadingPercentFromScrollRatio(scrollTop / maxTop);
-  emit("probeLineChange", probeLine, fromReadingScroll);
+  emit("probeLineChange", probeLine, fromReadingScroll, fromScroll);
   emit("viewportTopLineChange", startLine);
   emit("viewportEndLineChange", endLine);
   emit("viewportVisualProgressChange", percent, atBottom);

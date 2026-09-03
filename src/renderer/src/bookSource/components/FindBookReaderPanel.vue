@@ -1359,6 +1359,14 @@ stopTimedScroll = () => timedScroll.stopTimedScroll();
 const isTimedScrollActive = timedScroll.isTimedScrollActive;
 const canStartTimedScroll = timedScroll.canStartTimedScroll;
 
+function onFindBookProbeLineChange(
+  _probeLine: number,
+  _fromReadingScroll?: boolean,
+  fromAnyScroll?: boolean,
+) {
+  if (fromAnyScroll === true) timedScroll.nudgeTimedScrollTimer();
+}
+
 function toggleReaderClickMode() {
   readerClickMode.value = !readerClickMode.value;
   persistReaderUiPrefs();
@@ -2503,6 +2511,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
             @viewport-top-line-change="readerUi.onViewportTopLineChange"
             @viewport-end-line-change="onFindBookViewportEndLineChange"
             @viewport-visual-progress-change="readerUi.onViewportVisualProgressChange"
+            @probe-line-change="onFindBookProbeLineChange"
             @layout-viewport-restored="onFindBookLayoutViewportRestored"
             @reader-edit-dirty-change="onReaderEditDirtyChange"
             @reader-edit-save-request="onSaveReaderChapter"
