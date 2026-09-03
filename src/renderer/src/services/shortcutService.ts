@@ -18,6 +18,7 @@ export type AppShortcutActions = {
   toggleMinimalistView: () => void | Promise<void>;
   toggleTheme: () => void | Promise<void>;
   openNewWindow: () => void | Promise<void>;
+  enterStealthReader: () => void | Promise<void>;
   openFile: () => void | Promise<void>;
   pickTxtDirectory: () => void | Promise<void>;
   openChapterRules: () => void | Promise<void>;
@@ -94,6 +95,7 @@ const ACTION_BY_ID: Record<string, ActionKey> = {
   openFindBook: "openFindBook",
   openBookSource: "openBookSource",
   openNewWindow: "openNewWindow",
+  enterStealthReader: "enterStealthReader",
 };
 
 /** 编辑模式下焦点在 Monaco 内时，应交给编辑器处理的窗口快捷键（滚屏/查找等） */

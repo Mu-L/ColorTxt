@@ -79,6 +79,7 @@ export function useFindBookReaderShortcuts(deps: {
    * 已在章节边界时再次翻页/逐行滚动：切章并返回 true，调用方不再滚动正文。
    */
   tryAdvanceChapterOnScroll?: (direction: 1 | -1) => boolean;
+  enterStealthReader?: () => void;
 }) {
   const shortcutBindings = ref<ShortcutBindingMap>(
     mergeShortcutBindings(defaultShortcutBindings, loadMainShortcutBindings()),
@@ -112,6 +113,9 @@ export function useFindBookReaderShortcuts(deps: {
         openSettings: () => {},
         openColorScheme: () => {},
         openFindBook: () => {},
+        enterStealthReader: () => {
+          deps.enterStealthReader?.();
+        },
         openBookSource: () => {},
         toggleFullscreen: deps.toggleFullscreen,
         increaseFontSize: deps.increaseFontSize,

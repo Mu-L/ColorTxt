@@ -370,11 +370,9 @@ function applyScrollTop(
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) {
-      el.scrollTop = nextScrollTop;
-      if (useExternalScroll.value) syncFromExternal();
-      else listScrollOffset.value = nextScrollTop;
-      cancelPendingSmoothScroll = null;
-      return Promise.resolve();
+      return applyInstantScrollTop(el, nextScrollTop).then(() => {
+        cancelPendingSmoothScroll = null;
+      });
     }
 
     const targetTop = nextScrollTop;
@@ -429,10 +427,22 @@ function applyScrollTop(
     });
   }
 
+  return applyInstantScrollTop(el, nextScrollTop);
+}
+
+/**
+ * 瞬时滚动：先更新虚拟窗并等 DOM 落地，再写 scrollTop，
+ * 避免一帧内「容器已滚、transform 仍旧」造成文字重影闪烁。
+ */
+async function applyInstantScrollTop(el: HTMLElement, nextScrollTop: number) {
+  if (useExternalScroll.value) {
+    el.scrollTop = nextScrollTop;
+    syncFromExternal();
+    return;
+  }
+  listScrollOffset.value = nextScrollTop;
+  await nextTick();
   el.scrollTop = nextScrollTop;
-  if (useExternalScroll.value) syncFromExternal();
-  else listScrollOffset.value = nextScrollTop;
-  return Promise.resolve();
 }
 
 /**
@@ -593,7 +603,6 @@ defineExpose({
   top: 0;
   display: flex;
   flex-direction: column;
-  will-change: transform;
 }
 
 .virtualList-row {

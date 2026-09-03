@@ -40,6 +40,7 @@ export type ShortcutActionId =
   | "openFindBook"
   | "openBookSource"
   | "openNewWindow"
+  | "enterStealthReader"
   | "toggleAllWindowsVisibility";
 
 type ShortcutActionDef = {
@@ -241,6 +242,12 @@ export const SHORTCUT_ACTIONS: ShortcutActionDef[] = [
     handlerKey: "openBookSource",
   },
   {
+    id: "enterStealthReader",
+    scope: "window",
+    desc: "进入/退出摸鱼模式",
+    handlerKey: "enterStealthReader",
+  },
+  {
     id: "toggleMinimalistView",
     scope: "window",
     desc: "进入/退出极简视图",
@@ -321,6 +328,7 @@ export function createDefaultShortcutBindings(isMac: boolean): ShortcutBindingMa
     openFindBook: "F7",
     openBookSource: "F8",
     openNewWindow: `${accel}+Shift+N`,
+    enterStealthReader: "F9",
     toggleAllWindowsVisibility: "Control+`",
   };
 }

@@ -60,6 +60,8 @@ import { useFindBookReaderShortcuts } from "../composables/useFindBookReaderShor
 import { useFindBookChapterSession } from "../composables/useFindBookChapterSession";
 import { useAnchoredAppShellMenu } from "../../composables/useAnchoredAppShellMenu";
 import { acceleratorToDisplayText } from "../../services/shortcutUtils";
+import { loadStealthReaderSettings } from "../../utils/stealthReaderSettings";
+import type { StealthPagePayload } from "@shared/stealthReaderIpc";
 import { useAppReaderUiPrefs } from "../../composables/useAppReaderUiPrefs";
 import { useAppReaderChrome } from "../../composables/useAppReaderChrome";
 import { useReaderHudTip } from "../../composables/useReaderHudTip";
@@ -726,7 +728,9 @@ let stopTimedScroll = () => {};
 
 const {
   readerContentKey,
+  lastChapterTitle,
   lastChapterBody,
+  lastRenderedReaderText,
   totalLineCount,
   readerChapterSaving,
   loading,
@@ -1123,6 +1127,159 @@ function jumpToNextChapterWithShortcut() {
   goToNextChapter();
 }
 
+const canEnterStealth = computed(() => {
+  if (chapterContentBusy.value || readerBootLoading.value) return false;
+  if (chapterError.value && !readerContentKey.value) return false;
+  return Boolean(lastChapterBody.value?.trim());
+});
+
+async function resolveFindBookReaderAreaScreenBounds(): Promise<{
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} | null> {
+  const dom = readerRef.value?.getReaderEditorDomNode?.() ?? null;
+  if (!dom) return null;
+  const r = dom.getBoundingClientRect();
+  if (r.width < 8 || r.height < 8) return null;
+  const content = await window.colorTxt.getWindowContentBounds();
+  const originX = content?.x ?? window.screenX;
+  const originY = content?.y ?? window.screenY;
+  return {
+    x: Math.round(originX + r.left),
+    y: Math.round(originY + r.top),
+    width: Math.round(r.width),
+    height: Math.round(r.height),
+  };
+}
+
+function buildStealthPayloadFromCurrentChapter(
+  startLine: number,
+  opts?: { anchor?: "start" | "end" },
+): StealthPagePayload | null {
+  // 优先用最近渲染正文：源窗在摸鱼期间被 hide，Monaco getAllText 可能仍是旧章
+  const body =
+    lastRenderedReaderText.value.trim() ||
+    readerRef.value?.getAllText?.()?.trim() ||
+    "";
+  if (!body) return null;
+  const ch = displayChapters.value[currentDisplayIndex.value];
+  const title =
+    (ch?.title || lastChapterTitle.value || "当前章节").trim() || "当前章节";
+  return {
+    text: body,
+    startLine: Math.max(1, Math.floor(startLine) || 1),
+    chapters: [{ title, lineNumber: 1 }],
+    anchor: opts?.anchor === "end" ? "end" : "start",
+    hasPrevChapter: hasAdjacentContentChapter(-1),
+    hasNextChapter: hasAdjacentContentChapter(1),
+  };
+}
+
+function hasAdjacentContentChapter(direction: 1 | -1): boolean {
+  let readingIdx = currentReadingOrderIndex.value + direction;
+  while (
+    readingIdx >= 0 &&
+    readingIdx < displayChapters.value.length
+  ) {
+    const di = displayIndexForReadingOrder(
+      readingIdx,
+      displayChapters.value.length,
+      chapterSortDesc.value,
+    );
+    const ch = displayChapters.value[di];
+    if (ch && contentIndexFor(ch) >= 0) return true;
+    readingIdx += direction;
+  }
+  return false;
+}
+
+async function enterStealthMode() {
+  if (!canEnterStealth.value) return;
+  const startLine = readerRef.value?.getViewportTopLine?.() ?? 1;
+  const page = buildStealthPayloadFromCurrentChapter(startLine);
+  if (!page) {
+    appToast("没有可阅读的正文", { kind: "warning", duration: 2000 });
+    return;
+  }
+  const saved = loadStealthReaderSettings();
+  const bounds =
+    saved.bounds ??
+    (await resolveFindBookReaderAreaScreenBounds()) ??
+    undefined;
+  const result = await window.colorTxt.stealthReaderEnter({
+    ...page,
+    bounds,
+    exitAccelerator: shortcutBindings.value.enterStealthReader || "F9",
+    navShortcuts: saved.shortcuts,
+  });
+  if (!result?.ok) {
+    appToast(result?.message || "无法进入摸鱼模式", {
+      kind: "warning",
+      duration: 2200,
+    });
+  }
+}
+
+async function onStealthOwnerChapterNav(
+  direction: "prev" | "next",
+  anchor: "start" | "end" = "start",
+) {
+  const settleFail = () => {
+    window.colorTxt.stealthReaderChapterNavSettled();
+  };
+  if (chapterNavBusy.value) {
+    settleFail();
+    return;
+  }
+  const step = direction === "next" ? 1 : -1;
+  let readingIdx = currentReadingOrderIndex.value + step;
+  let targetIndex = -1;
+  while (
+    readingIdx >= 0 &&
+    readingIdx < displayChapters.value.length
+  ) {
+    const di = displayIndexForReadingOrder(
+      readingIdx,
+      displayChapters.value.length,
+      chapterSortDesc.value,
+    );
+    const ch = displayChapters.value[di];
+    if (ch && contentIndexFor(ch) >= 0) {
+      targetIndex = di;
+      break;
+    }
+    readingIdx += step;
+  }
+  if (targetIndex < 0) {
+    settleFail();
+    return;
+  }
+  const scrollTo =
+    direction === "prev" && anchor === "end" ? "bottom" : "top";
+  await loadChapterAtDisplayIndex(targetIndex, {
+    smoothScroll: false,
+    scrollTo,
+  });
+  await nextTick();
+  const page = buildStealthPayloadFromCurrentChapter(1, {
+    anchor: direction === "prev" && anchor === "end" ? "end" : "start",
+  });
+  if (!page) {
+    settleFail();
+    return;
+  }
+  const result = await window.colorTxt.stealthReaderUpdatePayload(page);
+  if (!result?.ok) {
+    console.warn("[findBook] stealth updatePayload failed", result?.message);
+    settleFail();
+  }
+}
+
+let offStealthOwnerProgress: (() => void) | null = null;
+let offStealthOwnerChapterNav: (() => void) | null = null;
+
 const { shortcutBindings } = useFindBookReaderShortcuts({
   readerOpen: modelValue,
   readerRef,
@@ -1150,6 +1307,9 @@ const { shortcutBindings } = useFindBookReaderShortcuts({
   toggleReaderEdit: onToggleReaderEdit,
   readerEditMode,
   tryAdvanceChapterOnScroll: tryAdvanceChapterFromOverscroll,
+  enterStealthReader: () => {
+    void enterStealthMode();
+  },
 });
 
 const isMacPlatform = /mac|iphone|ipad|ipod/i.test(navigator.platform || "");
@@ -1879,11 +2039,29 @@ onMounted(() => {
   window.addEventListener(findBookReplaceRulesChangedEvent, onReplaceRulesChanged);
   document.addEventListener("keydown", onDocumentKeydownEscape, true);
   void refreshReplaceRulesCache();
+  offStealthOwnerProgress = window.colorTxt.onStealthOwnerProgress((payload) => {
+    if (payload.focus) {
+      readerRef.value?.jumpToLine?.(payload.line, false);
+    }
+  });
+  offStealthOwnerChapterNav = window.colorTxt.onStealthOwnerChapterNav(
+    (payload) => {
+      if (payload?.direction !== "prev" && payload?.direction !== "next") return;
+      void onStealthOwnerChapterNav(
+        payload.direction,
+        payload.anchor === "end" ? "end" : "start",
+      );
+    },
+  );
 });
 
 onBeforeUnmount(() => {
   window.colorTxt.setWindowTitle(FIND_BOOK_WINDOW_TITLE);
   offFullscreen?.();
+  offStealthOwnerProgress?.();
+  offStealthOwnerProgress = null;
+  offStealthOwnerChapterNav?.();
+  offStealthOwnerChapterNav = null;
   window.removeEventListener("mousemove", onWindowMouseMove);
   window.removeEventListener("mouseup", onWindowMouseUp);
   window.removeEventListener("resize", clampSidebarWidthToViewport);
@@ -2104,6 +2282,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
           :can-enter-reader-edit-mode="canEnterReaderEditMode"
           :reader-chapter-saving="readerChapterSaving"
           :text-replace-active="textReplaceActive"
+          :can-enter-stealth="canEnterStealth"
           @change-theme="onChangeTheme"
           @toggle-minimalist="onToggleMinimalist"
           @toggle-fullscreen="toggleFullscreen"
@@ -2136,6 +2315,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
           @toggle-reader-click-mode="toggleReaderClickMode"
           @toggle-reading-ruler="toggleReadingRuler"
           @save-reader-chapter="onSaveReaderChapter"
+          @enter-stealth-reader="enterStealthMode"
         />
       </div>
       </Transition>

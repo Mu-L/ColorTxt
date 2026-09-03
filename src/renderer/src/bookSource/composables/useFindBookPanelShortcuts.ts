@@ -112,6 +112,7 @@ export function useFindBookPanelShortcuts(deps: {
         openFindBook: () => {
           deps.goMain();
         },
+        enterStealthReader: () => {},
         toggleFullscreen: () => {},
         increaseFontSize: () => {},
         decreaseFontSize: () => {},

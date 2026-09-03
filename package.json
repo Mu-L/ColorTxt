@@ -52,7 +52,7 @@
     "cheerio": "^1.2.0",
     "d3-cloud": "^1.2.7",
     "d3-scale": "^4.0.2",
-    "electron": "^35.1.4",
+    "electron": "35.4.0",
     "electron-builder": "^26.0.12",
     "electron-vite": "^3.0.0",
     "heic-convert": "^2.1.0",
@@ -124,6 +124,14 @@
       {
         "from": "resources/user.ico",
         "to": "user.ico"
+      },
+      {
+        "from": "resources/emituofo.png",
+        "to": "emituofo.png"
+      },
+      {
+        "from": "resources/emituofo.ico",
+        "to": "emituofo.ico"
       }
     ],
     "files": [

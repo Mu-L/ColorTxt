@@ -105,9 +105,13 @@ function syncDraftFromModel() {
 
 const POP_GAP = 6;
 const POP_FALLBACK_W = 280;
-const POP_FALLBACK_H = 280;
+/** 含色盘 + 滑条 + 模式切换，略估高以免误判「下方放得下」导致贴底裁切 */
+const POP_FALLBACK_H = 320;
 
-function placePopover(popEl?: HTMLElement | null) {
+function placePopover(
+  popEl?: HTMLElement | null,
+  opts?: { unlock?: boolean },
+) {
   const root = rootRef.value;
   const pop = popEl ?? popRef.value;
   if (!root) return;
@@ -115,19 +119,27 @@ function placePopover(popEl?: HTMLElement | null) {
   const pr = pop?.getBoundingClientRect();
   const popW =
     pr && pr.width >= 1 ? pr.width : POP_FALLBACK_W;
+  // scaleY(0) 入场时高度接近 0，不可信
+  const measuredH = pr && pr.height >= 40 ? pr.height : 0;
 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
   let placement: "below" | "above";
-  if (popVertPlacementLock.value !== null) {
+  if (popVertPlacementLock.value !== null && !opts?.unlock) {
     placement = popVertPlacementLock.value;
   } else {
-    const hForFlip =
-      pr && pr.height >= 1 ? pr.height : POP_FALLBACK_H;
     const belowTop = r.bottom + POP_GAP;
-    placement =
-      belowTop + hForFlip > vh - 8 ? "above" : "below";
+    const spaceBelow = vh - 8 - belowTop;
+    const spaceAbove = r.top - POP_GAP - 8;
+    // 入场用估高；unlock 时才用实测。估高偏保守，避免下方「差一点」却先往下开再被裁
+    const hForFlip =
+      opts?.unlock && measuredH > 0
+        ? measuredH
+        : Math.max(measuredH, POP_FALLBACK_H);
+    if (hForFlip <= spaceBelow) placement = "below";
+    else if (hForFlip <= spaceAbove) placement = "above";
+    else placement = spaceAbove >= spaceBelow ? "above" : "below";
     popVertPlacementLock.value = placement;
   }
 
@@ -165,8 +177,10 @@ function onPopBeforeEnter(el: Element) {
 
 function onPopAfterEnter() {
   requestAnimationFrame(() => {
+    // 只微调位置，勿 unlock 改方向——否则 scaleY 展开末尾会突然从上翻到下
     placePopover();
-    hexInputElRef.value?.focus();
+    // 设置窗 body 可滚动：勿因 focus 滚走触发器，否则看起来像「闪一下就没了」
+    hexInputElRef.value?.focus({ preventScroll: true });
   });
 }
 

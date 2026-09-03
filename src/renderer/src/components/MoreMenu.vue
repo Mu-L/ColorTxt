@@ -15,8 +15,9 @@ const props = withDefaults(
     shortcutBindings: ShortcutBindingMap;
     inMinimalist?: boolean;
     inFullscreen?: boolean;
+    canEnterStealth?: boolean;
   }>(),
-  { recentFiles: () => [], inMinimalist: false, inFullscreen: false },
+  { recentFiles: () => [], inMinimalist: false, inFullscreen: false, canEnterStealth: false },
 );
 
 const isMacPlatform = computed(() =>
@@ -42,6 +43,9 @@ const colorSchemeShortcutLabel = computed(() =>
 const findBookShortcutLabel = computed(() =>
   bindingLabel(props.shortcutBindings.openFindBook),
 );
+const stealthShortcutLabel = computed(() =>
+  bindingLabel(props.shortcutBindings.enterStealthReader),
+);
 
 const emit = defineEmits<{
   toggleFind: [];
@@ -51,6 +55,7 @@ const emit = defineEmits<{
   openSettings: [];
   openColorScheme: [];
   openFindBook: [];
+  enterStealthReader: [];
   openNewWindow: [];
   openAbout: [];
   quitApp: [];
@@ -244,6 +249,12 @@ function onOpenFindBook() {
   emit("openFindBook");
 }
 
+function onEnterStealthReader() {
+  if (!props.canEnterStealth) return;
+  closeMoreMenu();
+  emit("enterStealthReader");
+}
+
 function onOpenNewWindow() {
   closeMoreMenu();
   emit("openNewWindow");
@@ -345,6 +356,19 @@ function onQuit() {
         <span class="appShellMenuIconSlot" v-html="icons.findBook"></span>
         <span class="appShellMenuLabel">找书（beta）</span>
         <span class="appShellMenuShortcut">{{ findBookShortcutLabel }}</span>
+      </button>
+      <button
+        class="appShellMenuItem"
+        role="menuitem"
+        :disabled="!canEnterStealth"
+        @click="onEnterStealthReader"
+      >
+        <span
+          class="appShellMenuIconSlot appShellMenuIconSlot--colorful"
+          v-html="icons.stealthMode"
+        ></span>
+        <span class="appShellMenuLabel">摸鱼模式</span>
+        <span class="appShellMenuShortcut">{{ stealthShortcutLabel }}</span>
       </button>
       <div class="appShellMenuDivider" role="separator"></div>
       <button class="appShellMenuItem" role="menuitem" @click="onCheckForUpdates">

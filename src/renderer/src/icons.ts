@@ -25,6 +25,8 @@ import newWindowIcon from "./assets/new_window.svg?raw";
 import infoIcon from "./assets/info.svg?raw";
 import quitIcon from "./assets/quit.svg?raw";
 import fontFamilyIcon from "./assets/font_family.svg?raw";
+import boldIcon from "./assets/bold.svg?raw";
+import italicIcon from "./assets/italic.svg?raw";
 import editIcon from "./assets/edit.svg?raw";
 import saveIcon from "./assets/save.svg?raw";
 import sourceCodeIcon from "./assets/source_code.svg?raw";
@@ -131,6 +133,7 @@ import selectModeIcon from "./assets/select_mode.svg?raw";
 import clickModeIcon from "./assets/click_mode.svg?raw";
 import readingRulerIcon from "./assets/reading_ruler.svg?raw";
 import eyedropperIcon from "./assets/eyedropper.svg?raw";
+import stealthModeIcon from "./assets/emituofo.svg?raw";
 
 /** 角色卡「语音」播放动画帧：speak_0 → speak_1 → speak */
 export const speakIconAnimFrames = [
@@ -182,6 +185,8 @@ export const icons = {
   info: infoIcon,
   quit: quitIcon,
   fontFamily: fontFamilyIcon,
+  bold: boldIcon,
+  italic: italicIcon,
   edit: editIcon,
   save: saveIcon,
   sourceCode: sourceCodeIcon,
@@ -329,4 +334,6 @@ export const icons = {
   readingRuler: readingRulerIcon,
   /** 拾色器全屏取色 */
   eyedropper: eyedropperIcon,
+  /** 摸鱼模式 */
+  stealthMode: stealthModeIcon,
 } as const;

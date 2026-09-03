@@ -18,6 +18,7 @@ import { formatPhysicalPlainTextForReader } from "../../reader/readerDisplayPipe
 import type { ChapterTitleBlankMode } from "../../constants/appUi";
 import type { ReaderViewportRestoreAnchor } from "../../reader/readerViewportAnchor";
 import { applyTextDisplayConverts } from "../../services/textConvertApply";
+import { afterNextPaints } from "../../ebook/yieldToUi";
 import { appConfirm } from "../../services/appDialog";
 import { appToast } from "../../services/appToast";
 import { appLoading } from "../../services/appLoading";
@@ -115,6 +116,8 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
    * 与 `lastDisplayLineToPhysicalLine` 下标一致；供局部编辑选区映射。
    */
   const lastReaderPhysicalLines = ref<string[]>([]);
+  /** 最近一次写入 ReaderMain 的展示正文（摸鱼热换章用，不依赖隐藏窗 Monaco） */
+  const lastRenderedReaderText = ref("");
 
   function viewportDisplayLineToPhysicalLine(displayLine: number): number {
     const v = Math.max(1, Math.floor(displayLine));
@@ -229,15 +232,9 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
     };
     apply();
     await nextTick();
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          apply();
-          reader.refreshChapterStickyScroll?.();
-          resolve();
-        });
-      });
-    });
+    await afterNextPaints();
+    apply();
+    reader.refreshChapterStickyScroll?.();
   }
 
   async function ensureChapterScrollAtBottom() {
@@ -248,22 +245,16 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
     if (!reader) return;
     reader.scrollToBottom?.(false);
     await nextTick();
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          reader.scrollToBottom?.(false);
-          reader.refreshChapterStickyScroll?.();
-          if (
-            deps.readingRulerEnabled.value &&
-            !deps.readerEditMode.value &&
-            !deps.isVoiceReadActive?.()
-          ) {
-            reader.syncReadingRulerToDocumentContentEdge?.(1);
-          }
-          resolve();
-        });
-      });
-    });
+    await afterNextPaints();
+    reader.scrollToBottom?.(false);
+    reader.refreshChapterStickyScroll?.();
+    if (
+      deps.readingRulerEnabled.value &&
+      !deps.readerEditMode.value &&
+      !deps.isVoiceReadActive?.()
+    ) {
+      reader.syncReadingRulerToDocumentContentEdge?.(1);
+    }
   }
 
   function stripLeadingChapterTitleFromBody(body: string, title: string): string {
@@ -313,6 +304,7 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
     if (!reader) return;
     lastReaderPhysicalLines.value = text.length > 0 ? text.split("\n") : [""];
     lastDisplayLineToPhysicalLine.value = formatted.displayLineToPhysicalLine;
+    lastRenderedReaderText.value = formatted.text;
     await reader.setFullText(formatted.text, {
       heavy: false,
       resetScroll: opts?.resetScroll ?? true,
@@ -349,11 +341,7 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
   }
 
   function settleReaderViewport(): Promise<void> {
-    return new Promise((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => resolve());
-      });
-    });
+    return afterNextPaints();
   }
 
   const chapterContentBusy = computed(
@@ -617,6 +605,7 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
       readerContentKey.value = null;
       lastChapterTitle.value = "";
       lastChapterBody.value = "";
+      lastRenderedReaderText.value = "";
       totalLineCount.value = 0;
     }
     const listLen = deps.displayChapters.value.length;
@@ -661,6 +650,7 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
         readerContentKey.value = null;
         lastChapterTitle.value = ch.title;
         lastChapterBody.value = "";
+        lastRenderedReaderText.value = "";
         return;
       }
       const { content: body, displayTitle } = loaded;
@@ -709,6 +699,7 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
     readerContentKey.value = null;
     lastChapterBody.value = "";
     lastChapterTitle.value = "";
+    lastRenderedReaderText.value = "";
     totalLineCount.value = 0;
     lastDisplayLineToPhysicalLine.value = null;
     lastReaderPhysicalLines.value = [];
@@ -723,6 +714,7 @@ export function useFindBookChapterSession(deps: FindBookChapterSessionDeps) {
     readerContentKey,
     lastChapterTitle,
     lastChapterBody,
+    lastRenderedReaderText,
     totalLineCount,
     readerEditMode,
     readerEditorDirty,

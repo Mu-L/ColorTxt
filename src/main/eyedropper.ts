@@ -14,6 +14,10 @@ import {
   type EyedropperInitPayload,
   type EyedropperPointerPayload,
 } from "@shared/eyedropperIpc";
+import {
+  prepareStealthForEyedropper,
+  restoreStealthAfterEyedropper,
+} from "./stealthReader";
 
 /** 标记全屏取色覆盖层，避免被当成用户窗挡 quit / 隐身热键误关 */
 const EYEDROPPER_FLAG = "__colortxtEyedropper";
@@ -55,6 +59,7 @@ function finish(result: string | null): void {
       /* ignore */
     }
   }
+  restoreStealthAfterEyedropper();
   s.resolve(result);
 }
 
@@ -260,13 +265,18 @@ export function registerEyedropperIpc(): void {
   ipcMain.removeHandler(EYEDROPPER_IPC.pick);
   ipcMain.handle(EYEDROPPER_IPC.pick, async () => {
     if (session) finish(null);
+    prepareStealthForEyedropper();
     let shots: Shot[] = [];
     try {
       shots = await captureAllDisplays();
     } catch {
+      restoreStealthAfterEyedropper();
       return null;
     }
-    if (shots.length === 0) return null;
+    if (shots.length === 0) {
+      restoreStealthAfterEyedropper();
+      return null;
+    }
     return await new Promise<string | null>((resolve) => {
       session = {
         resolve,

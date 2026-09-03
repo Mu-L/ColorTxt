@@ -21,8 +21,13 @@ export type UseAnchoredAppShellMenuOptions = {
   open?: Ref<boolean>;
   anchor: Ref<HTMLElement | null>;
   placement: MaybeRefOrGetter<AnchoredMenuPlacement>;
-  /** 首次布局前用于 below-end 的宽度估算 */
-  widthPx?: number;
+  /** 首次布局前用于宽度估算；也可写成 CSS width（支持 ref/getter，便于面板变宽后重算） */
+  widthPx?: MaybeRefOrGetter<number | undefined>;
+  /**
+   * 为 false 时不把 widthPx 写成面板 CSS width（仅作定位估算）。
+   * 默认 true，与历史「更多」菜单固定宽度行为一致。
+   */
+  applyWidthPx?: boolean;
   gap?: number;
   margin?: number;
   zIndex?: number;
@@ -102,7 +107,8 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
     availableMaxHeight.value = maxH;
     await nextTick();
     const panel = panelRef.value;
-    const w = panel?.offsetWidth ?? opts.widthPx ?? 160;
+    const estimateW = toValue(opts.widthPx);
+    const w = panel?.offsetWidth || estimateW || 160;
     const h = Math.min(panel?.offsetHeight ?? 0, maxH);
     const pos = computeAnchoredMenuPosition(
       rect,
@@ -118,6 +124,11 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
     if (opts.disabled?.value) return;
     open.value = true;
     await reposition();
+    // 首帧可能尚未量到真实宽度，再对齐一次，避免箭头/面板相对锚点偏移
+    await nextTick();
+    requestAnimationFrame(() => {
+      if (open.value) void reposition();
+    });
   }
 
   function closeMenu() {
@@ -197,17 +208,21 @@ export function useAnchoredAppShellMenu(opts: UseAnchoredAppShellMenuOptions) {
     if (isOpen) void reposition();
   });
 
-  const panelStyle = computed(() => ({
-    left: `${left.value}px`,
-    top: `${top.value}px`,
-    zIndex: opts.zIndex ?? 7200,
-    ...(opts.widthPx != null ? { width: `${opts.widthPx}px` } : {}),
-    ...(opts.panelMaxHeight != null
-      ? { maxHeight: `${opts.panelMaxHeight}px` }
-      : availableMaxHeight.value != null
-        ? { maxHeight: `${availableMaxHeight.value}px` }
-        : {}),
-  }));
+  const panelStyle = computed(() => {
+    const w = toValue(opts.widthPx);
+    const applyW = opts.applyWidthPx !== false && w != null;
+    return {
+      left: `${left.value}px`,
+      top: `${top.value}px`,
+      zIndex: opts.zIndex ?? 7200,
+      ...(applyW ? { width: `${w}px` } : {}),
+      ...(opts.panelMaxHeight != null
+        ? { maxHeight: `${opts.panelMaxHeight}px` }
+        : availableMaxHeight.value != null
+          ? { maxHeight: `${availableMaxHeight.value}px` }
+          : {}),
+    };
+  });
 
   return {
     open,

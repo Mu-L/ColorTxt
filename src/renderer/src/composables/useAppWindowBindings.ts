@@ -128,6 +128,7 @@ export function useAppWindowBindings(deps: {
   openSettings: () => void;
   openColorScheme: () => void;
   openFindBook: () => void;
+  enterStealthReader: () => void;
   /** 主窗口无书源面板；找书窗口内由对应快捷键处理 */
   openBookSource?: () => void;
   toggleFind: () => void;
@@ -237,6 +238,7 @@ export function useAppWindowBindings(deps: {
           openSettings: deps.openSettings,
           openColorScheme: deps.openColorScheme,
           openFindBook: deps.openFindBook,
+          enterStealthReader: deps.enterStealthReader,
           openBookSource: deps.openBookSource ?? (() => {}),
           toggleFullscreen: deps.enterOrExitFullscreenView,
           increaseFontSize: deps.increaseFontSize,

@@ -24,7 +24,7 @@ import type {
   TextConvertZhMode,
 } from "@shared/textConvertTypes";
 import type { ShortcutBindingMap } from "../../services/shortcutRegistry";
-import { titleWithShortcut } from "../../services/shortcutUtils";
+import { titleWithShortcut, acceleratorToDisplayText } from "../../services/shortcutUtils";
 
 const props = withDefaults(
   defineProps<{
@@ -72,6 +72,8 @@ const props = withDefaults(
     readerChapterSaving?: boolean;
     /** 有已启用的文本替换规则时工具栏按钮为激活态 */
     textReplaceActive?: boolean;
+    /** 当前有正文可进入摸鱼模式 */
+    canEnterStealth?: boolean;
     shortcutBindings: ShortcutBindingMap;
   }>(),
   {
@@ -98,6 +100,7 @@ const props = withDefaults(
     canEnterReaderEditMode: false,
     readerChapterSaving: false,
     textReplaceActive: false,
+    canEnterStealth: false,
   },
 );
 
@@ -134,6 +137,7 @@ const emit = defineEmits<{
   toggleReadingRuler: [];
   saveReaderChapter: [];
   openTextReplace: [];
+  enterStealthReader: [];
 }>();
 
 const vrFormatLock = computed(() => props.voiceReadHeaderLocked);
@@ -237,6 +241,18 @@ function onOpenTextReplace() {
   closeMoreMenu();
   emit("openTextReplace");
 }
+
+function onEnterStealthReader() {
+  closeMoreMenu();
+  emit("enterStealthReader");
+}
+
+const stealthShortcutLabel = computed(() =>
+  acceleratorToDisplayText(
+    props.shortcutBindings.enterStealthReader,
+    isMacPlatform,
+  ),
+);
 </script>
 
 <template>
@@ -518,6 +534,22 @@ function onOpenTextReplace() {
         <span class="appShellMenuLabel">配色</span>
         <span v-if="colorSchemeShortcutLabel" class="appShellMenuShortcut">{{
           colorSchemeShortcutLabel
+        }}</span>
+      </button>
+      <button
+        type="button"
+        class="appShellMenuItem"
+        role="menuitem"
+        :disabled="!canEnterStealth"
+        @click="onEnterStealthReader"
+      >
+        <span
+          class="appShellMenuIconSlot appShellMenuIconSlot--colorful"
+          v-html="icons.stealthMode"
+        />
+        <span class="appShellMenuLabel">摸鱼模式</span>
+        <span v-if="stealthShortcutLabel" class="appShellMenuShortcut">{{
+          stealthShortcutLabel
         }}</span>
       </button>
     </AppShellMenuTeleport>

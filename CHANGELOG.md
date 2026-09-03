@@ -2,6 +2,10 @@
 
 新功能：
 
+- **摸鱼模式**：打开一个无边框透明置顶的阅读窗口；入口「更多 → 摸鱼模式」，默认快捷键 `F9`
+  - 全局快捷键 `Ctrl` + `↑` / `↓` 翻页、`Ctrl` + `←` / `→` 切章
+  - 窗口上 `Ctrl + 滚轮` 改字号，`Shift + 滚轮` 改字体不透明度，`Alt + 滚轮` 改背景不透明度
+  - 右键菜单「设置」打开独立设置窗口 / 「退出摸鱼模式」
 - **极简视图**：顶栏 / 侧栏 / 底栏默认隐藏，阅读区撑满窗口；鼠标移到窗口边缘唤起相应面板（交互与全屏模式一致） [#58](https://github.com/ssnangua/ColorTxt/issues/58)
   - 入口在工具栏「<img src="./src/renderer/src/assets/enter_minimalist_view.svg" width="18" height="18" alt=""> 极简模式」，默认快捷键 `F10`
 - **阅读尺**：适合注意力不容易集中的人（**ADHD**），聚焦阅读行，淡化其他行 [#83](https://github.com/ssnangua/ColorTxt/issues/83)

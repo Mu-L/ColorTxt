@@ -20,6 +20,17 @@ import {
   type EyedropperInitPayload,
   type EyedropperPointerPayload,
 } from "@shared/eyedropperIpc";
+import {
+  STEALTH_READER_IPC,
+  type StealthBounds,
+  type StealthCommand,
+  type StealthChapterNavDirection,
+  type StealthEnterPayload,
+  type StealthOwnerChapterNavPayload,
+  type StealthOwnerProgressPayload,
+  type StealthPagePayload,
+} from "@shared/stealthReaderIpc";
+import { STEALTH_SETTINGS_IPC } from "@shared/stealthSettingsIpc";
 import type {
   AIAgentRendererEvent,
   AIAgentStartPayload,
@@ -525,6 +536,93 @@ const api = {
   /** 全屏取色：冻结截屏 + 覆盖层；取消或失败返回 `null` */
   eyedropperPick: () =>
     ipcRenderer.invoke(EYEDROPPER_IPC.pick) as Promise<string | null>,
+  stealthReaderEnter: (payload: StealthEnterPayload) =>
+    ipcRenderer.invoke(STEALTH_READER_IPC.enter, payload) as Promise<{
+      ok: boolean;
+      message?: string;
+    }>,
+  stealthReaderGetPayload: () =>
+    ipcRenderer.invoke(STEALTH_READER_IPC.getPayload) as Promise<StealthPagePayload | null>,
+  stealthReaderUpdatePayload: (payload: StealthPagePayload) =>
+    ipcRenderer.invoke(STEALTH_READER_IPC.updatePayload, payload) as Promise<{
+      ok: boolean;
+      message?: string;
+    }>,
+  stealthReaderGetPendingPayload: () =>
+    ipcRenderer.invoke(
+      STEALTH_READER_IPC.getPendingPayload,
+    ) as Promise<StealthPagePayload | null>,
+  stealthReaderOwnerChapterNav: (
+    direction: StealthChapterNavDirection,
+    anchor?: "start" | "end",
+  ) =>
+    ipcRenderer.send(STEALTH_READER_IPC.ownerChapterNav, {
+      direction,
+      anchor: anchor === "end" ? "end" : "start",
+    }),
+  stealthReaderChapterNavSettled: () =>
+    ipcRenderer.send(STEALTH_READER_IPC.chapterNavSettled),
+  stealthReaderExit: (line: number) =>
+    ipcRenderer.send(STEALTH_READER_IPC.exit, line),
+  stealthReaderPopupMenu: () => ipcRenderer.send(STEALTH_READER_IPC.popupMenu),
+  stealthReaderSetNavShortcuts: (shortcuts: Record<string, string>) =>
+    ipcRenderer.send(STEALTH_READER_IPC.setNavShortcuts, shortcuts),
+  openStealthSettingsWindow: () =>
+    ipcRenderer.invoke(STEALTH_SETTINGS_IPC.open) as Promise<void>,
+  closeStealthSettingsWindow: () =>
+    ipcRenderer.invoke(STEALTH_SETTINGS_IPC.close) as Promise<void>,
+  stealthReaderGetBounds: () =>
+    ipcRenderer.invoke(STEALTH_READER_IPC.getBounds) as Promise<StealthBounds | null>,
+  /** 与 BrowserWindow.getBounds 同为 DIP；经主进程读取（沙箱 preload 无 screen） */
+  stealthReaderGetCursorScreenPoint: () =>
+    ipcRenderer.sendSync(STEALTH_READER_IPC.getCursorScreenPoint) as {
+      x: number;
+      y: number;
+    },
+  stealthReaderSetBounds: (bounds: StealthBounds) =>
+    ipcRenderer.send(STEALTH_READER_IPC.setBounds, bounds),
+  stealthReaderSetPosition: (x: number, y: number) =>
+    ipcRenderer.send(STEALTH_READER_IPC.setPosition, x, y),
+  stealthReaderSetMinSize: (width: number, height: number) =>
+    ipcRenderer.send(STEALTH_READER_IPC.setMinSize, width, height),
+  stealthReaderBlur: () => ipcRenderer.send(STEALTH_READER_IPC.blur),
+  /** 重申摸鱼窗透明（不改尺寸）；`nudge` 时水平微移逼 DWM 重绘 */
+  stealthReaderRefreshTransparency(nudge?: boolean): void {
+    ipcRenderer.send(
+      STEALTH_READER_IPC.refreshTransparency,
+      nudge === true,
+    );
+  },
+  stealthReaderPrepareEyedropper: () =>
+    ipcRenderer.invoke(STEALTH_READER_IPC.prepareEyedropper) as Promise<void>,
+  stealthReaderRestoreEyedropper: () =>
+    ipcRenderer.invoke(STEALTH_READER_IPC.restoreEyedropper) as Promise<void>,
+  onStealthReaderCommand: (
+    cb: (command: StealthCommand, extra: string) => void,
+  ) => {
+    const fn = (_: unknown, command: StealthCommand, extra: string) =>
+      cb(command, extra ?? "");
+    ipcRenderer.on(STEALTH_READER_IPC.command, fn);
+    return () => ipcRenderer.off(STEALTH_READER_IPC.command, fn);
+  },
+  onStealthReaderMenuOpen: (cb: (open: boolean) => void) => {
+    const fn = (_: unknown, open: boolean) => cb(Boolean(open));
+    ipcRenderer.on(STEALTH_READER_IPC.menuOpen, fn);
+    return () => ipcRenderer.off(STEALTH_READER_IPC.menuOpen, fn);
+  },
+  onStealthOwnerProgress: (cb: (payload: StealthOwnerProgressPayload) => void) => {
+    const fn = (_: unknown, payload: StealthOwnerProgressPayload) => cb(payload);
+    ipcRenderer.on(STEALTH_READER_IPC.ownerProgress, fn);
+    return () => ipcRenderer.off(STEALTH_READER_IPC.ownerProgress, fn);
+  },
+  onStealthOwnerChapterNav: (
+    cb: (payload: StealthOwnerChapterNavPayload) => void,
+  ) => {
+    const fn = (_: unknown, payload: StealthOwnerChapterNavPayload) =>
+      cb(payload);
+    ipcRenderer.on(STEALTH_READER_IPC.ownerChapterNav, fn);
+    return () => ipcRenderer.off(STEALTH_READER_IPC.ownerChapterNav, fn);
+  },
   eyedropperOnInit: (cb: (payload: EyedropperInitPayload) => void) => {
     const fn = (_: unknown, payload: EyedropperInitPayload) => cb(payload);
     ipcRenderer.on(EYEDROPPER_IPC.init, fn);
@@ -578,6 +676,13 @@ const api = {
   setWindowTitle: (title: string) => ipcRenderer.send("window:setTitle", title),
   setFullscreen: (value: boolean) =>
     ipcRenderer.invoke("window:setFullscreen", value) as Promise<boolean>,
+  getWindowContentBounds: () =>
+    ipcRenderer.invoke("window:getContentBounds") as Promise<{
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    } | null>,
   shouldRestoreSession: () =>
     ipcRenderer.invoke("window:shouldRestoreSession") as Promise<boolean>,
   /** 首屏用：本窗口是否会加载文件（新窗口为 false；首启恢复 / 打开方式为 true） */
@@ -603,6 +708,9 @@ const api = {
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   listSystemFonts: () =>
     ipcRenderer.invoke("fonts:listSystemFonts") as Promise<string[]>,
+  /** 解析当前用户终端默认字体族名（Windows Terminal / 控制台 FaceName / 平台回退）。 */
+  getTerminalDefaultFontFace: () =>
+    ipcRenderer.invoke("fonts:getTerminalDefaultFace") as Promise<string | null>,
   convertTextOpenCc: (text: string, config: string) =>
     ipcRenderer.invoke("text-convert:opencc", {
       text,

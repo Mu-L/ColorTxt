@@ -185,7 +185,7 @@ import {
   subscribeModalStackChange,
 } from "../utils/modalStack";
 import { hasDismissibleOverlay } from "../utils/dismissibleOverlayStack";
-import { yieldToUi } from "../ebook/yieldToUi";
+import { yieldToUi, afterNextPaints } from "../ebook/yieldToUi";
 import { appAlert } from "../services/appDialog";
 import { appToast } from "../services/appToast";
 import {
@@ -1787,11 +1787,7 @@ async function setFullText(
       m.setValue(text);
     }
     await yieldToUi();
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => resolve());
-      });
-    });
+    await afterNextPaints();
     if (resetScroll) {
       scrollToDocumentStart(false);
     }

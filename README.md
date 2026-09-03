@@ -37,6 +37,7 @@
 | <img src="./src/renderer/src/assets/enter_fullscreen.svg" width="18" height="18" alt=""> | 全屏阅读 | 禅模式，**沉浸式阅读体验**，阅读区域宽度可自由调整 |
 | <img src="./src/renderer/src/assets/enter_minimalist_view.svg" width="18" height="18" alt=""> | 极简视图 | **专注阅读**，阅读区撑满窗口，鼠标移到窗口边缘唤出相应面板 |
 | <img src="./src/renderer/src/assets/reading_ruler.svg" width="18" height="18" alt=""> | 阅读尺 | 适合注意力不容易集中的人（**ADHD**），聚焦阅读行，淡化其他行 |
+| <img src="./src/renderer/src/assets/emituofo.svg" width="18" height="18" alt=""> | 摸鱼模式 | 打开一个无边框透明置顶的阅读窗口，不知道有什么用 |
 | <img src="./src/renderer/src/assets/history.svg" width="18" height="18" alt=""> | **番茄时钟** | 保护眼睛，健康阅读，从你我做起！ |
 | <img src="./src/renderer/src/assets/bookmark_active.svg" width="18" height="18" alt=""> | 书签 | 可添加带备注的书签 |
 | <img src="./src/renderer/src/assets/note.svg" width="18" height="18" alt=""> | **划线笔记** | 可选中文本进行划线标注、记笔记 |
@@ -77,7 +78,7 @@
 > [!NOTE]
 > 会舍弃掉电子书自带的样式，只提取里面的文本进行展示。<br />对于排版精美的电子书，建议使用专门的阅读器进行阅读，彩读**只适用于**纯文本或带简单插图的电子书。
 
-### 关于「摸鱼快捷键」
+### 关于「摸鱼快捷键」与「摸鱼模式」
 
 「摸鱼快捷键」可以快速隐藏阅读器，包括窗口、任务栏按钮（Windows）、程序坞图标（macOS），让摸鱼更安全。
 
@@ -85,6 +86,10 @@
 
 > [!NOTE]
 > macOS 上，要隐藏程序坞图标，需要在 `系统设置` → `桌面与程序坞` 中关掉 `在程序坞中显示建议App和最近使用的App`。
+
+「摸鱼模式」会打开一个无边框、无任务栏、透明背景、始终置顶的阅读窗口，不知道有什么用。
+
+全局快捷键 `Ctrl` + `↑` / `↓` 翻页、`Ctrl` + `←` / `→` 切章。
 
 > [!WARNING]
 > 已知问题：在 Linux Wayland 上，全局快捷键会失效，这个暂时没有解决办法。

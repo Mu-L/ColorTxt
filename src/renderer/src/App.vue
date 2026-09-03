@@ -256,6 +256,7 @@ import { appToast } from "./services/appToast";
 import { appLoading } from "./services/appLoading";
 import { appAlert, appConfirm } from "./services/appDialog";
 import { mergeShortcutBindings } from "./services/shortcutUtils";
+import { loadStealthReaderSettings } from "./utils/stealthReaderSettings";
 import {
   syncTxtFilesCategoriesAfterCatalogEdit,
   normalizeTxtFileItem,
@@ -422,6 +423,8 @@ function onReplaceRulesChanged() {
   reformatReaderDisplayPreservingViewport();
 }
 
+let offStealthOwnerProgress: (() => void) | undefined;
+
 const currentFile = ref<string | null>(null);
 const loading = ref(false);
 /** 打开文件时主进程流式读取的字节进度（0–100），无总大小时为 null */
@@ -527,10 +530,17 @@ onMounted(() => {
   window.addEventListener(appReplaceRulesChangedEvent, onReplaceRulesChanged);
   // 主窗口推送找书/设置共用的 HTTP 代理（词典等网络请求依赖主进程默认代理）
   syncPersistedFindBookProxyToMain();
+  offStealthOwnerProgress = window.colorTxt.onStealthOwnerProgress((payload) => {
+    // 摸鱼期间不同步；仅退出时 focus=true 跳回主阅读器行号
+    if (payload.focus) {
+      readerRef.value?.jumpToLine(payload.line, false);
+    }
+  });
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener(appReplaceRulesChangedEvent, onReplaceRulesChanged);
+  offStealthOwnerProgress?.();
   endWebDavBookPackProgress();
 });
 
@@ -2834,6 +2844,64 @@ function openFindBookWindow() {
   window.colorTxt.openFindBookWindow();
 }
 
+const canEnterStealth = computed(
+  () => Boolean(currentFile.value) && !loading.value,
+);
+
+/** 阅读区（Monaco）在屏幕上的位置；供首次摸鱼窗对齐用。 */
+async function resolveReaderAreaScreenBounds(): Promise<{
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} | null> {
+  const dom = readerRef.value?.getReaderEditorDomNode?.() ?? null;
+  if (!dom) return null;
+  const r = dom.getBoundingClientRect();
+  if (r.width < 8 || r.height < 8) return null;
+  const content = await window.colorTxt.getWindowContentBounds();
+  const originX = content?.x ?? window.screenX;
+  const originY = content?.y ?? window.screenY;
+  return {
+    x: Math.round(originX + r.left),
+    y: Math.round(originY + r.top),
+    width: Math.round(r.width),
+    height: Math.round(r.height),
+  };
+}
+
+async function enterStealthMode() {
+  const reader = readerRef.value;
+  const body = reader?.getAllText() ?? "";
+  if (!body) {
+    appToast("没有可阅读的正文", { kind: "warning", duration: 2000 });
+    return;
+  }
+  const startLine = reader?.getViewportTopLine() ?? 1;
+  const chaps = chapters.value.map((c) => ({
+    title: c.title,
+    lineNumber: c.lineNumber,
+    tocOrder: c.tocOrder,
+  }));
+  const saved = loadStealthReaderSettings();
+  const bounds =
+    saved.bounds ?? (await resolveReaderAreaScreenBounds()) ?? undefined;
+  const result = await window.colorTxt.stealthReaderEnter({
+    text: body,
+    startLine,
+    chapters: chaps,
+    bounds,
+    exitAccelerator: shortcutBindings.value.enterStealthReader || "F9",
+    navShortcuts: saved.shortcuts,
+  });
+  if (!result?.ok) {
+    appToast(result?.message || "无法进入摸鱼模式", {
+      kind: "warning",
+      duration: 2200,
+    });
+  }
+}
+
 async function applyShortcutBindings(next: ShortcutBindingMap) {
   const merged = mergeShortcutBindings(defaultShortcutBindings, next);
   const globalResult = await window.colorTxt.setGlobalShortcut(
@@ -3611,6 +3679,9 @@ useAppWindowBindings({
     showColorSchemePanel.value = true;
   },
   openFindBook: openFindBookWindow,
+  enterStealthReader: () => {
+    void enterStealthMode();
+  },
   toggleFind: onToggleFind,
   openSidebarSearch,
   openSidebarFiles: () => openReaderSidebarTab("files"),
@@ -3717,6 +3788,7 @@ useAppShellThemeWatch({
         :reading-ruler-enabled="readingRulerEnabled"
         :can-enter-reader-edit-mode="canEnterReaderEditMode"
         :shortcut-bindings="shortcutBindings"
+        :can-enter-stealth="canEnterStealth"
         @open-file="openFileViaDialog"
         @pin-click="onPinClick"
         @bookmark-click="onBookmarkClick"
@@ -3755,6 +3827,7 @@ useAppShellThemeWatch({
         @open-settings="showSettingsPanel = true"
         @open-color-scheme="showColorSchemePanel = true"
         @open-find-book="openFindBookWindow"
+        @enter-stealth-reader="enterStealthMode"
         @open-new-window="openNewWindow"
         @open-recent-file="openRecentFileFromHistory"
         @clear-recent-files="clearRecentFiles"

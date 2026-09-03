@@ -82,6 +82,7 @@ const props = withDefaults(
     canEnterReaderEditMode: boolean;
     /** 与快捷键面板、按键处理一致，用于「更多」菜单旁展示的快捷键 */
     shortcutBindings: ShortcutBindingMap;
+    canEnterStealth?: boolean;
     /** Markdown 文件：禁用章节正则规则（使用 # 标题） */
     chapterRulesDisabled?: boolean;
     aiFeaturesEnabled?: boolean;
@@ -110,6 +111,7 @@ const props = withDefaults(
     readerClickModeAltHeld: false,
     readingRulerEnabled: false,
     canEnterReaderEditMode: false,
+    canEnterStealth: false,
     chapterRulesDisabled: false,
     textReplaceActive: false,
     aiFeaturesEnabled: false,
@@ -158,6 +160,7 @@ const emit = defineEmits<{
   openSettings: [];
   openColorScheme: [];
   openFindBook: [];
+  enterStealthReader: [];
   openNewWindow: [];
   openAbout: [];
   quitApp: [];
@@ -464,6 +467,7 @@ const showFormatToolbarInMore = computed(() => compactFormatToolbar.value);
           :shortcut-bindings="shortcutBindings"
           :in-minimalist="inMinimalist"
           :in-fullscreen="inFullscreen"
+          :can-enter-stealth="canEnterStealth"
           @toggle-find="emit('toggleFind')"
           @open-github="emit('openGithub')"
           @check-for-updates="emit('checkForUpdates')"
@@ -471,6 +475,7 @@ const showFormatToolbarInMore = computed(() => compactFormatToolbar.value);
           @open-settings="emit('openSettings')"
           @open-color-scheme="emit('openColorScheme')"
           @open-find-book="emit('openFindBook')"
+          @enter-stealth-reader="emit('enterStealthReader')"
           @open-new-window="emit('openNewWindow')"
           @open-about="emit('openAbout')"
           @quit-app="emit('quitApp')"
