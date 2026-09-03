@@ -12,6 +12,11 @@ import {
   minLineHeightMultiple,
   normalizeLineHeightMultiple,
 } from "../constants/appUi";
+import {
+  defaultTimedScrollSettings,
+  mergeTimedScrollSettings,
+  type TimedScrollSettings,
+} from "../constants/timedScroll";
 import { quoteFontFamily } from "./fontFamilyCss";
 import type { StealthBounds } from "@shared/stealthReaderIpc";
 
@@ -65,6 +70,8 @@ export type StealthReaderSettings = {
   /** 「其他字体」固定到外层列表的名称 */
   pinnedOtherFonts: string[];
   shortcuts: StealthShortcutMap;
+  /** 与主窗 `colorTxt.ui.settings.timedScroll` 同结构，单独落盘、不互通 */
+  timedScroll: TimedScrollSettings;
   bounds: StealthBounds | null;
 };
 
@@ -130,6 +137,7 @@ export function defaultStealthReaderSettings(): StealthReaderSettings {
     hideOnMouseLeave: false,
     pinnedOtherFonts: [],
     shortcuts: { ...DEFAULT_STEALTH_NAV_SHORTCUTS },
+    timedScroll: { ...defaultTimedScrollSettings },
     bounds: null,
   };
 }
@@ -231,6 +239,11 @@ export function loadStealthReaderSettings(): StealthReaderSettings {
           : fallback.hideOnMouseLeave,
       pinnedOtherFonts: parsePinnedOtherFonts(data.pinnedOtherFonts),
       shortcuts: parseShortcuts(data.shortcuts),
+      timedScroll: mergeTimedScrollSettings(
+        data.timedScroll && typeof data.timedScroll === "object"
+          ? (data.timedScroll as Partial<TimedScrollSettings>)
+          : undefined,
+      ),
       bounds: parseBounds(data.bounds),
     };
   } catch {
@@ -257,6 +270,7 @@ export function saveStealthReaderSettings(
         hideOnMouseLeave: Boolean(settings.hideOnMouseLeave),
         pinnedOtherFonts: parsePinnedOtherFonts(settings.pinnedOtherFonts),
         shortcuts: parseShortcuts(settings.shortcuts),
+        timedScroll: mergeTimedScrollSettings(settings.timedScroll),
         bounds: settings.bounds,
       }),
     );

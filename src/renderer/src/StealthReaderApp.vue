@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { Chapter } from "./chapter";
 import { pickActiveChapterIdx } from "./reader/chapterIndex";
 import { minFontSize, maxFontSize } from "./constants/appUi";
+import { clampTimedScrollIntervalMs } from "./constants/timedScroll";
 import LoadingDotsBounce from "./components/LoadingDotsBounce.vue";
 import {
   buildLineStarts,
@@ -76,6 +77,8 @@ let pageFlipQueued = 0;
 let pageFlipRaf = 0;
 let lineScrollQueued = 0;
 let lineScrollRaf = 0;
+const timedScrollActive = ref(false);
+let timedScrollTimer: ReturnType<typeof setInterval> | null = null;
 
 const contentVisible = computed(
   () =>
@@ -475,6 +478,68 @@ function chapterNext(): void {
   }
 }
 
+function canAdvanceNextChapter(): boolean {
+  if (chapters.length > 1) {
+    const idx = pickActiveChapterIdx(chapters, currentLine());
+    if (idx === -1) return chapters.length > 0;
+    return idx + 1 < chapters.length;
+  }
+  const idx =
+    chapters.length === 0
+      ? -1
+      : pickActiveChapterIdx(chapters, currentLine());
+  if (idx === -1 && chapters.length > 0) return true;
+  if (idx >= 0 && idx + 1 < chapters.length) return true;
+  return ownerHasNextChapter === true;
+}
+
+function isAtLastPage(): boolean {
+  return !text || pageEnd >= text.length;
+}
+
+function clearTimedScrollTimer(): void {
+  if (timedScrollTimer != null) {
+    clearInterval(timedScrollTimer);
+    timedScrollTimer = null;
+  }
+}
+
+function stopTimedScroll(): void {
+  timedScrollActive.value = false;
+  clearTimedScrollTimer();
+}
+
+function timedScrollTick(): void {
+  if (!timedScrollActive.value) return;
+  if (chapterLoading.value) return;
+  if (isAtLastPage() && !canAdvanceNextChapter()) {
+    stopTimedScroll();
+    return;
+  }
+  if (settings.value.timedScroll.range === "line") {
+    requestLineScroll(1);
+  } else {
+    requestPageFlip(1);
+  }
+}
+
+function startTimedScrollTimer(): void {
+  clearTimedScrollTimer();
+  const ms = clampTimedScrollIntervalMs(settings.value.timedScroll.intervalMs);
+  timedScrollTimer = setInterval(timedScrollTick, ms);
+}
+
+function startTimedScroll(): void {
+  if (!text || (isAtLastPage() && !canAdvanceNextChapter())) return;
+  timedScrollActive.value = true;
+  startTimedScrollTimer();
+}
+
+function toggleTimedScroll(): void {
+  if (timedScrollActive.value) stopTimedScroll();
+  else startTimedScroll();
+}
+
 function bumpFontSize(delta: number): void {
   const next = Math.min(
     maxFontSize,
@@ -615,7 +680,9 @@ async function syncLastBoundsFromWindow(): Promise<void> {
 
 function onContextMenu(ev: MouseEvent): void {
   ev.preventDefault();
-  window.colorTxt.stealthReaderPopupMenu();
+  window.colorTxt.stealthReaderPopupMenu({
+    timedScrollActive: timedScrollActive.value,
+  });
 }
 
 function exitStealth(): void {
@@ -633,6 +700,8 @@ function onCommand(command: StealthCommand, _extra: string): void {
   else if (command === "exit") exitStealth();
   else if (command === "openSettings") {
     void window.colorTxt.openStealthSettingsWindow();
+  } else if (command === "toggleTimedScroll") {
+    toggleTimedScroll();
   } else if (command === "reloadPayload") {
     void pullAndApplyPendingPayload();
   } else if (command === "chapterNavSettled") {
@@ -955,6 +1024,29 @@ function onDoubleClick(ev: MouseEvent): void {
   window.getSelection()?.removeAllRanges();
 }
 
+watch(
+  () => [
+    settings.value.timedScroll.range,
+    settings.value.timedScroll.intervalMs,
+  ],
+  () => {
+    if (timedScrollActive.value) startTimedScrollTimer();
+  },
+);
+
+watch(chapterLoading, (loading) => {
+  if (!timedScrollActive.value) return;
+  if (loading) {
+    clearTimedScrollTimer();
+    return;
+  }
+  if (isAtLastPage() && !canAdvanceNextChapter()) {
+    stopTimedScroll();
+    return;
+  }
+  startTimedScrollTimer();
+});
+
 onMounted(() => {
   unsubscribers.push(
     window.colorTxt.onStealthReaderCommand((command, extra) => {
@@ -1008,6 +1100,7 @@ onBeforeUnmount(() => {
   if (persistTimer != null) clearTimeout(persistTimer);
   if (pageFlipRaf) cancelAnimationFrame(pageFlipRaf);
   if (lineScrollRaf) cancelAnimationFrame(lineScrollRaf);
+  stopTimedScroll();
   locateUntilHover.value = false;
   clearOwnerChapterNavPending();
   document.documentElement.style.background = "transparent";

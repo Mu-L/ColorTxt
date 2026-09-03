@@ -4,9 +4,18 @@ import AppModal from "./components/AppModal.vue";
 import FontPicker from "./components/FontPicker.vue";
 import HexColorPickerField from "./components/HexColorPickerField.vue";
 import IconButton from "./components/IconButton.vue";
+import NumericInput from "./components/NumericInput.vue";
+import RadioGroup from "./components/RadioGroup.vue";
 import RangeSlider from "./components/RangeSlider.vue";
 import SwitchToggle from "./components/SwitchToggle.vue";
 import { maxFontSize, minFontSize } from "./constants/appUi";
+import {
+  TIMED_SCROLL_RANGE_OPTIONS,
+  maxTimedScrollIntervalMs,
+  mergeTimedScrollSettings,
+  minTimedScrollIntervalMs,
+  type TimedScrollRange,
+} from "./constants/timedScroll";
 import { icons } from "./icons";
 import { setWindowShortcutRecordingHandler } from "./services/shortcutService";
 import {
@@ -42,7 +51,7 @@ import {
   type StealthShortcutMap,
 } from "./utils/stealthReaderSettings";
 
-type TabId = "general" | "shortcuts";
+type TabId = "general" | "timedScroll" | "shortcuts";
 
 const FONT_PICKER_Z = 9000;
 
@@ -254,6 +263,28 @@ const hideOnMouseLeaveModel = computed({
   set: (v: boolean) => patchSettings({ hideOnMouseLeave: v }),
 });
 
+const timedScrollRangeModel = computed({
+  get: () => settings.value.timedScroll.range,
+  set: (v: TimedScrollRange) =>
+    patchSettings({
+      timedScroll: mergeTimedScrollSettings({
+        ...settings.value.timedScroll,
+        range: v,
+      }),
+    }),
+});
+
+const timedScrollIntervalMsModel = computed({
+  get: () => settings.value.timedScroll.intervalMs,
+  set: (v: number) =>
+    patchSettings({
+      timedScroll: mergeTimedScrollSettings({
+        ...settings.value.timedScroll,
+        intervalMs: v,
+      }),
+    }),
+});
+
 onMounted(() => {
   syncThemeFromStorage();
   offThemeSync = listenPersistedSettingsSync(syncThemeFromStorage);
@@ -282,6 +313,16 @@ onBeforeUnmount(() => {
         @click="tab = 'general'"
       >
         常规
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="tabBtn"
+        :class="{ active: tab === 'timedScroll' }"
+        :aria-selected="tab === 'timedScroll'"
+        @click="tab = 'timedScroll'"
+      >
+        定时滚动
       </button>
       <button
         type="button"
@@ -442,6 +483,37 @@ onBeforeUnmount(() => {
       </section>
     </div>
 
+    <div
+      v-else-if="tab === 'timedScroll'"
+      class="stealthSettingsBody settingsBody"
+    >
+      <section class="aiSection aiSection--compact">
+        <div class="settingsRow">
+          <div class="settingsRowMain settingsRowMain--baseline">
+            <span class="settingsLabel">范围</span>
+            <RadioGroup
+              v-model="timedScrollRangeModel"
+              :options="TIMED_SCROLL_RANGE_OPTIONS"
+              aria-label="定时滚动范围"
+            />
+          </div>
+        </div>
+
+        <div class="settingsRow">
+          <div class="settingsRowMain settingsRowMain--baseline">
+            <span class="settingsLabel">间隔（毫秒）</span>
+            <NumericInput
+              v-model="timedScrollIntervalMsModel"
+              :min="minTimedScrollIntervalMs"
+              :max="maxTimedScrollIntervalMs"
+              integer
+              aria-label="定时滚动间隔毫秒"
+            />
+          </div>
+        </div>
+      </section>
+    </div>
+
     <div v-else class="stealthSettingsBody">
       <div class="shortcutTableWrap">
         <table class="shortcutTable">
@@ -555,6 +627,35 @@ onBeforeUnmount(() => {
   min-height: 0;
   overflow: auto;
   padding: 16px 18px 24px;
+}
+
+.settingsSectionTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.settingsSectionTitle--timedScroll {
+  margin-bottom: 10px;
+}
+
+.settingsIcon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  vertical-align: -3px;
+}
+
+.settingsIcon :deep(svg) {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.settingsIcon :deep(svg path) {
+  fill: currentColor;
 }
 
 .aiSectionTitleRow {

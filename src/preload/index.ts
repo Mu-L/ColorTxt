@@ -564,7 +564,10 @@ const api = {
     ipcRenderer.send(STEALTH_READER_IPC.chapterNavSettled),
   stealthReaderExit: (line: number) =>
     ipcRenderer.send(STEALTH_READER_IPC.exit, line),
-  stealthReaderPopupMenu: () => ipcRenderer.send(STEALTH_READER_IPC.popupMenu),
+  stealthReaderPopupMenu: (opts?: { timedScrollActive?: boolean }) =>
+    ipcRenderer.send(STEALTH_READER_IPC.popupMenu, {
+      timedScrollActive: opts?.timedScrollActive === true,
+    }),
   stealthReaderSetNavShortcuts: (shortcuts: Record<string, string>) =>
     ipcRenderer.send(STEALTH_READER_IPC.setNavShortcuts, shortcuts),
   openStealthSettingsWindow: () =>

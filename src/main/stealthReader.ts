@@ -457,11 +457,18 @@ function setMenuOpen(open: boolean): void {
   s.overlay.webContents.send(STEALTH_READER_IPC.menuOpen, open);
 }
 
-function popupContextMenu(): void {
+function popupContextMenu(timedScrollActive: boolean): void {
   const s = session;
   if (!s || s.overlay.isDestroyed()) return;
 
   const template: MenuItemConstructorOptions[] = [
+    {
+      label: "定时滚动",
+      type: "checkbox",
+      checked: timedScrollActive,
+      click: () => sendCommand("toggleTimedScroll"),
+    },
+    { type: "separator" },
     {
       label: "设置",
       click: () => {
@@ -604,10 +611,14 @@ export function registerStealthReaderIpc(): void {
     teardown(true);
   });
 
-  ipcMain.on(STEALTH_READER_IPC.popupMenu, (evt) => {
+  ipcMain.on(STEALTH_READER_IPC.popupMenu, (evt, raw: unknown) => {
     const s = session;
     if (!s || s.overlay.webContents !== evt.sender) return;
-    popupContextMenu();
+    const timedScrollActive =
+      raw != null &&
+      typeof raw === "object" &&
+      (raw as { timedScrollActive?: unknown }).timedScrollActive === true;
+    popupContextMenu(timedScrollActive);
   });
 
   ipcMain.on(STEALTH_READER_IPC.setNavShortcuts, (_evt, raw: unknown) => {

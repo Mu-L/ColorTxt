@@ -79,6 +79,8 @@ export type StealthCommand =
   | "chapterNext"
   | "exit"
   | "openSettings"
+  /** 右键：启动/停止摸鱼窗定时滚动 */
+  | "toggleTimedScroll"
   /** 源窗热换章后：覆盖层拉取 pending payload */
   | "reloadPayload"
   /** 源窗切章未更新正文：解除加载态 */
