@@ -183,18 +183,25 @@ export async function replaceImgAnchorLinesWithViewZones(
 }
 
 /**
- * 段间距变更后：刷新已挂载插图 ViewZone 的总高度（内容高不变，底部空隙跟 `lineSpacingPx`）。
+ * 段间距 / 插图内容高度变更后：刷新已挂载插图 ViewZone 总高度。
+ * @param contentHeightPx 若传入则同时更新内容区高度；省略则仅跟段间距。
  */
 export function syncReaderImageViewZonesLineSpacing(
   editor: monaco.editor.IStandaloneCodeEditor,
   zoneIds: readonly string[],
+  contentHeightPx?: number,
 ): void {
   if (zoneIds.length === 0) return;
   const gapPx = getLineSpacingPx();
+  const nextContent =
+    typeof contentHeightPx === "number" && Number.isFinite(contentHeightPx)
+      ? Math.max(1, Math.floor(contentHeightPx))
+      : null;
   editor.changeViewZones((accessor) => {
     for (const id of zoneIds) {
       const rec = activeImageZones.get(id);
       if (!rec?.zone.domNode) continue;
+      if (nextContent != null) rec.contentHeightPx = nextContent;
       const heightInPx = applyImageZoneBoxHeights(
         rec.zone.domNode,
         rec.frame,
@@ -213,7 +220,8 @@ export function forEachReaderImageViewZone(
 ): void {
   for (const id of zoneIds) {
     const rec = activeImageZones.get(id);
-    const dom = rec?.zone.domNode;
+    if (!rec) continue;
+    const dom = rec.zone.domNode;
     if (!(dom instanceof HTMLElement)) continue;
     fn(dom, rec.zone.afterLineNumber);
   }

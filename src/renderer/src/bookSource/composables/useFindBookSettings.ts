@@ -64,6 +64,7 @@ function createFindBookSettingsStore() {
   const readingRulerDimOpacity = ref(initial.readingRulerDimOpacity);
   const readingRulerDimStickyTitle = ref(initial.readingRulerDimStickyTitle);
   const readingRulerTransitionEnabled = ref(initial.readingRulerTransitionEnabled);
+  const markdownImageHeightPx = ref(initial.markdownImageHeightPx);
   const chapterNavToolbarEnabled = ref(initial.chapterNavToolbarEnabled);
   const findBookChapterAdvanceEnabled = ref(initial.findBookChapterAdvanceEnabled);
   const readerEditShowLineNumbers = ref(initial.readerEditShowLineNumbers);
@@ -132,6 +133,7 @@ function createFindBookSettingsStore() {
       readingRulerDimOpacity: readingRulerDimOpacity.value,
       readingRulerDimStickyTitle: readingRulerDimStickyTitle.value,
       readingRulerTransitionEnabled: readingRulerTransitionEnabled.value,
+      markdownImageHeightPx: markdownImageHeightPx.value,
       chapterNavToolbarEnabled: chapterNavToolbarEnabled.value,
       findBookChapterAdvanceEnabled: findBookChapterAdvanceEnabled.value,
       readerEditShowLineNumbers: readerEditShowLineNumbers.value,
@@ -220,6 +222,7 @@ function createFindBookSettingsStore() {
     readingRulerDimOpacity.value = shared.readingRulerDimOpacity;
     readingRulerDimStickyTitle.value = shared.readingRulerDimStickyTitle;
     readingRulerTransitionEnabled.value = shared.readingRulerTransitionEnabled;
+    markdownImageHeightPx.value = shared.markdownImageHeightPx;
     chapterNavToolbarEnabled.value = shared.chapterNavToolbarEnabled;
     readerEditShowLineNumbers.value = shared.readerEditShowLineNumbers;
     readerEditMinimap.value = shared.readerEditMinimap;
@@ -310,6 +313,7 @@ function createFindBookSettingsStore() {
     readingRulerDimOpacity,
     readingRulerDimStickyTitle,
     readingRulerTransitionEnabled,
+    markdownImageHeightPx,
     chapterNavToolbarEnabled,
     findBookChapterAdvanceEnabled,
     readerEditShowLineNumbers,

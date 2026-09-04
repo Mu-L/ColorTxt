@@ -241,6 +241,7 @@ const {
   readingRulerDimOpacity,
   readingRulerDimStickyTitle,
   readingRulerTransitionEnabled,
+  markdownImageHeightPx,
   chapterNavToolbarEnabled,
   findBookChapterAdvanceEnabled,
   selectionToolbarButtons,
@@ -2483,6 +2484,7 @@ const modalRef = ref<InstanceType<typeof AppModal> | null>(null);
             :reading-ruler-dim-opacity="readingRulerDimOpacity"
             :reading-ruler-dim-sticky-title="readingRulerDimStickyTitle"
             :reading-ruler-transition-enabled="readingRulerTransitionEnabled"
+            :markdown-image-height-px="markdownImageHeightPx"
             :reader-click-mode-alt-held="clickModeAltHeld"
             :selection-toolbar-buttons="selectionToolbarButtons"
             :dictionary-settings="dictionarySettings"

@@ -372,6 +372,7 @@ function createFindBookReaderSettingsStore() {
     readingRulerDimOpacity: fb.readingRulerDimOpacity,
     readingRulerDimStickyTitle: fb.readingRulerDimStickyTitle,
     readingRulerTransitionEnabled: fb.readingRulerTransitionEnabled,
+    markdownImageHeightPx: fb.markdownImageHeightPx,
     chapterNavToolbarEnabled: fb.chapterNavToolbarEnabled,
     findBookChapterAdvanceEnabled: fb.findBookChapterAdvanceEnabled,
     selectionToolbarButtons: fb.selectionToolbarButtons,

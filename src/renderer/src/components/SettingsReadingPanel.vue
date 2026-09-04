@@ -33,6 +33,9 @@ import {
   minReadingRulerDimOpacity,
   maxReadingRulerDimOpacity,
   readingRulerDimOpacityStep,
+  minMarkdownImageHeightPx,
+  maxMarkdownImageHeightPx,
+  markdownImageHeightPxStep,
   type ChapterTitleBlankMode,
 } from "../constants/appUi";
 import {
@@ -92,6 +95,7 @@ const props = withDefaults(
     draftTimedScrollIntervalMs: number;
     draftSelectionToolbarButtons: SelectionToolbarButtons;
     monacoCustomHighlight: boolean;
+    draftMarkdownImageHeightPx: number;
     draftReadingRulerEnabled: boolean;
     draftReadingRulerFocusLines: number;
     draftReadingRulerDimOpacity: number;
@@ -139,6 +143,7 @@ defineEmits<{
   "update:draftReadingRulerDimStickyTitle": [v: boolean];
   "update:draftReadingRulerTransitionEnabled": [v: boolean];
   "update:draftFindBookChapterAdvanceEnabled": [v: boolean];
+  "update:draftMarkdownImageHeightPx": [v: number];
   "update:draftChapterTitleBlankMode": [v: ChapterTitleBlankMode];
   "update:draftCompressBlankKeepOneBlank": [v: boolean];
   "update:draftTxtrDelimitedMatchCrossLine": [v: boolean];
@@ -367,6 +372,28 @@ const selectListsEmpty: CustomSelectItem[] = [];
         <p class="settingsHint">
           阅读到章节边界后再次滚动（滚轮、空格、<code>PageUp</code> / <code>PageDown</code>、方向键）时跳转到邻章。
         </p>
+      </div>
+    </div>
+
+    <div class="settingsBody settingsBody--markdown">
+      <h3 class="settingsSectionTitle settingsSectionTitle--markdown">Markdown</h3>
+      <div class="settingsRow">
+        <div class="settingsRowMain">
+          <span class="settingsLabel short"
+            >插图高度（{{ draftMarkdownImageHeightPx }} px）</span
+          >
+          <RangeSlider
+            :model-value="draftMarkdownImageHeightPx"
+            :min="minMarkdownImageHeightPx"
+            :max="maxMarkdownImageHeightPx"
+            :step="markdownImageHeightPxStep"
+            :show-percent="false"
+            aria-label="Markdown 插图高度"
+            @update:model-value="
+              $emit('update:draftMarkdownImageHeightPx', $event)
+            "
+          />
+        </div>
       </div>
     </div>
 
@@ -917,6 +944,7 @@ const selectListsEmpty: CustomSelectItem[] = [];
 .settingsBody--timedScroll,
 .settingsBody--toolbar,
 .settingsBody--webSearch,
+.settingsBody--markdown,
 .settingsBody--readingRuler {
   gap: 10px;
 }
@@ -925,6 +953,7 @@ const selectListsEmpty: CustomSelectItem[] = [];
 .settingsSectionTitle--fullscreen,
 .settingsSectionTitle--pomodoro,
 .settingsSectionTitle--timedScroll,
+.settingsSectionTitle--markdown,
 .settingsSectionTitle--readingRuler {
   margin-bottom: 10px;
 }

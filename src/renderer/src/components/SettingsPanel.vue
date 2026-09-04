@@ -62,6 +62,8 @@ import {
   defaultReadingRulerTransitionEnabled,
   clampReadingRulerFocusLines,
   clampReadingRulerDimOpacity,
+  defaultMarkdownImageHeightPx,
+  clampMarkdownImageHeightPx,
   defaultChapterNavToolbarEnabled,
   defaultChapterCharCountExact,
   defaultReaderEditShowLineNumbers,
@@ -162,6 +164,7 @@ export type SettingsApplyPayload = {
   readingRulerDimOpacity: number;
   readingRulerDimStickyTitle: boolean;
   readingRulerTransitionEnabled: boolean;
+  markdownImageHeightPx: number;
   chapterNavToolbarEnabled: boolean;
   chapterCharCountExact: boolean;
   readerEditShowLineNumbers: boolean;
@@ -222,6 +225,7 @@ const props = defineProps<{
   readingRulerDimOpacity: number;
   readingRulerDimStickyTitle: boolean;
   readingRulerTransitionEnabled: boolean;
+  markdownImageHeightPx: number;
   chapterNavToolbarEnabled: boolean;
   chapterCharCountExact: boolean;
   readerEditShowLineNumbers: boolean;
@@ -306,6 +310,7 @@ const draftReadingRulerDimStickyTitle = ref(defaultReadingRulerDimStickyTitle);
 const draftReadingRulerTransitionEnabled = ref(
   defaultReadingRulerTransitionEnabled,
 );
+const draftMarkdownImageHeightPx = ref(defaultMarkdownImageHeightPx);
 const draftChapterNavToolbarEnabled = ref(defaultChapterNavToolbarEnabled);
 const draftChapterCharCountExact = ref(defaultChapterCharCountExact);
 const draftReaderEditShowLineNumbers = ref(defaultReaderEditShowLineNumbers);
@@ -407,6 +412,9 @@ function syncDraftFromProps() {
   draftReadingRulerDimStickyTitle.value = props.readingRulerDimStickyTitle;
   draftReadingRulerTransitionEnabled.value =
     props.readingRulerTransitionEnabled;
+  draftMarkdownImageHeightPx.value = clampMarkdownImageHeightPx(
+    props.markdownImageHeightPx,
+  );
   draftChapterNavToolbarEnabled.value = props.chapterNavToolbarEnabled;
   draftChapterCharCountExact.value = props.chapterCharCountExact;
   draftReaderEditShowLineNumbers.value = props.readerEditShowLineNumbers;
@@ -617,6 +625,7 @@ function resetReadingDraft() {
   draftReadingRulerDimStickyTitle.value = defaultReadingRulerDimStickyTitle;
   draftReadingRulerTransitionEnabled.value =
     defaultReadingRulerTransitionEnabled;
+  draftMarkdownImageHeightPx.value = defaultMarkdownImageHeightPx;
   draftChapterNavToolbarEnabled.value = defaultChapterNavToolbarEnabled;
   draftChapterTitleBlankMode.value =
     defaultChapterTitleBlankMode;
@@ -855,6 +864,9 @@ async function onConfirm() {
     ),
     readingRulerDimStickyTitle: draftReadingRulerDimStickyTitle.value,
     readingRulerTransitionEnabled: draftReadingRulerTransitionEnabled.value,
+    markdownImageHeightPx: clampMarkdownImageHeightPx(
+      draftMarkdownImageHeightPx.value,
+    ),
     chapterNavToolbarEnabled: draftChapterNavToolbarEnabled.value,
     chapterCharCountExact: draftChapterCharCountExact.value,
     readerEditShowLineNumbers: draftReaderEditShowLineNumbers.value,
@@ -1044,6 +1056,7 @@ async function onClearCache() {
               v-model:draft-reading-ruler-transition-enabled="
                 draftReadingRulerTransitionEnabled
               "
+              v-model:draft-markdown-image-height-px="draftMarkdownImageHeightPx"
               v-model:draft-chapter-nav-toolbar-enabled="
                 draftChapterNavToolbarEnabled
               "

@@ -58,6 +58,8 @@ import {
   defaultReadingRulerTransitionEnabled,
   clampReadingRulerFocusLines,
   clampReadingRulerDimOpacity,
+  defaultMarkdownImageHeightPx,
+  clampMarkdownImageHeightPx,
   defaultTxtrDelimitedMatchCrossLine,
   defaultChapterNavToolbarEnabled,
   maxLineHeightMultipleForFontSize,
@@ -184,6 +186,7 @@ const draftReadingRulerDimStickyTitle = ref(defaultReadingRulerDimStickyTitle);
 const draftReadingRulerTransitionEnabled = ref(
   defaultReadingRulerTransitionEnabled,
 );
+const draftMarkdownImageHeightPx = ref(defaultMarkdownImageHeightPx);
 const draftChapterNavToolbarEnabled = ref(defaultChapterNavToolbarEnabled);
 const draftFindBookChapterAdvanceEnabled = ref(fbReaderSettings.findBookChapterAdvanceEnabled.value);
 const draftReaderEditShowLineNumbers = ref(defaultReaderEditShowLineNumbers);
@@ -319,6 +322,9 @@ function syncSharedReaderDraftFromStore() {
   draftReadingRulerDimStickyTitle.value = fb.readingRulerDimStickyTitle.value;
   draftReadingRulerTransitionEnabled.value =
     fb.readingRulerTransitionEnabled.value;
+  draftMarkdownImageHeightPx.value = clampMarkdownImageHeightPx(
+    fb.markdownImageHeightPx.value,
+  );
   draftChapterNavToolbarEnabled.value = fb.chapterNavToolbarEnabled.value;
   draftFindBookChapterAdvanceEnabled.value = fb.findBookChapterAdvanceEnabled.value;
   draftReaderEditShowLineNumbers.value = fb.readerEditShowLineNumbers.value;
@@ -413,6 +419,7 @@ function resetReadingDraft() {
   draftReadingRulerDimStickyTitle.value = defaultReadingRulerDimStickyTitle;
   draftReadingRulerTransitionEnabled.value =
     defaultReadingRulerTransitionEnabled;
+  draftMarkdownImageHeightPx.value = defaultMarkdownImageHeightPx;
   draftChapterNavToolbarEnabled.value = defaultChapterNavToolbarEnabled;
   draftChapterTitleBlankMode.value =
     defaultChapterTitleBlankMode;
@@ -596,6 +603,9 @@ async function onConfirm() {
   fb.readingRulerDimStickyTitle.value = draftReadingRulerDimStickyTitle.value;
   fb.readingRulerTransitionEnabled.value =
     draftReadingRulerTransitionEnabled.value;
+  fb.markdownImageHeightPx.value = clampMarkdownImageHeightPx(
+    draftMarkdownImageHeightPx.value,
+  );
   fb.chapterNavToolbarEnabled.value = draftChapterNavToolbarEnabled.value;
   fb.findBookChapterAdvanceEnabled.value = draftFindBookChapterAdvanceEnabled.value;
   fb.readerEditShowLineNumbers.value = draftReaderEditShowLineNumbers.value;
@@ -749,6 +759,7 @@ watch(draftFontSize, (size) => {
               v-model:draft-reading-ruler-dim-opacity="draftReadingRulerDimOpacity"
               v-model:draft-reading-ruler-dim-sticky-title="draftReadingRulerDimStickyTitle"
               v-model:draft-reading-ruler-transition-enabled="draftReadingRulerTransitionEnabled"
+              v-model:draft-markdown-image-height-px="draftMarkdownImageHeightPx"
               v-model:draft-chapter-nav-toolbar-enabled="draftChapterNavToolbarEnabled"
               v-model:draft-find-book-chapter-advance-enabled="draftFindBookChapterAdvanceEnabled"
               v-model:draft-chapter-title-blank-mode="draftChapterTitleBlankMode"

@@ -158,6 +158,8 @@ import {
   defaultReadingRulerTransitionEnabled,
   clampReadingRulerFocusLines,
   clampReadingRulerDimOpacity,
+  defaultMarkdownImageHeightPx,
+  clampMarkdownImageHeightPx,
   defaultChapterNavToolbarEnabled,
   defaultReaderEditShowLineNumbers,
   defaultReaderEditMinimap,
@@ -666,6 +668,7 @@ const readingRulerDimStickyTitle = ref(defaultReadingRulerDimStickyTitle);
 const readingRulerTransitionEnabled = ref(
   defaultReadingRulerTransitionEnabled,
 );
+const markdownImageHeightPx = ref(defaultMarkdownImageHeightPx);
 const chapterNavToolbarEnabled = ref(defaultChapterNavToolbarEnabled);
 const readerEditShowLineNumbers = ref(defaultReaderEditShowLineNumbers);
 const readerEditMinimap = ref(defaultReaderEditMinimap);
@@ -1176,6 +1179,7 @@ const persistence = useAppPersistence({
   readingRulerDimOpacity,
   readingRulerDimStickyTitle,
   readingRulerTransitionEnabled,
+  markdownImageHeightPx,
   chapterNavToolbarEnabled,
   readerEditShowLineNumbers,
   readerEditMinimap,
@@ -3434,6 +3438,9 @@ async function applySettings(payload: SettingsApplyPayload) {
   );
   readingRulerDimStickyTitle.value = payload.readingRulerDimStickyTitle;
   readingRulerTransitionEnabled.value = payload.readingRulerTransitionEnabled;
+  markdownImageHeightPx.value = clampMarkdownImageHeightPx(
+    payload.markdownImageHeightPx,
+  );
   chapterNavToolbarEnabled.value = payload.chapterNavToolbarEnabled;
   chapterCharCountExact.value = payload.chapterCharCountExact;
   timedScrollSettings.value = mergeTimedScrollSettings(payload.timedScroll);
@@ -4077,6 +4084,7 @@ useAppShellThemeWatch({
           :reading-ruler-dim-opacity="readingRulerDimOpacity"
           :reading-ruler-dim-sticky-title="readingRulerDimStickyTitle"
           :reading-ruler-transition-enabled="readingRulerTransitionEnabled"
+          :markdown-image-height-px="markdownImageHeightPx"
           :reader-click-mode-alt-held="clickModeAltHeld"
           :selection-toolbar-buttons="selectionToolbarButtons"
           :dictionary-settings="dictionarySettings"
@@ -4356,6 +4364,7 @@ useAppShellThemeWatch({
       :reading-ruler-dim-opacity="readingRulerDimOpacity"
       :reading-ruler-dim-sticky-title="readingRulerDimStickyTitle"
       :reading-ruler-transition-enabled="readingRulerTransitionEnabled"
+      :markdown-image-height-px="markdownImageHeightPx"
       :chapter-nav-toolbar-enabled="chapterNavToolbarEnabled"
       :chapter-char-count-exact="chapterCharCountExact"
       :timed-scroll-settings="timedScrollSettings"

@@ -64,6 +64,7 @@ const props = defineProps<{
   readingRulerDimOpacity: number;
   readingRulerDimStickyTitle: boolean;
   readingRulerTransitionEnabled: boolean;
+  markdownImageHeightPx: number;
   chapterNavToolbarEnabled: boolean;
   chapterCharCountExact: boolean;
   readerEditShowLineNumbers: boolean;
@@ -299,6 +300,7 @@ const busyOverlayText = computed(() => {
     :reading-ruler-dim-opacity="readingRulerDimOpacity"
     :reading-ruler-dim-sticky-title="readingRulerDimStickyTitle"
     :reading-ruler-transition-enabled="readingRulerTransitionEnabled"
+    :markdown-image-height-px="markdownImageHeightPx"
     :chapter-nav-toolbar-enabled="chapterNavToolbarEnabled"
     :chapter-char-count-exact="chapterCharCountExact"
     :reader-edit-show-line-numbers="readerEditShowLineNumbers"

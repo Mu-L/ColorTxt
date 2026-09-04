@@ -64,6 +64,7 @@ const UI_READER_KEYS = [
   "readingRulerDimOpacity",
   "readingRulerDimStickyTitle",
   "readingRulerTransitionEnabled",
+  "markdownImageHeightPx",
   "chapterNavToolbarEnabled",
   "readerEditShowLineNumbers",
   "readerEditMinimap",

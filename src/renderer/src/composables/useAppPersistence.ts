@@ -119,6 +119,7 @@ import {
   clampFastScrollSensitivity,
   clampReadingRulerFocusLines,
   clampReadingRulerDimOpacity,
+  clampMarkdownImageHeightPx,
   defaultMouseWheelScrollSensitivity,
   defaultFastScrollSensitivity,
   fileListKey,
@@ -282,6 +283,7 @@ export function useAppPersistence(deps: {
   readingRulerDimOpacity: Ref<number>;
   readingRulerDimStickyTitle: Ref<boolean>;
   readingRulerTransitionEnabled: Ref<boolean>;
+  markdownImageHeightPx: Ref<number>;
   chapterNavToolbarEnabled: Ref<boolean>;
   readerEditShowLineNumbers: Ref<boolean>;
   readerEditMinimap: Ref<boolean>;
@@ -433,6 +435,7 @@ export function useAppPersistence(deps: {
       readingRulerDimOpacity: deps.readingRulerDimOpacity.value,
       readingRulerDimStickyTitle: deps.readingRulerDimStickyTitle.value,
       readingRulerTransitionEnabled: deps.readingRulerTransitionEnabled.value,
+      markdownImageHeightPx: deps.markdownImageHeightPx.value,
       chapterNavToolbarEnabled: deps.chapterNavToolbarEnabled.value,
       readerEditShowLineNumbers: deps.readerEditShowLineNumbers.value,
       readerEditMinimap: deps.readerEditMinimap.value,
@@ -1386,6 +1389,14 @@ export function useAppPersistence(deps: {
       if (typeof data.readingRulerTransitionEnabled === "boolean") {
         deps.readingRulerTransitionEnabled.value =
           data.readingRulerTransitionEnabled;
+      }
+      if (
+        typeof data.markdownImageHeightPx === "number" &&
+        Number.isFinite(data.markdownImageHeightPx)
+      ) {
+        deps.markdownImageHeightPx.value = clampMarkdownImageHeightPx(
+          data.markdownImageHeightPx,
+        );
       }
       if (typeof data.chapterNavToolbarEnabled === "boolean") {
         deps.chapterNavToolbarEnabled.value = data.chapterNavToolbarEnabled;

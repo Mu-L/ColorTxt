@@ -318,6 +318,22 @@ export function clampReadingRulerDimOpacity(n: number): number {
 
 export const readingRulerButtonTitle =
   "阅读尺\n\n适合注意力不容易集中的人，聚焦阅读行，淡化其他行";
+
+/** Markdown 块级插图 ViewZone 内容高度（px）；不含底部段间距 */
+export const defaultMarkdownImageHeightPx = 100;
+export const minMarkdownImageHeightPx = 50;
+export const maxMarkdownImageHeightPx = 1000;
+export const markdownImageHeightPxStep = 50;
+
+export function clampMarkdownImageHeightPx(px: number): number {
+  if (!Number.isFinite(px)) return defaultMarkdownImageHeightPx;
+  const stepped =
+    Math.round(px / markdownImageHeightPxStep) * markdownImageHeightPxStep;
+  return Math.max(
+    minMarkdownImageHeightPx,
+    Math.min(maxMarkdownImageHeightPx, stepped),
+  );
+}
 export const readerSelectModeButtonTitle =
   "当前为「可选模式」，点击切换「点击模式」\n\n可选模式：可选中文本进行标记、记笔记等操作\n点击模式：左键下一屏，右键上一屏，按下可拖动\n\n按住 Alt 可临时切换模式";
 export const readerClickModeButtonTitle =

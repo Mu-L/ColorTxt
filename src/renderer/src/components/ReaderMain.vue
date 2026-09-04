@@ -140,8 +140,10 @@ import {
   defaultReadingRulerDimOpacity,
   defaultReadingRulerDimStickyTitle,
   defaultReadingRulerTransitionEnabled,
+  defaultMarkdownImageHeightPx,
   clampReadingRulerFocusLines,
   clampReadingRulerDimOpacity,
+  clampMarkdownImageHeightPx,
   clampMouseWheelScrollSensitivity,
   clampFastScrollSensitivity,
   defaultReaderEditShowLineNumbers,
@@ -514,6 +516,8 @@ const props = withDefaults(
     readingRulerDimStickyTitle?: boolean;
     /** 阅读尺焦点行切换过渡动画 */
     readingRulerTransitionEnabled?: boolean;
+    /** Markdown 块级插图 ViewZone 内容高度（px） */
+    markdownImageHeightPx?: number;
     /** 编辑模式下是否显示行号（只读模式始终关闭） */
     readerEditShowLineNumbers?: boolean;
     readerEditMinimap?: boolean;
@@ -621,6 +625,7 @@ const props = withDefaults(
     readingRulerDimOpacity: defaultReadingRulerDimOpacity,
     readingRulerDimStickyTitle: defaultReadingRulerDimStickyTitle,
     readingRulerTransitionEnabled: defaultReadingRulerTransitionEnabled,
+    markdownImageHeightPx: defaultMarkdownImageHeightPx,
     selectionToolbarButtons: () => ({ ...defaultSelectionToolbarButtons }),
     dictionarySettings: () => mergeDictionarySettings(undefined),
     webSearchSettings: () => mergeWebSearchSettings(undefined),
@@ -1566,6 +1571,19 @@ watch(
 );
 
 watch(
+  () => props.markdownImageHeightPx,
+  (px) => {
+    const e = editor.value;
+    if (!e || imageViewZoneIds.value.length === 0) return;
+    syncReaderImageViewZonesLineSpacing(
+      e,
+      imageViewZoneIds.value,
+      clampMarkdownImageHeightPx(px),
+    );
+  },
+);
+
+watch(
   () => props.letterSpacingPx,
   (px) => {
     setLetterSpacingPx(px);
@@ -1881,7 +1899,7 @@ async function applyEmbeddedImageAnchors(
   const raw = m.getValue();
   const isMd = !props.readerEditMode && isMarkdownReaderPath(p);
   const result = await replaceImgAnchorLinesWithViewZones(monaco, e, p, {
-    zoneHeightPx: 100,
+    zoneHeightPx: clampMarkdownImageHeightPx(props.markdownImageHeightPx),
     sourceText: raw,
     blockImages: isMd ? collectBlockMarkdownImageLines(raw, p) : [],
   });

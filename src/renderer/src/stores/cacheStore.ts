@@ -151,6 +151,8 @@ export type PersistedSettingsData = {
   readingRulerDimStickyTitle?: boolean;
   /** 阅读尺焦点行切换过渡动画 */
   readingRulerTransitionEnabled?: boolean;
+  /** Markdown 块级插图 ViewZone 内容高度（px） */
+  markdownImageHeightPx?: number;
   /** 阅读区底部「上一章 / 下一章」工具栏 */
   chapterNavToolbarEnabled?: boolean;
   /** 找书阅读器边界滚动切章 */
@@ -496,6 +498,12 @@ export function loadPersistedSettingsData(
   }
   if (typeof obj.readingRulerTransitionEnabled === "boolean") {
     data.readingRulerTransitionEnabled = obj.readingRulerTransitionEnabled;
+  }
+  if (
+    typeof obj.markdownImageHeightPx === "number" &&
+    Number.isFinite(obj.markdownImageHeightPx)
+  ) {
+    data.markdownImageHeightPx = obj.markdownImageHeightPx;
   }
   if (typeof obj.chapterNavToolbarEnabled === "boolean") {
     data.chapterNavToolbarEnabled = obj.chapterNavToolbarEnabled;

@@ -36,6 +36,8 @@ import {
   defaultReadingRulerTransitionEnabled,
   clampReadingRulerFocusLines,
   clampReadingRulerDimOpacity,
+  defaultMarkdownImageHeightPx,
+  clampMarkdownImageHeightPx,
   defaultTxtrDelimitedMatchCrossLine,
   FIND_BOOK_SIDEBAR_MIN_WIDTH,
   normalizeLineHeightMultiple,
@@ -220,6 +222,7 @@ export type SharedReaderSettingsSnapshot = {
   readingRulerDimOpacity: number;
   readingRulerDimStickyTitle: boolean;
   readingRulerTransitionEnabled: boolean;
+  markdownImageHeightPx: number;
   chapterNavToolbarEnabled: boolean;
   findBookChapterAdvanceEnabled: boolean;
   readerEditShowLineNumbers: boolean;
@@ -345,6 +348,11 @@ export function sharedReaderSettingsFromMainData(
       typeof data.readingRulerTransitionEnabled === "boolean"
         ? data.readingRulerTransitionEnabled
         : defaultReadingRulerTransitionEnabled,
+    markdownImageHeightPx: clampMarkdownImageHeightPx(
+      typeof data.markdownImageHeightPx === "number"
+        ? data.markdownImageHeightPx
+        : defaultMarkdownImageHeightPx,
+    ),
     chapterNavToolbarEnabled:
       typeof data.chapterNavToolbarEnabled === "boolean"
         ? data.chapterNavToolbarEnabled
@@ -414,6 +422,7 @@ export function snapshotSharedReaderSettingsForMain(
     readingRulerDimOpacity: state.readingRulerDimOpacity,
     readingRulerDimStickyTitle: state.readingRulerDimStickyTitle,
     readingRulerTransitionEnabled: state.readingRulerTransitionEnabled,
+    markdownImageHeightPx: state.markdownImageHeightPx,
     chapterNavToolbarEnabled: state.chapterNavToolbarEnabled,
     findBookChapterAdvanceEnabled: state.findBookChapterAdvanceEnabled,
     readerEditShowLineNumbers: state.readerEditShowLineNumbers,
