@@ -7,4 +7,8 @@ export type VoiceReadEdgeTtsRequest = {
   rate: number;
   /** 相对音调，1 为默认 */
   pitch: number;
+  /** 句末停顿（。！？…）时长 ms；0 或不传表示不插入停顿 */
+  pauseSentenceMs?: number;
+  /** 句中停顿（，；：、）时长 ms；0 或不传表示不插入停顿 */
+  pauseCommaMs?: number;
 };

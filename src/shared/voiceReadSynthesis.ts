@@ -3,10 +3,23 @@ import type { VoiceReadEngineId } from "./voiceReadEngines";
 
 export type VoiceReadAudioFormat = "mp3" | "wav" | "pcm_s16le";
 
+/**
+ * 标点停顿点：音频内 [fromMs, toMs] 区间为自然间隙（含 TTS 气息声），
+ * 播放端应将其替换为 kind 对应时长的干净静音；fromMs === toMs 表示在 fromMs 处插入。
+ * toMs 超过音频总长时按总长处理（段尾停顿）。
+ */
+export type VoiceReadPausePoint = {
+  fromMs: number;
+  toMs: number;
+  kind: "sentence" | "comma";
+};
+
 export type VoiceReadSynthesisResult = {
   format: VoiceReadAudioFormat;
   data: ArrayBuffer;
   sampleRate?: number;
+  /** 标点停顿点（当前仅 Edge 引擎返回），播放端解码后在对应时刻插入静音 */
+  pauses?: VoiceReadPausePoint[];
 };
 
 import type { VoiceReadEmotionId } from "./voiceReadEmotion";
@@ -18,6 +31,10 @@ export type VoiceReadSynthesisRequest = {
   voiceId: string;
   rate: number;
   pitch: number;
+  /** 句末停顿（。！？…）时长 ms；0 不插入停顿；仅 edge 引擎消费 */
+  pauseSentenceMs: number;
+  /** 句中停顿（，；：、）时长 ms；0 不插入停顿；仅 edge 引擎消费 */
+  pauseCommaMs: number;
   engineConfig: VoiceReadEngineConfig;
   /** 朗读情绪；auto 或未设置时不传给引擎 */
   emotion?: VoiceReadEmotionId;

@@ -118,6 +118,7 @@ export class VoiceReadAudioCache {
       format: prep.format,
       data: prep.data.slice(0),
       sampleRate: prep.sampleRate,
+      pauses: prep.pauses,
     };
   }
 }

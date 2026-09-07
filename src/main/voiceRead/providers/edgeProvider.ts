@@ -22,6 +22,8 @@ function toEdgeRequest(
     lang: inferLangFromEdgeVoiceId(voice),
     rate: req.rate,
     pitch: req.pitch,
+    pauseSentenceMs: req.pauseSentenceMs,
+    pauseCommaMs: req.pauseCommaMs,
   };
 }
 
@@ -29,8 +31,8 @@ export const edgeTtsProvider: VoiceReadTtsProvider = {
   engineId: "edge",
   async synthesize(req, signal) {
     if (signal.aborted) throw new Error("interrupted");
-    const mp3 = await synthesizeEdgeTtsMp3(toEdgeRequest(req));
+    const { data, pauses } = await synthesizeEdgeTtsMp3(toEdgeRequest(req));
     if (signal.aborted) throw new Error("interrupted");
-    return { format: "mp3", data: arrayBufferForIpc(mp3) };
+    return { format: "mp3", data: arrayBufferForIpc(data), pauses };
   },
 };

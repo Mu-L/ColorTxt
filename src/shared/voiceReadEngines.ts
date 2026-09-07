@@ -43,6 +43,8 @@ export type VoiceReadEngineMeta = {
   auth: VoiceReadEngineAuth;
   supportsRate: boolean;
   supportsPitch: boolean;
+  /** 是否支持标点停顿（目前仅 Edge TTS，按 WordBoundary 时间戳在播放端插静音） */
+  supportsPunctuationPauses: boolean;
   voiceSource: VoiceReadEngineVoiceSource;
   audioFormat: VoiceReadEngineAudioFormat;
   /** 相对默认切段单位：edge 较短 */
@@ -61,6 +63,7 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
     auth: "none",
     supportsRate: true,
     supportsPitch: true,
+    supportsPunctuationPauses: true,
     voiceSource: "static",
     audioFormat: "mp3",
     shortChunks: true,
@@ -73,6 +76,7 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
     auth: "none",
     supportsRate: true,
     supportsPitch: true,
+    supportsPunctuationPauses: false,
     voiceSource: "dynamic",
     audioFormat: "mp3",
     shortChunks: false,
@@ -85,6 +89,7 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
     auth: "none",
     supportsRate: true,
     supportsPitch: false,
+    supportsPunctuationPauses: false,
     voiceSource: "dynamic",
     audioFormat: "wav",
     shortChunks: false,
@@ -97,6 +102,7 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
     auth: "apiKey",
     supportsRate: true,
     supportsPitch: false,
+    supportsPunctuationPauses: false,
     voiceSource: "static",
     audioFormat: "pcm_s16le",
     shortChunks: false,
@@ -109,6 +115,7 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
     auth: "apiKey",
     supportsRate: true,
     supportsPitch: false,
+    supportsPunctuationPauses: false,
     voiceSource: "dynamic",
     audioFormat: "mp3",
     shortChunks: false,
@@ -121,6 +128,7 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
     auth: "apiKey",
     supportsRate: true,
     supportsPitch: false,
+    supportsPunctuationPauses: false,
     voiceSource: "static",
     audioFormat: "wav",
     shortChunks: false,
@@ -133,6 +141,7 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
     auth: "apiKey",
     supportsRate: true,
     supportsPitch: true,
+    supportsPunctuationPauses: false,
     voiceSource: "static",
     audioFormat: "pcm_s16le",
     shortChunks: false,

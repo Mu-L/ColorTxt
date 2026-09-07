@@ -55,6 +55,15 @@ function parseSynthesisRequest(raw: unknown): VoiceReadSynthesisRequest | null {
     typeof o.rate === "number" && Number.isFinite(o.rate) ? o.rate : 1;
   const pitch =
     typeof o.pitch === "number" && Number.isFinite(o.pitch) ? o.pitch : 1;
+  // 标点停顿：兜底 0=不插停顿；防御性 clamp 到 [0,5000]
+  const pauseSentenceMs =
+    typeof o.pauseSentenceMs === "number" && Number.isFinite(o.pauseSentenceMs)
+      ? Math.max(0, Math.min(5000, o.pauseSentenceMs))
+      : 0;
+  const pauseCommaMs =
+    typeof o.pauseCommaMs === "number" && Number.isFinite(o.pauseCommaMs)
+      ? Math.max(0, Math.min(5000, o.pauseCommaMs))
+      : 0;
   const engineConfig = toPlainVoiceReadEngineConfig(o.engineConfig);
   const emotionRaw = o.emotion;
   const emotion =
@@ -67,6 +76,8 @@ function parseSynthesisRequest(raw: unknown): VoiceReadSynthesisRequest | null {
     voiceId,
     rate,
     pitch,
+    pauseSentenceMs,
+    pauseCommaMs,
     engineConfig,
     emotion: emotion === "auto" ? undefined : emotion,
     volcengineSpeechSlot: parseVolcengineSpeechSlot(o.volcengineSpeechSlot),

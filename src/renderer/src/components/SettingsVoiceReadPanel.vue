@@ -19,7 +19,12 @@ import {
   voiceReadEngineSupportsEmotion,
   voiceReadEngineSupportsMultiVoiceScheme,
   voiceReadEngineSupportsPitch,
+  voiceReadEngineSupportsPunctuationPauses,
   voiceReadEngineSupportsRate,
+  voiceReadPauseCommaMax,
+  voiceReadPauseCommaMin,
+  voiceReadPauseSentenceMax,
+  voiceReadPauseSentenceMin,
   voiceReadSettingsSynthesisFingerprint,
   type VoiceReadDialogueQuoteStyle,
   type VoiceReadEngineId,
@@ -901,6 +906,9 @@ const showPitchControl = computed(
 const showVolcenginePitchControl = computed(
   () => draft.value.engine === "volcengine",
 );
+const showPunctuationPauseControls = computed(() =>
+  voiceReadEngineSupportsPunctuationPauses(draft.value.engine),
+);
 
 const showEmotionToggle = computed(
   () =>
@@ -1336,6 +1344,40 @@ onUnmounted(() => {
             :step="1"
             :show-percent="false"
             aria-label="音调"
+          />
+        </div>
+      </div>
+
+      <div v-if="showPunctuationPauseControls" class="settingsRowMain">
+        <span class="settingsLabel short">
+          句末停顿（{{ draft.pauseSentenceMs === 0 ? "关" : draft.pauseSentenceMs + "ms" }}）
+        </span>
+        <div class="settingsRowField">
+          <RangeSlider
+            :model-value="draft.pauseSentenceMs"
+            :min="voiceReadPauseSentenceMin"
+            :max="voiceReadPauseSentenceMax"
+            :step="50"
+            :show-percent="false"
+            aria-label="句末停顿"
+            @update:model-value="patchDraft({ pauseSentenceMs: $event })"
+          />
+        </div>
+      </div>
+
+      <div v-if="showPunctuationPauseControls" class="settingsRowMain">
+        <span class="settingsLabel short">
+          句中停顿（{{ draft.pauseCommaMs === 0 ? "关" : draft.pauseCommaMs + "ms" }}）
+        </span>
+        <div class="settingsRowField">
+          <RangeSlider
+            :model-value="draft.pauseCommaMs"
+            :min="voiceReadPauseCommaMin"
+            :max="voiceReadPauseCommaMax"
+            :step="50"
+            :show-percent="false"
+            aria-label="句中停顿"
+            @update:model-value="patchDraft({ pauseCommaMs: $event })"
           />
         </div>
       </div>

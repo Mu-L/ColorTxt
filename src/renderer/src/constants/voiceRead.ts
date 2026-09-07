@@ -56,6 +56,10 @@ export const voiceReadPitchMin = 0.5;
 export const voiceReadPitchMax = 2;
 export const voiceReadVolumeMin = 0;
 export const voiceReadVolumeMax = 1;
+export const voiceReadPauseSentenceMin = 0;
+export const voiceReadPauseSentenceMax = 1200;
+export const voiceReadPauseCommaMin = 0;
+export const voiceReadPauseCommaMax = 600;
 
 export { DASHSCOPE_TTS_VOICES } from "@shared/voiceReadDashscopeVoices";
 
@@ -67,6 +71,22 @@ export function clampVoiceReadRate(v: number): number {
 export function clampVoiceReadPitch(v: number): number {
   if (!Number.isFinite(v)) return defaultVoiceReadSettings.pitch;
   return Math.max(voiceReadPitchMin, Math.min(voiceReadPitchMax, v));
+}
+
+export function clampVoiceReadPauseSentence(v: number): number {
+  if (!Number.isFinite(v)) return defaultVoiceReadSettings.pauseSentenceMs;
+  return Math.max(
+    voiceReadPauseSentenceMin,
+    Math.min(voiceReadPauseSentenceMax, v),
+  );
+}
+
+export function clampVoiceReadPauseComma(v: number): number {
+  if (!Number.isFinite(v)) return defaultVoiceReadSettings.pauseCommaMs;
+  return Math.max(
+    voiceReadPauseCommaMin,
+    Math.min(voiceReadPauseCommaMax, v),
+  );
 }
 
 export function clampVoiceReadVolume(v: number): number {
@@ -85,6 +105,8 @@ export function voiceReadSettingsSynthesisFingerprint(
     JSON.stringify(settings.multi),
     settings.rate,
     settings.pitch,
+    settings.pauseSentenceMs,
+    settings.pauseCommaMs,
     settings.emotionEnabled !== false ? "1" : "0",
     engineConfigFingerprint(settings.engineConfig),
   ].join("\u0001");
@@ -123,6 +145,8 @@ export function mergeVoiceReadSettings(
     engine,
     rate: clampVoiceReadRate(merged.rate),
     pitch: clampVoiceReadPitch(merged.pitch),
+    pauseSentenceMs: clampVoiceReadPauseSentence(merged.pauseSentenceMs),
+    pauseCommaMs: clampVoiceReadPauseComma(merged.pauseCommaMs),
     volume: clampVoiceReadVolume(merged.volume),
     dashscopeApiKey,
     engineConfig: syncEngineConfigDashscopeKey(engineConfig, dashscopeApiKey),
@@ -235,6 +259,12 @@ export function voiceReadEngineSupportsRate(
   return getVoiceReadEngineMeta(engine).supportsRate;
 }
 
+export function voiceReadEngineSupportsPunctuationPauses(
+  engine: VoiceReadEngineId,
+): boolean {
+  return getVoiceReadEngineMeta(engine).supportsPunctuationPauses;
+}
+
 export function inferLangFromEdgeVoiceId(voiceId: string): string {
   const idx = voiceId.indexOf("-");
   if (idx <= 0) return "zh-CN";
@@ -257,6 +287,8 @@ export function toVoiceReadEdgeTtsRequest(
     lang: inferLangFromEdgeVoiceId(voice),
     rate: settings.rate,
     pitch: settings.pitch,
+    pauseSentenceMs: settings.pauseSentenceMs,
+    pauseCommaMs: settings.pauseCommaMs,
   };
 }
 

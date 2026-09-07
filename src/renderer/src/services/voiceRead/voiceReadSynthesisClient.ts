@@ -40,6 +40,8 @@ export function toVoiceReadSynthesisRequest(
     voiceId,
     rate: settings.rate,
     pitch: settings.pitch,
+    pauseSentenceMs: settings.pauseSentenceMs,
+    pauseCommaMs: settings.pauseCommaMs,
     emotion,
     volcengineSpeechSlot: speechSlot,
     volcengineLanguage: speechMode ? speechMode.language : undefined,
