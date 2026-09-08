@@ -74,7 +74,7 @@ const props = withDefaults(
     fileSort: FileSortMode;
     fileListViewMode?: FileListViewMode;
     fileCategoryCatalog: FileCategoryDefinition[];
-    /** 全屏浮动侧栏是否展开；从展开变为收起时关闭 Teleport 到 body 的浮层 */
+    /** 全屏/极简浮动侧栏是否展开；从展开变为收起时关闭 Teleport 菜单/下拉（不含 AppModal） */
     showFullscreenSidebar?: boolean;
     /** 侧栏标题行「更多」按钮（锚定菜单） */
     menuAnchorEl?: HTMLButtonElement | null;
@@ -1093,7 +1093,8 @@ function dismissAllFullscreenTeleportUi() {
   menus.dismissAllTeleportMenus();
   closeFolderContextMenuAll();
   filterVisible.value = false;
-  manageModalOpen.value = false;
+  // AppModal（分类管理）Teleport 到 body：蒙版打开时 chrome 会收起浮动侧栏，
+  // 若此处一并关掉弹窗，极简/全屏下「分类管理」会刚开即关。
   categoryToolbarSelectRef.value?.closePanel?.();
   sortToolbarSelectRef.value?.closePanel?.();
 }
