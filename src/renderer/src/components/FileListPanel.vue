@@ -58,6 +58,7 @@ import AppShellMenuTeleport from "./AppShellMenuTeleport.vue";
 import { appToast } from "../services/appToast";
 import { appLoading } from "../services/appLoading";
 import { appConfirm } from "../services/appDialog";
+import { fileHistoryKey } from "../stores/recentHistoryStore";
 
 const FILES_HEADER_MORE_MENU_W = 140;
 const TREE_INDENT_PX = 14;
@@ -286,6 +287,16 @@ function folderExpandSetsEqual(a: Set<string>, b: Set<string>): boolean {
   return true;
 }
 
+function listPathForCurrentFile(): string {
+  const path = props.currentFilePath?.trim() ?? "";
+  if (!path) return "";
+  if (props.filesFiltered.some((f) => f.path === path)) return path;
+  const key = fileHistoryKey(path);
+  return (
+    props.filesFiltered.find((f) => fileHistoryKey(f.path) === key)?.path ?? ""
+  );
+}
+
 /**
  * 初始化 / 列表重建（含切换分类）：
  * - 当前打开文件在筛选列表中 → 只展开其祖先目录
@@ -295,9 +306,8 @@ function folderExpandSetsEqual(a: Set<string>, b: Set<string>): boolean {
 function applyExpandForCurrentFileOnTreeRebuild(
   roots: readonly FileListTreeNode[],
 ): boolean {
-  const path = props.currentFilePath?.trim() ?? "";
-  const inList =
-    !!path && props.filesFiltered.some((f) => f.path === path);
+  const path = listPathForCurrentFile();
+  const inList = !!path;
   if (!inList) {
     if (expandedFolderPaths.value.size > 0) {
       expandedFolderPaths.value = new Set();
@@ -324,7 +334,7 @@ async function scrollTreeToCurrentFileRow(
 ) {
   await nextTick();
   if (!isTreeMode.value || !props.panelVisible) return;
-  const path = props.currentFilePath;
+  const path = listPathForCurrentFile();
   if (!path) return;
   const idx = findFileRowIndex(treeFlatRows.value, path);
   if (idx < 0) return;
@@ -408,17 +418,17 @@ function fileItemFromPath(path: string): SidebarFileItem | undefined {
   return fileByPath.value.get(path);
 }
 
-/** 打开/居中当前文件时：展开其路径（可保留其它已展开目录）并滚入视口 */
+/** 打开/居中当前文件时：展开其路径（可保留其它已展开目录）；面板可见时再滚入视口 */
 async function scrollTreeToCurrentFile(
   mode: "edge" | "center" = "center",
   behavior: ScrollBehavior = "auto",
 ) {
   await nextTick();
-  const path = props.currentFilePath;
-  if (!path || !isTreeMode.value || !props.panelVisible) return;
+  if (!isTreeMode.value) return;
+  const path = listPathForCurrentFile();
+  if (!path) return;
   const roots = fileTreeRoots.value;
   if (roots.length === 0) return;
-  if (!props.filesFiltered.some((f) => f.path === path)) return;
   const ancestors = collectAncestorFolderKeysForFile(roots, path);
   if (!ancestors) return;
   const next = new Set(expandedFolderPaths.value);
@@ -426,6 +436,7 @@ async function scrollTreeToCurrentFile(
   if (!folderExpandSetsEqual(next, expandedFolderPaths.value)) {
     expandedFolderPaths.value = next;
   }
+  if (!props.panelVisible) return;
   await scrollTreeToCurrentFileRow(mode, behavior);
 }
 
@@ -455,6 +466,28 @@ watch(
   },
 );
 
+/**
+ * 会话恢复时先建树（尚无当前文件 → 全收起），再打开文件并切到「章节」。
+ * 当前文件就绪后补展开祖先；切到「文件」面板时再滚入视口。
+ */
+watch(
+  () => [isTreeMode.value, props.currentFilePath] as const,
+  () => {
+    if (!isTreeMode.value) return;
+    if (!listPathForCurrentFile()) return;
+    void scrollTreeToCurrentFile("center");
+  },
+);
+
+watch(
+  () => props.panelVisible,
+  (visible) => {
+    if (!visible || !isTreeMode.value) return;
+    if (!listPathForCurrentFile()) return;
+    void scrollTreeToCurrentFile("center");
+  },
+);
+
 watch(isTreeMode, (tree) => {
   if (!props.currentFilePath || !props.panelVisible) return;
   if (tree) {
@@ -469,11 +502,7 @@ watch(isTreeMode, (tree) => {
   });
 });
 
-const canLocateCurrentFile = computed(() => {
-  const path = props.currentFilePath?.trim() ?? "";
-  if (!path) return false;
-  return props.filesFiltered.some((f) => f.path === path);
-});
+const canLocateCurrentFile = computed(() => !!listPathForCurrentFile());
 
 function onLocateCurrentFile() {
   if (!canLocateCurrentFile.value) return;
