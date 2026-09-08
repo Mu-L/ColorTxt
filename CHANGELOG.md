@@ -19,6 +19,7 @@
 - 极简 / 全屏浮动侧栏里，「文件」分类下拉的「分类管理」现在可以正常打开 [#89](https://github.com/ssnangua/ColorTxt/issues/89)
 - 摸鱼窗口拖动移动时钉死逻辑宽高，避免在某些情况下窗体被越拖越大 [#89](https://github.com/ssnangua/ColorTxt/issues/89)
 - Windows 下，点任务栏时，系统会强行把任务栏抬到前面，导致摸鱼窗口被压到下面，现在会在指针进入任务栏区域时立刻重申置顶，并周期兜底以覆盖关窗等层级重排 [#91](https://github.com/ssnangua/ColorTxt/issues/91)
+- 电子书转 Markdown 时，段落里的行内图片（如字形图）不再拆成独占行插图，阅读器按字号显示在句中
 
 ## 3.8
 
