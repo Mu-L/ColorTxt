@@ -59,6 +59,22 @@ let overlayMinHeight = 8;
  * 小于该值时 OS 会撑高；用 setShape 裁出逻辑尺寸，getBounds 仍回逻辑值。
  */
 let overlayLogicalBounds: StealthBounds | null = null;
+/** 右键菜单打开时勿 moveTop，避免盖住菜单 */
+let overlayMenuOpen = false;
+/** Windows：已对覆盖层安装 WM_ACTIVATEAPP 钩子 */
+let stealthActivateAppHooked = false;
+let stealthBrowserBlurHandler: (() => void) | null = null;
+/** 指针在任务栏条带内时的监视（非盲目周期置顶） */
+let stealthTaskbarWatchTimer: ReturnType<typeof setInterval> | null = null;
+let stealthCursorWasOverTaskbar = false;
+/** 取消过期的置顶重申（失活可能连续触发） */
+let stealthZOrderReassertGen = 0;
+
+const STEALTH_AOT_LEVEL = "screen-saver" as const;
+/** 相对同级再抬一层，减轻被任务栏盖住 */
+const STEALTH_AOT_RELATIVE = 1;
+/** 应用激活状态变化（点任务栏/切到其它应用） */
+const WM_ACTIVATEAPP = 0x001c;
 
 export function isStealthReaderWindow(win: BrowserWindow): boolean {
   return (win as unknown as Record<string, unknown>)[STEALTH_FLAG] === true;
@@ -100,10 +116,127 @@ export function refreshStealthOverlayTransparency(opts?: {
         applyOverlayShape(win);
       }
     }
-    win.setAlwaysOnTop(true, "screen-saver");
+    assertStealthOverlayAlwaysOnTop(win);
   } catch {
     /* ignore */
   }
+}
+
+/** 重申摸鱼覆盖层置顶（含相对层级）；Win 上必要时 moveTop。 */
+function assertStealthOverlayAlwaysOnTop(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  try {
+    win.setAlwaysOnTop(true, STEALTH_AOT_LEVEL, STEALTH_AOT_RELATIVE);
+    if (process.platform === "win32") {
+      try {
+        win.moveTop();
+      } catch {
+        /* ignore */
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function stopStealthZOrderWatch(overlay?: BrowserWindow | null): void {
+  stealthZOrderReassertGen += 1;
+  stealthCursorWasOverTaskbar = false;
+  if (stealthTaskbarWatchTimer != null) {
+    clearInterval(stealthTaskbarWatchTimer);
+    stealthTaskbarWatchTimer = null;
+  }
+  const win = overlay && !overlay.isDestroyed() ? overlay : getStealthOverlayWindow();
+  if (win && !win.isDestroyed() && stealthActivateAppHooked) {
+    try {
+      win.unhookWindowMessage(WM_ACTIVATEAPP);
+    } catch {
+      /* ignore */
+    }
+  }
+  stealthActivateAppHooked = false;
+  if (stealthBrowserBlurHandler) {
+    app.off("browser-window-blur", stealthBrowserBlurHandler);
+    stealthBrowserBlurHandler = null;
+  }
+}
+
+/**
+ * 工作区外、显示器 bounds 内 = 任务栏/侧栏等 shell 条带。
+ * 摸鱼窗 focusable:false 时点任务栏往往不再发 WM_ACTIVATEAPP，只能靠指针位置感知。
+ */
+function isCursorOverTaskbarStrip(): boolean {
+  const point = screen.getCursorScreenPoint();
+  const display = screen.getDisplayNearestPoint(point);
+  const { bounds, workArea } = display;
+  if (
+    point.x < bounds.x ||
+    point.y < bounds.y ||
+    point.x >= bounds.x + bounds.width ||
+    point.y >= bounds.y + bounds.height
+  ) {
+    return false;
+  }
+  return (
+    point.x < workArea.x ||
+    point.y < workArea.y ||
+    point.x >= workArea.x + workArea.width ||
+    point.y >= workArea.y + workArea.height
+  );
+}
+
+/**
+ * Windows：点任务栏后 shell 常把覆盖层压到任务栏下。
+ * 失活事件 + 指针进入任务栏条带时再重申（避免无差别周期 setAlwaysOnTop）。
+ */
+function scheduleStealthZOrderReassert(): void {
+  const gen = ++stealthZOrderReassertGen;
+  // 任务栏抬升往往在点击之后，分几拍补钉
+  for (const ms of [0, 80, 250]) {
+    setTimeout(() => {
+      if (gen !== stealthZOrderReassertGen) return;
+      const s = session;
+      if (!s || s.overlay.isDestroyed()) return;
+      if (s.overlayHiddenByStealthHotkey || overlayMenuOpen) return;
+      if (!s.overlay.isVisible()) return;
+      assertStealthOverlayAlwaysOnTop(s.overlay);
+    }, ms);
+  }
+}
+
+function onStealthTaskbarWatchTick(): void {
+  const s = session;
+  if (!s || s.overlay.isDestroyed()) return;
+  if (s.overlayHiddenByStealthHotkey || overlayMenuOpen) return;
+  if (!s.overlay.isVisible()) return;
+  const over = isCursorOverTaskbarStrip();
+  if (over && !stealthCursorWasOverTaskbar) {
+    scheduleStealthZOrderReassert();
+  } else if (over) {
+    // 停留在任务栏上点击时 shell 会再次抬升，轻量保持
+    assertStealthOverlayAlwaysOnTop(s.overlay);
+  } else if (!over && stealthCursorWasOverTaskbar) {
+    scheduleStealthZOrderReassert();
+  }
+  stealthCursorWasOverTaskbar = over;
+}
+
+function startStealthZOrderWatch(overlay: BrowserWindow): void {
+  stopStealthZOrderWatch(overlay);
+  if (process.platform !== "win32" || overlay.isDestroyed()) return;
+  try {
+    overlay.hookWindowMessage(WM_ACTIVATEAPP, () => {
+      scheduleStealthZOrderReassert();
+    });
+    stealthActivateAppHooked = true;
+  } catch {
+    stealthActivateAppHooked = false;
+  }
+  stealthBrowserBlurHandler = () => {
+    scheduleStealthZOrderReassert();
+  };
+  app.on("browser-window-blur", stealthBrowserBlurHandler);
+  stealthTaskbarWatchTimer = setInterval(onStealthTaskbarWatchTick, 200);
 }
 
 function clearOverlayShape(win: BrowserWindow): void {
@@ -254,7 +387,7 @@ export function restoreStealthAfterEyedropper(): void {
   if (s.overlayHiddenByStealthHotkey) return;
   s.overlay.setFocusable(false);
   s.overlay.showInactive();
-  s.overlay.setAlwaysOnTop(true, "screen-saver");
+  assertStealthOverlayAlwaysOnTop(s.overlay);
 }
 
 function clampBoundsToDisplay(bounds: StealthBounds): StealthBounds {
@@ -352,7 +485,12 @@ function createOverlayWindow(bounds: StealthBounds): BrowserWindow {
   const win = new BrowserWindow(opts);
   (win as unknown as Record<string, unknown>)[STEALTH_FLAG] = true;
   overlayLogicalBounds = b;
-  win.setAlwaysOnTop(true, "screen-saver");
+  assertStealthOverlayAlwaysOnTop(win);
+  try {
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  } catch {
+    /* 部分平台不支持 */
+  }
   win.setMenuBarVisibility(false);
   win.removeMenu();
   win.setBackgroundColor("#00000000");
@@ -397,6 +535,8 @@ function teardown(restore: boolean): void {
   tearingDown = true;
   const s = session;
   session = null;
+  stopStealthZOrderWatch(s?.overlay);
+  overlayMenuOpen = false;
   unregisterPageShortcuts();
   closeStealthSettingsWindow();
   const line = s?.lastLine ?? 1;
@@ -433,12 +573,14 @@ export function setStealthOverlayHiddenByHotkey(hidden: boolean): void {
   if (hidden) {
     s.overlay.hide();
     s.overlayHiddenByStealthHotkey = true;
+    stopStealthZOrderWatch(s.overlay);
     return;
   }
   s.overlayHiddenByStealthHotkey = false;
   s.overlay.setFocusable(false);
   s.overlay.showInactive();
-  s.overlay.setAlwaysOnTop(true, "screen-saver");
+  assertStealthOverlayAlwaysOnTop(s.overlay);
+  startStealthZOrderWatch(s.overlay);
 }
 
 function enterFromOwner(
@@ -514,8 +656,9 @@ function enterFromOwner(
     }
     overlay.setFocusable(false);
     overlay.showInactive();
-    overlay.setAlwaysOnTop(true, "screen-saver");
+    assertStealthOverlayAlwaysOnTop(overlay);
     registerPageShortcuts();
+    startStealthZOrderWatch(overlay);
   });
 
   return { ok: true };
@@ -524,7 +667,12 @@ function enterFromOwner(
 function setMenuOpen(open: boolean): void {
   const s = session;
   if (!s || s.overlay.isDestroyed()) return;
+  overlayMenuOpen = open;
   s.overlay.webContents.send(STEALTH_READER_IPC.menuOpen, open);
+  // 菜单关掉后立刻抢回置顶，避免点任务栏场景下长时间被压住
+  if (!open && !s.overlayHiddenByStealthHotkey) {
+    assertStealthOverlayAlwaysOnTop(s.overlay);
+  }
 }
 
 function popupContextMenu(timedScrollActive: boolean): void {
