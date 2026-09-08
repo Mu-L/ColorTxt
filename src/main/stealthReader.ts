@@ -61,20 +61,19 @@ let overlayMinHeight = 8;
 let overlayLogicalBounds: StealthBounds | null = null;
 /** 右键菜单打开时勿 moveTop，避免盖住菜单 */
 let overlayMenuOpen = false;
-/** Windows：已对覆盖层安装 WM_ACTIVATEAPP 钩子 */
-let stealthActivateAppHooked = false;
-let stealthBrowserBlurHandler: (() => void) | null = null;
-/** 指针在任务栏条带内时的监视（非盲目周期置顶） */
+/** 指针在任务栏条带内时的快速重申 */
 let stealthTaskbarWatchTimer: ReturnType<typeof setInterval> | null = null;
+/** 关窗等 shell 重排时的周期兜底重申 */
+let stealthZOrderFallbackTimer: ReturnType<typeof setInterval> | null = null;
 let stealthCursorWasOverTaskbar = false;
-/** 取消过期的置顶重申（失活可能连续触发） */
+/** 取消过期的置顶重申（进出任务栏可能连续触发） */
 let stealthZOrderReassertGen = 0;
 
 const STEALTH_AOT_LEVEL = "screen-saver" as const;
 /** 相对同级再抬一层，减轻被任务栏盖住 */
 const STEALTH_AOT_RELATIVE = 1;
-/** 应用激活状态变化（点任务栏/切到其它应用） */
-const WM_ACTIVATEAPP = 0x001c;
+/** 关窗/任务栏抢层等无法用指针感知的场景，周期兜底 */
+const STEALTH_ZORDER_FALLBACK_MS = 700;
 
 export function isStealthReaderWindow(win: BrowserWindow): boolean {
   return (win as unknown as Record<string, unknown>)[STEALTH_FLAG] === true;
@@ -139,31 +138,22 @@ function assertStealthOverlayAlwaysOnTop(win: BrowserWindow): void {
   }
 }
 
-function stopStealthZOrderWatch(overlay?: BrowserWindow | null): void {
+function stopStealthZOrderWatch(): void {
   stealthZOrderReassertGen += 1;
   stealthCursorWasOverTaskbar = false;
   if (stealthTaskbarWatchTimer != null) {
     clearInterval(stealthTaskbarWatchTimer);
     stealthTaskbarWatchTimer = null;
   }
-  const win = overlay && !overlay.isDestroyed() ? overlay : getStealthOverlayWindow();
-  if (win && !win.isDestroyed() && stealthActivateAppHooked) {
-    try {
-      win.unhookWindowMessage(WM_ACTIVATEAPP);
-    } catch {
-      /* ignore */
-    }
-  }
-  stealthActivateAppHooked = false;
-  if (stealthBrowserBlurHandler) {
-    app.off("browser-window-blur", stealthBrowserBlurHandler);
-    stealthBrowserBlurHandler = null;
+  if (stealthZOrderFallbackTimer != null) {
+    clearInterval(stealthZOrderFallbackTimer);
+    stealthZOrderFallbackTimer = null;
   }
 }
 
 /**
  * 工作区外、显示器 bounds 内 = 任务栏/侧栏等 shell 条带。
- * 摸鱼窗 focusable:false 时点任务栏往往不再发 WM_ACTIVATEAPP，只能靠指针位置感知。
+ * 摸鱼窗 focusable:false，点任务栏不会再走失活事件，靠指针位置做快速路径。
  */
 function isCursorOverTaskbarStrip(): boolean {
   const point = screen.getCursorScreenPoint();
@@ -185,21 +175,26 @@ function isCursorOverTaskbarStrip(): boolean {
   );
 }
 
+function tryAssertStealthOverlayZOrder(): void {
+  const s = session;
+  if (!s || s.overlay.isDestroyed()) return;
+  if (s.overlayHiddenByStealthHotkey || overlayMenuOpen) return;
+  if (!s.overlay.isVisible()) return;
+  assertStealthOverlayAlwaysOnTop(s.overlay);
+}
+
 /**
- * Windows：点任务栏后 shell 常把覆盖层压到任务栏下。
- * 失活事件 + 指针进入任务栏条带时再重申（避免无差别周期 setAlwaysOnTop）。
+ * Windows：shell 常把覆盖层压到任务栏下（点任务栏、关其它窗后的层级重排等）。
+ * - 指针进入任务栏条带：立刻分拍重申（快路径）
+ * - 周期兜底：盖住关窗等指针感知不到的场景
+ * 真·事件驱动需 SetWinEventHook（额外 FFI），目前不引入。
  */
 function scheduleStealthZOrderReassert(): void {
   const gen = ++stealthZOrderReassertGen;
-  // 任务栏抬升往往在点击之后，分几拍补钉
   for (const ms of [0, 80, 250]) {
     setTimeout(() => {
       if (gen !== stealthZOrderReassertGen) return;
-      const s = session;
-      if (!s || s.overlay.isDestroyed()) return;
-      if (s.overlayHiddenByStealthHotkey || overlayMenuOpen) return;
-      if (!s.overlay.isVisible()) return;
-      assertStealthOverlayAlwaysOnTop(s.overlay);
+      tryAssertStealthOverlayZOrder();
     }, ms);
   }
 }
@@ -213,7 +208,6 @@ function onStealthTaskbarWatchTick(): void {
   if (over && !stealthCursorWasOverTaskbar) {
     scheduleStealthZOrderReassert();
   } else if (over) {
-    // 停留在任务栏上点击时 shell 会再次抬升，轻量保持
     assertStealthOverlayAlwaysOnTop(s.overlay);
   } else if (!over && stealthCursorWasOverTaskbar) {
     scheduleStealthZOrderReassert();
@@ -221,22 +215,14 @@ function onStealthTaskbarWatchTick(): void {
   stealthCursorWasOverTaskbar = over;
 }
 
-function startStealthZOrderWatch(overlay: BrowserWindow): void {
-  stopStealthZOrderWatch(overlay);
-  if (process.platform !== "win32" || overlay.isDestroyed()) return;
-  try {
-    overlay.hookWindowMessage(WM_ACTIVATEAPP, () => {
-      scheduleStealthZOrderReassert();
-    });
-    stealthActivateAppHooked = true;
-  } catch {
-    stealthActivateAppHooked = false;
-  }
-  stealthBrowserBlurHandler = () => {
-    scheduleStealthZOrderReassert();
-  };
-  app.on("browser-window-blur", stealthBrowserBlurHandler);
+function startStealthZOrderWatch(_overlay: BrowserWindow): void {
+  stopStealthZOrderWatch();
+  if (process.platform !== "win32" || _overlay.isDestroyed()) return;
   stealthTaskbarWatchTimer = setInterval(onStealthTaskbarWatchTick, 200);
+  stealthZOrderFallbackTimer = setInterval(
+    tryAssertStealthOverlayZOrder,
+    STEALTH_ZORDER_FALLBACK_MS,
+  );
 }
 
 function clearOverlayShape(win: BrowserWindow): void {
@@ -535,7 +521,7 @@ function teardown(restore: boolean): void {
   tearingDown = true;
   const s = session;
   session = null;
-  stopStealthZOrderWatch(s?.overlay);
+  stopStealthZOrderWatch();
   overlayMenuOpen = false;
   unregisterPageShortcuts();
   closeStealthSettingsWindow();
@@ -573,7 +559,7 @@ export function setStealthOverlayHiddenByHotkey(hidden: boolean): void {
   if (hidden) {
     s.overlay.hide();
     s.overlayHiddenByStealthHotkey = true;
-    stopStealthZOrderWatch(s.overlay);
+    stopStealthZOrderWatch();
     return;
   }
   s.overlayHiddenByStealthHotkey = false;
