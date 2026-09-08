@@ -54,6 +54,11 @@ let sessionShortcutsRegistered = false;
 /** 渲染进程 updateMinSize 同步过来的字号最小尺寸（setBounds 兜底） */
 let overlayMinWidth = 8;
 let overlayMinHeight = 8;
+/**
+ * 逻辑窗位（渲染进程 / 持久化用）。Windows 无边框窗 OS 最小高度约标题栏高（~39px），
+ * 小于该值时 OS 会撑高；用 setShape 裁出逻辑尺寸，getBounds 仍回逻辑值。
+ */
+let overlayLogicalBounds: StealthBounds | null = null;
 
 export function isStealthReaderWindow(win: BrowserWindow): boolean {
   return (win as unknown as Record<string, unknown>)[STEALTH_FLAG] === true;
@@ -91,12 +96,73 @@ export function refreshStealthOverlayTransparency(opts?: {
       if (b.width > 0 && b.height > 0) {
         win.setBounds({ ...b, x: b.x + 1 }, false);
         win.setBounds(b, false);
+        // setBounds 可能冲掉 shape，按逻辑尺寸再裁一次
+        applyOverlayShape(win);
       }
     }
     win.setAlwaysOnTop(true, "screen-saver");
   } catch {
     /* ignore */
   }
+}
+
+function clearOverlayShape(win: BrowserWindow): void {
+  try {
+    if (typeof win.setShape === "function") {
+      win.setShape([]);
+    }
+  } catch {
+    /* macOS 等不支持 */
+  }
+}
+
+/** OS 窗大于逻辑尺寸时裁剪可视/点击区域（Windows 最小高度绕过）。 */
+function applyOverlayShape(win: BrowserWindow): void {
+  const logical = overlayLogicalBounds;
+  if (!logical || win.isDestroyed()) return;
+  if (typeof win.setShape !== "function") return;
+  try {
+    const after = win.getBounds();
+    const needShape =
+      after.width > logical.width + 1 || after.height > logical.height + 1;
+    if (needShape) {
+      win.setShape([
+        {
+          x: 0,
+          y: 0,
+          width: Math.max(1, logical.width),
+          height: Math.max(1, logical.height),
+        },
+      ]);
+    } else {
+      win.setShape([]);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function applyOverlayLogicalBounds(
+  win: BrowserWindow,
+  bounds: StealthBounds,
+): void {
+  const next = clampBoundsToDisplay(bounds);
+  overlayLogicalBounds = next;
+  win.setMinimumSize(overlayMinWidth, overlayMinHeight);
+  win.setBounds(next);
+  // 部分 Windows/DPI 下 setBounds 会悄悄小于 min，读回再钉死（仅钉逻辑下限）
+  const after = win.getBounds();
+  if (after.width < overlayMinWidth || after.height < overlayMinHeight) {
+    const repaired = clampBoundsToDisplay({
+      x: after.x,
+      y: after.y,
+      width: Math.max(after.width, overlayMinWidth),
+      height: Math.max(after.height, overlayMinHeight),
+    });
+    overlayLogicalBounds = repaired;
+    win.setBounds(repaired);
+  }
+  applyOverlayShape(win);
 }
 
 function sendCommand(command: StealthCommand, extra?: string): void {
@@ -285,6 +351,7 @@ function createOverlayWindow(bounds: StealthBounds): BrowserWindow {
   }
   const win = new BrowserWindow(opts);
   (win as unknown as Record<string, unknown>)[STEALTH_FLAG] = true;
+  overlayLogicalBounds = b;
   win.setAlwaysOnTop(true, "screen-saver");
   win.setMenuBarVisibility(false);
   win.removeMenu();
@@ -292,6 +359,7 @@ function createOverlayWindow(bounds: StealthBounds): BrowserWindow {
   win.setFocusable(false);
   win.setResizable(false);
   lockEmptyWindowTitle(win);
+  applyOverlayShape(win);
 
   win.webContents.on("before-input-event", (event, input) => {
     const isToggleDevToolsKey =
@@ -337,8 +405,10 @@ function teardown(restore: boolean): void {
   }
   const overlay = s?.overlay;
   if (overlay && !overlay.isDestroyed()) {
+    clearOverlayShape(overlay);
     overlay.destroy();
   }
+  overlayLogicalBounds = null;
   if (restore && s && !s.owner.isDestroyed()) {
     restoreOwner(s.owner, line);
   }
@@ -628,6 +698,8 @@ export function registerStealthReaderIpc(): void {
   ipcMain.handle(STEALTH_READER_IPC.getBounds, (evt) => {
     const win = BrowserWindow.fromWebContents(evt.sender);
     if (!win || win.isDestroyed()) return null;
+    // 优先逻辑尺寸：Windows 上 OS getBounds 可能被系统最小高度撑高
+    if (overlayLogicalBounds) return { ...overlayLogicalBounds };
     return win.getBounds();
   });
 
@@ -640,12 +712,12 @@ export function registerStealthReaderIpc(): void {
     const win = BrowserWindow.fromWebContents(evt.sender);
     if (!win || win.isDestroyed() || !raw || typeof raw !== "object") return;
     const o = raw as Record<string, unknown>;
-    const bounds = clampBoundsToDisplay({
+    const bounds = {
       x: Number(o.x),
       y: Number(o.y),
       width: Number(o.width),
       height: Number(o.height),
-    });
+    };
     if (
       !Number.isFinite(bounds.x) ||
       !Number.isFinite(bounds.y) ||
@@ -654,21 +726,7 @@ export function registerStealthReaderIpc(): void {
     ) {
       return;
     }
-    win.setMinimumSize(overlayMinWidth, overlayMinHeight);
-    win.setBounds(bounds);
-    // 部分 Windows/DPI 下 setBounds 会悄悄小于 min，读回再钉死
-    const after = win.getBounds();
-    if (
-      after.width < overlayMinWidth ||
-      after.height < overlayMinHeight
-    ) {
-      win.setBounds({
-        x: after.x,
-        y: after.y,
-        width: Math.max(after.width, overlayMinWidth),
-        height: Math.max(after.height, overlayMinHeight),
-      });
-    }
+    applyOverlayLogicalBounds(win, bounds);
   });
 
   ipcMain.on(STEALTH_READER_IPC.setPosition, (evt, x: unknown, y: unknown) => {
@@ -677,6 +735,16 @@ export function registerStealthReaderIpc(): void {
     const nx = Math.round(Number(x));
     const ny = Math.round(Number(y));
     if (!Number.isFinite(nx) || !Number.isFinite(ny)) return;
+    // Win11 上纯 setPosition 可能清掉 setShape，或让 HWND 宽高漂移；
+    // 有逻辑窗位时改走 setBounds，钉死宽高并重裁 shape。
+    if (overlayLogicalBounds) {
+      applyOverlayLogicalBounds(win, {
+        ...overlayLogicalBounds,
+        x: nx,
+        y: ny,
+      });
+      return;
+    }
     win.setPosition(nx, ny);
   });
 
@@ -689,15 +757,17 @@ export function registerStealthReaderIpc(): void {
     overlayMinHeight = height;
     win.setMinimumSize(width, height);
     // 仅 setMinimumSize 不会抬高已偏小的窗；字号变大时要把当前高度/宽度撑到能显示一行
-    const b = win.getBounds();
-    if (b.width >= width && b.height >= height) return;
-    const next = clampBoundsToDisplay({
+    const b = overlayLogicalBounds ?? win.getBounds();
+    if (b.width >= width && b.height >= height) {
+      applyOverlayShape(win);
+      return;
+    }
+    applyOverlayLogicalBounds(win, {
       x: b.x,
       y: b.y,
       width: Math.max(b.width, width),
       height: Math.max(b.height, height),
     });
-    win.setBounds(next);
   });
 
   ipcMain.on(STEALTH_READER_IPC.blur, (evt) => {
