@@ -7,6 +7,10 @@
 
 import type { VoiceReadEmotionId } from "@shared/voiceReadEmotion";
 import type { VoiceReadPausePoint } from "@shared/voiceReadSynthesis";
+import {
+  applyPunctuationPausesToPcm,
+  clonePausePoints,
+} from "@shared/voiceReadPunctuationPauses";
 import type { VoiceReadSettings } from "../../constants/voiceRead";
 import {
   clampVoiceReadVolume,
@@ -200,6 +204,28 @@ function concatUint8Arrays(parts: Uint8Array[]): Uint8Array {
   return out;
 }
 
+function concatFloat32(parts: Float32Array[]): Float32Array {
+  let n = 0;
+  for (const p of parts) n += p.length;
+  const out = new Float32Array(n);
+  let o = 0;
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
+  return out;
+}
+
+function float32ToPcm16le(channel: Float32Array): Uint8Array {
+  const out = new Uint8Array(channel.length * 2);
+  const view = new DataView(out.buffer);
+  for (let i = 0; i < channel.length; i++) {
+    const s = Math.max(-1, Math.min(1, channel[i]!));
+    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+  return out;
+}
+
 function pcm16leToWav(pcm: Uint8Array, sampleRate: number): ArrayBuffer {
   const numChannels = 1;
   const bitsPerSample = 16;
@@ -377,11 +403,7 @@ export class VoiceReadLinePlayer {
   private cloneEdgeMp3Payload(p: EdgeMp3Payload): EdgeMp3Payload {
     return {
       data: p.data.slice(0),
-      pauses: p.pauses.map((x) => ({
-        fromMs: x.fromMs,
-        toMs: x.toMs,
-        kind: x.kind,
-      })),
+      pauses: clonePausePoints(p.pauses),
     };
   }
 
@@ -1083,7 +1105,7 @@ export class VoiceReadLinePlayer {
     if (r.result.format !== "mp3" && r.result.format !== "wav") {
       throw new Error("语音合成返回了不支持的音频格式");
     }
-    return { data: r.result.data, pauses: r.result.pauses ?? [] };
+    return { data: r.result.data, pauses: clonePausePoints(r.result.pauses) };
   }
 
   private async fetchIpcPcm(
@@ -1441,14 +1463,16 @@ export class VoiceReadLinePlayer {
     if (audioBuffer.duration < MIN_DECODED_CHUNK_DURATION_SEC) {
       throw new Error("语音合成音频过短");
     }
+    const ctx = this.edgeAudioCtx;
+    const gain = this.edgeGain;
+    if (!ctx || !gain) throw new Error("aborted");
     audioBuffer = this.applyPunctuationPauses(
+      ctx,
       audioBuffer,
       payload.pauses,
       settings,
     );
 
-    const ctx = this.edgeAudioCtx;
-    const gain = this.edgeGain;
     const src = ctx.createBufferSource();
     src.buffer = audioBuffer;
     src.connect(gain);
@@ -1479,108 +1503,39 @@ export class VoiceReadLinePlayer {
   }
 
   /**
-   * 按标点停顿点处理解码后的 PCM：把 [fromMs, toMs] 自然间隙（TTS 常在此处
-   * 生成气息声）整体替换为 kind 对应时长的干净静音（0 表示不插）；fromMs === toMs
-   * 或区间退化时退化为插入；toMs 超长时钳制到音频末尾（段尾停顿）。
-   * 静音边缘加 2ms 淡入淡出，避免拼接咔哒声。区间按序处理、偏移累积，
-   * 重叠区间合并（取最宽 + 最长停顿）。
+   * 按标点停顿点处理解码后的 PCM：把 [fromMs, toMs] 自然间隙替换为
+   * kind 对应时长的干净静音（按时速缩放；0 表示不插）。
    */
   private applyPunctuationPauses(
+    ctx: AudioContext,
     buffer: AudioBuffer,
     pauses: VoiceReadPausePoint[],
     settings: VoiceReadSettings,
   ): AudioBuffer {
-    const sr = buffer.sampleRate;
-    const items = pauses
-      .map((p) => ({
-        fromSample: Math.round((p.fromMs / 1000) * sr),
-        toSample: Math.round((p.toMs / 1000) * sr),
-        durationSamples: Math.round(
-          ((p.kind === "sentence"
-            ? settings.pauseSentenceMs
-            : settings.pauseCommaMs) /
-            1000) *
-            sr,
-        ),
-      }))
-      .filter((x) => x.durationSamples > 0)
-      .sort((a, b) => a.fromSample - b.fromSample);
-    if (items.length === 0) return buffer;
-
-    // 重叠/相邻区间合并：取最宽区间与最长停顿
-    const merged: {
-      fromSample: number;
-      toSample: number;
-      durationSamples: number;
-    }[] = [];
-    for (const it of items) {
-      const last = merged[merged.length - 1];
-      if (last && it.fromSample <= last.toSample) {
-        last.toSample = Math.max(last.toSample, it.toSample);
-        last.durationSamples = Math.max(
-          last.durationSamples,
-          it.durationSamples,
-        );
-      } else {
-        merged.push({ ...it });
-      }
+    const channels: Float32Array[] = [];
+    for (let c = 0; c < buffer.numberOfChannels; c++) {
+      channels.push(buffer.getChannelData(c));
     }
-
-    const ctx = this.edgeAudioCtx;
-    if (!ctx) return buffer;
-    const chCount = buffer.numberOfChannels;
-    const FADE_SAMPLES = Math.round(0.002 * sr); // 2ms 淡入淡出
-    const totalInsert = merged.reduce((s, x) => s + x.durationSamples, 0);
-    const newBuf = ctx.createBuffer(chCount, buffer.length + totalInsert, sr);
-
-    // 段拷贝：可对段首淡入（衔接静音，避免咔哒）、段尾淡出（滑入静音）
-    const copySegment = (
-      target: Float32Array,
-      targetPos: number,
-      src: Float32Array,
-      srcPos: number,
-      len: number,
-      fadeInStart: boolean,
-    ) => {
-      target.set(src.subarray(srcPos, srcPos + len), targetPos);
-      const fade = Math.min(FADE_SAMPLES, len);
-      if (fadeInStart) {
-        for (let k = 0; k < fade; k++) {
-          target[targetPos + k] = target[targetPos + k]! * (k / fade);
-        }
-      }
-      for (let k = 0; k < fade; k++) {
-        target[targetPos + len - 1 - k] =
-          target[targetPos + len - 1 - k]! * (k / fade);
-      }
-    };
-
-    let srcPos = 0;
-    let shift = 0;
-    for (const it of merged) {
-      const from = Math.max(0, Math.min(buffer.length, it.fromSample));
-      const to = Math.max(from, Math.min(buffer.length, it.toSample));
-      for (let c = 0; c < chCount; c++) {
-        const src = buffer.getChannelData(c)!;
-        const dst = newBuf.getChannelData(c)!;
-        // 拷贝 [srcPos, from)：段首淡入（衔接上一段静音），段尾淡出（滑入本段静音）
-        copySegment(
-          dst,
-          srcPos + shift,
-          src,
-          srcPos,
-          from - srcPos,
-          shift > 0,
-        );
-      }
-      srcPos = to;
-      shift += it.durationSamples;
+    const out = applyPunctuationPausesToPcm(
+      channels,
+      buffer.sampleRate,
+      pauses,
+      {
+        pauseSentenceMs: settings.pauseSentenceMs,
+        pauseCommaMs: settings.pauseCommaMs,
+        rate: settings.rate,
+      },
+    );
+    if (out.length === channels.length && out[0] === channels[0]) {
+      return buffer;
     }
-    for (let c = 0; c < chCount; c++) {
-      const src = buffer.getChannelData(c)!;
-      const dst = newBuf.getChannelData(c)!;
-      // 尾段：不淡出（保持原样到结束）
-      dst.set(src.subarray(srcPos), srcPos + shift);
+    const newBuf = ctx.createBuffer(
+      out.length,
+      Math.max(1, out[0]?.length ?? 1),
+      buffer.sampleRate,
+    );
+    for (let c = 0; c < out.length; c++) {
+      newBuf.getChannelData(c).set(out[c]!);
     }
     return newBuf;
   }
@@ -2007,24 +1962,61 @@ export class VoiceReadLinePlayer {
           })();
 
     if (voiceReadPlaybackKind(settings.engine) === "decoded") {
-      const parts: ArrayBuffer[] = [];
+      const payloads: EdgeMp3Payload[] = [];
       for (const c of built) {
         const payload = await this.getEdgeMp3(settings, c);
         if (!payload.data.byteLength) return null;
-        parts.push(payload.data);
+        payloads.push(payload);
       }
-      const ext =
-        built.length === 1 &&
-        isDecodedAudioPayloadValid(parts[0]!) &&
-        new Uint8Array(parts[0]!, 0, 4)[0] === 0x52
-          ? "wav"
-          : "mp3";
-      return {
-        blob: new Blob([concatArrayBuffers(parts)], {
-          type: ext === "wav" ? "audio/wav" : "audio/mpeg",
-        }),
-        filename: voiceReadPreviewFilename(settings, ext),
-      };
+      const applyPauses =
+        (settings.pauseSentenceMs > 0 || settings.pauseCommaMs > 0) &&
+        payloads.some((p) => p.pauses.length > 0);
+      if (!applyPauses) {
+        const parts = payloads.map((p) => p.data);
+        const ext =
+          built.length === 1 &&
+          isDecodedAudioPayloadValid(parts[0]!) &&
+          new Uint8Array(parts[0]!, 0, 4)[0] === 0x52
+            ? "wav"
+            : "mp3";
+        return {
+          blob: new Blob([concatArrayBuffers(parts)], {
+            type: ext === "wav" ? "audio/wav" : "audio/mpeg",
+          }),
+          filename: voiceReadPreviewFilename(settings, ext),
+        };
+      }
+
+      const reuse =
+        this.edgeAudioCtx && this.edgeAudioCtx.state !== "closed"
+          ? this.edgeAudioCtx
+          : null;
+      const ctx = reuse ?? new AudioContext();
+      try {
+        const pcmParts: Float32Array[] = [];
+        let sampleRate = 24000;
+        for (const payload of payloads) {
+          let buf = await ctx.decodeAudioData(payload.data.slice(0));
+          buf = this.applyPunctuationPauses(
+            ctx,
+            buf,
+            payload.pauses,
+            settings,
+          );
+          pcmParts.push(buf.getChannelData(0).slice());
+          sampleRate = buf.sampleRate;
+        }
+        const pcm = float32ToPcm16le(concatFloat32(pcmParts));
+        if (!pcm.length) return null;
+        return {
+          blob: new Blob([pcm16leToWav(pcm, sampleRate)], {
+            type: "audio/wav",
+          }),
+          filename: voiceReadPreviewFilename(settings, "wav"),
+        };
+      } finally {
+        if (!reuse) void ctx.close();
+      }
     }
 
     const signal = new AbortController().signal;

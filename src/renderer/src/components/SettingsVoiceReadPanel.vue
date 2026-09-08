@@ -1348,26 +1348,24 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div v-if="showPunctuationPauseControls" class="settingsRowMain">
-        <span class="settingsLabel short">
-          句末停顿（{{ draft.pauseSentenceMs === 0 ? "关" : draft.pauseSentenceMs + "ms" }}）
-        </span>
+      <div class="settingsRowMain">
+        <span class="settingsLabel short">音量（{{ Math.round(draft.volume * 100) }}%）</span>
         <div class="settingsRowField">
           <RangeSlider
-            :model-value="draft.pauseSentenceMs"
-            :min="voiceReadPauseSentenceMin"
-            :max="voiceReadPauseSentenceMax"
-            :step="50"
+            :model-value="draft.volume"
+            :min="0"
+            :max="1"
+            :step="0.05"
             :show-percent="false"
-            aria-label="句末停顿"
-            @update:model-value="patchDraft({ pauseSentenceMs: $event })"
+            aria-label="音量"
+            @update:model-value="patchVolume($event)"
           />
         </div>
       </div>
 
       <div v-if="showPunctuationPauseControls" class="settingsRowMain">
         <span class="settingsLabel short">
-          句中停顿（{{ draft.pauseCommaMs === 0 ? "关" : draft.pauseCommaMs + "ms" }}）
+          句中停顿（{{ draft.pauseCommaMs === 0 ? "默认" : draft.pauseCommaMs + "ms" }}）
         </span>
         <div class="settingsRowField">
           <RangeSlider
@@ -1382,17 +1380,19 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class="settingsRowMain">
-        <span class="settingsLabel short">音量（{{ Math.round(draft.volume * 100) }}%）</span>
+      <div v-if="showPunctuationPauseControls" class="settingsRowMain">
+        <span class="settingsLabel short">
+          句末停顿（{{ draft.pauseSentenceMs === 0 ? "默认" : draft.pauseSentenceMs + "ms" }}）
+        </span>
         <div class="settingsRowField">
           <RangeSlider
-            :model-value="draft.volume"
-            :min="0"
-            :max="1"
-            :step="0.05"
+            :model-value="draft.pauseSentenceMs"
+            :min="voiceReadPauseSentenceMin"
+            :max="voiceReadPauseSentenceMax"
+            :step="50"
             :show-percent="false"
-            aria-label="音量"
-            @update:model-value="patchVolume($event)"
+            aria-label="句末停顿"
+            @update:model-value="patchDraft({ pauseSentenceMs: $event })"
           />
         </div>
       </div>

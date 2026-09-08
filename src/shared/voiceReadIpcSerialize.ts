@@ -2,6 +2,7 @@
 
 import { mergeVoiceReadEngineConfig } from "./voiceReadEngineConfig";
 import { normalizeVoiceReadEmotion } from "./voiceReadEmotion";
+import { clonePausePoints } from "./voiceReadPunctuationPauses";
 import type { VoiceReadEngineId } from "./voiceReadEngines";
 import type {
   VoiceReadHealthCheckRequest,
@@ -31,8 +32,6 @@ export function toPlainVoiceReadSynthesisRequest(
     voiceId: req.voiceId,
     rate: req.rate,
     pitch: req.pitch,
-    pauseSentenceMs: req.pauseSentenceMs,
-    pauseCommaMs: req.pauseCommaMs,
     emotion: req.emotion
       ? normalizeVoiceReadEmotion(req.emotion)
       : undefined,
@@ -78,6 +77,6 @@ export function normalizeSynthesisResultForIpc(
     format: result.format,
     sampleRate: result.sampleRate,
     data: arrayBufferForIpc(result.data),
-    pauses: result.pauses,
+    pauses: result.pauses ? clonePausePoints(result.pauses) : undefined,
   };
 }

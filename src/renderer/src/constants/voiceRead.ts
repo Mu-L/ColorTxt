@@ -94,7 +94,7 @@ export function clampVoiceReadVolume(v: number): number {
   return Math.max(voiceReadVolumeMin, Math.min(voiceReadVolumeMax, v));
 }
 
-/** 变更时不应使 TTS 合成缓存失效的字段（如 volume）除外 */
+/** 变更时不应使 TTS 合成缓存失效的字段（如 volume、标点停顿时长）除外 */
 export function voiceReadSettingsSynthesisFingerprint(
   settings: VoiceReadSettings,
 ): string {
@@ -105,8 +105,6 @@ export function voiceReadSettingsSynthesisFingerprint(
     JSON.stringify(settings.multi),
     settings.rate,
     settings.pitch,
-    settings.pauseSentenceMs,
-    settings.pauseCommaMs,
     settings.emotionEnabled !== false ? "1" : "0",
     engineConfigFingerprint(settings.engineConfig),
   ].join("\u0001");
@@ -287,8 +285,6 @@ export function toVoiceReadEdgeTtsRequest(
     lang: inferLangFromEdgeVoiceId(voice),
     rate: settings.rate,
     pitch: settings.pitch,
-    pauseSentenceMs: settings.pauseSentenceMs,
-    pauseCommaMs: settings.pauseCommaMs,
   };
 }
 

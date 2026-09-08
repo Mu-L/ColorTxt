@@ -31,10 +31,6 @@ export type VoiceReadSynthesisRequest = {
   voiceId: string;
   rate: number;
   pitch: number;
-  /** 句末停顿（。！？…）时长 ms；0 不插入停顿；仅 edge 引擎消费 */
-  pauseSentenceMs: number;
-  /** 句中停顿（，；：、）时长 ms；0 不插入停顿；仅 edge 引擎消费 */
-  pauseCommaMs: number;
   engineConfig: VoiceReadEngineConfig;
   /** 朗读情绪；auto 或未设置时不传给引擎 */
   emotion?: VoiceReadEmotionId;

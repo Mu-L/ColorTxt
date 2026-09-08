@@ -452,11 +452,11 @@ export function normalizeVoiceReadProfileSettingsFromPartial(
     multi: mergeVoiceReadMultiVoiceSettings(src.multi),
     rate: typeof src.rate === "number" ? src.rate : 1,
     pitch: typeof src.pitch === "number" ? src.pitch : 1,
-    // 默认开启停顿：句末 600ms / 句中 250ms，0 表示关闭（仅 Edge TTS 生效）
+    // 默认关闭：老存档无字段保持原听感；0 表示关闭（仅 Edge TTS 生效）
     pauseSentenceMs:
-      typeof src.pauseSentenceMs === "number" ? src.pauseSentenceMs : 600,
+      typeof src.pauseSentenceMs === "number" ? src.pauseSentenceMs : 0,
     pauseCommaMs:
-      typeof src.pauseCommaMs === "number" ? src.pauseCommaMs : 250,
+      typeof src.pauseCommaMs === "number" ? src.pauseCommaMs : 0,
     volume: typeof src.volume === "number" ? src.volume : 1,
     emotionEnabled: src.emotionEnabled !== false,
     dashscopeApiKey: engineConfig.dashscopeApiKey?.trim() ?? legacyDash.trim(),

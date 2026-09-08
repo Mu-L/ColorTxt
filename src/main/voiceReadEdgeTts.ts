@@ -1,6 +1,10 @@
 import { createHash, randomBytes } from "node:crypto";
 import WebSocket from "ws";
 import type { VoiceReadEdgeTtsRequest } from "@shared/voiceReadEdgeIpc";
+import {
+  computePausePoints,
+  type EdgeTtsWordBoundary,
+} from "@shared/voiceReadPunctuationPauses";
 import type { VoiceReadPausePoint } from "@shared/voiceReadSynthesis";
 import { getVoiceReadEngineMeta } from "@shared/voiceReadEngines";
 
@@ -65,62 +69,8 @@ function escapeXml(text: string): string {
     .replace(/'/g, "&apos;");
 }
 
-/** 句末停顿标点（。！？…） */
-const SENTENCE_PUNCT_RE = /[。！？…]/u;
-/** 句中停顿标点（，；：、） */
-const COMMA_PUNCT_RE = /[，；：、]/u;
-/** 停顿后可跟随吞入的右引号（停顿点放到引号之后） */
-const CLOSING_QUOTE_RE = /[」』”’"']/u;
-
-type PauseRun = { start: number; end: number; isSentence: boolean };
-
-/**
- * 收集文本中标点停顿段：连续标点合并为一段（句末优先，句末后并入逗号类，
- * 如“……，”→句末停顿；纯逗号段→句中停顿）；停顿后紧跟右引号（如“。」”）
- * 时并入同一段（停顿在引号之后）。仅处理全角标点，ASCII 的 . , ! ? : 不参与
- * （避免数字 12.5、URL、英文缩写冲突）。
- */
-function collectPauseRuns(text: string): PauseRun[] {
-  const chars = [...text];
-  const runs: PauseRun[] = [];
-  let i = 0;
-  while (i < chars.length) {
-    const ch = chars[i]!;
-    if (!SENTENCE_PUNCT_RE.test(ch) && !COMMA_PUNCT_RE.test(ch)) {
-      i++;
-      continue;
-    }
-    let j = i;
-    let sawSentence = false;
-    while (j < chars.length) {
-      const c = chars[j]!;
-      if (SENTENCE_PUNCT_RE.test(c)) {
-        sawSentence = true;
-        j++;
-      } else if (COMMA_PUNCT_RE.test(c)) {
-        j++;
-      } else if (CLOSING_QUOTE_RE.test(c)) {
-        // 右引号并入运行段（如“。」”后跟“！！”，整段仍为一次停顿）
-        j++;
-      } else {
-        break;
-      }
-    }
-    runs.push({ start: i, end: j, isSentence: sawSentence });
-    i = j;
-  }
-  return runs;
-}
-
-type EdgeTtsWord = {
-  text: string;
-  /** 音频偏移，100ns 单位 */
-  offsetNs: number;
-  durationNs: number;
-};
-
 /** 解析 audio.metadata 帧中的 WordBoundary 列表（按音频顺序） */
-function parseWordBoundaries(body: string): EdgeTtsWord[] | null {
+function parseWordBoundaries(body: string): EdgeTtsWordBoundary[] | null {
   try {
     const json: unknown = JSON.parse(body);
     const metas =
@@ -128,7 +78,7 @@ function parseWordBoundaries(body: string): EdgeTtsWord[] | null {
         ? (json as { Metadata?: unknown[] }).Metadata
         : undefined;
     if (!Array.isArray(metas)) return null;
-    const words: EdgeTtsWord[] = [];
+    const words: EdgeTtsWordBoundary[] = [];
     for (const m of metas) {
       if (!m || typeof m !== "object") continue;
       const meta = m as { Type?: unknown; Data?: unknown };
@@ -148,67 +98,6 @@ function parseWordBoundaries(body: string): EdgeTtsWord[] | null {
   } catch {
     return null;
   }
-}
-
-/**
- * 把标点停顿段映射为音频内待替换区间：按词序在文本中匹配各词，
- * 区间 = [标点前一个词的音频末尾, 标点后第一个词的音频起始]（即 TTS 的自然间隙，
- * 常含气息声，播放端整体替换为干净静音）；文本尾部无后续词的停顿段从末词末尾
- * 延伸到音频总长。ms 单位（100ns ÷ 1e4 = ms）。
- */
-function computePausePoints(
-  text: string,
-  words: EdgeTtsWord[],
-  sentencePauseMs: number,
-  commaPauseMs: number,
-): VoiceReadPausePoint[] {
-  if (sentencePauseMs <= 0 && commaPauseMs <= 0) return [];
-  const runs = collectPauseRuns(text);
-  if (runs.length === 0 || words.length === 0) return [];
-  const out: VoiceReadPausePoint[] = [];
-  const pushPause = (fromMs: number, toMs: number, isSentence: boolean) => {
-    const durationMs = isSentence ? sentencePauseMs : commaPauseMs;
-    if (durationMs <= 0) return;
-    out.push({
-      fromMs,
-      toMs: Math.max(fromMs, toMs),
-      kind: isSentence ? "sentence" : "comma",
-    });
-  };
-  let cursor = 0;
-  let wi = 0;
-  for (const run of runs) {
-    let matched = false;
-    while (wi < words.length) {
-      const w = words[wi]!;
-      const idx = text.indexOf(w.text, cursor);
-      if (idx < 0) {
-        wi++;
-        continue;
-      }
-      cursor = idx + w.text.length;
-      wi++;
-      if (cursor >= run.end) {
-        // 该词起点在停顿段之后 → 区间 = [上一词末尾, 该词音频起始]
-        const toMs = w.offsetNs / 10000;
-        const prev = wi - 2 >= 0 ? words[wi - 2]! : null;
-        const fromMs = prev
-          ? (prev.offsetNs + prev.durationNs) / 10000
-          : toMs;
-        pushPause(fromMs, toMs, run.isSentence);
-        matched = true;
-        break;
-      }
-    }
-    if (!matched) {
-      // 词已耗尽仍未见停顿段之后的词 → 段尾停顿：从末词末尾延伸到音频总长
-      // （toMs 传超大值，渲染端钳制到实际音频时长，覆盖句末气息尾）
-      const last = words[words.length - 1]!;
-      const endMs = (last.offsetNs + last.durationNs) / 10000;
-      pushPause(endMs, 1e9, run.isSentence);
-    }
-  }
-  return out;
 }
 
 function genSSML(
@@ -308,12 +197,6 @@ async function synthesizeEdgeTtsMp3Once(
   const lang = req.lang?.trim() || "zh-CN";
   const rate = Number.isFinite(req.rate) ? req.rate : 1;
   const pitch = Number.isFinite(req.pitch) ? req.pitch : 1;
-  const sentencePauseMs = Number.isFinite(req.pauseSentenceMs)
-    ? Math.min(5000, Math.max(0, req.pauseSentenceMs ?? 0))
-    : 0;
-  const commaPauseMs = Number.isFinite(req.pauseCommaMs)
-    ? Math.min(5000, Math.max(0, req.pauseCommaMs ?? 0))
-    : 0;
 
   const connectId = randomHex(16);
   const secMsGec = await generateSecMsGec();
@@ -371,7 +254,7 @@ async function synthesizeEdgeTtsMp3Once(
 
   return new Promise((resolve, reject) => {
     let audioData = new ArrayBuffer(0);
-    const words: EdgeTtsWord[] = [];
+    const words: EdgeTtsWordBoundary[] = [];
     let settled = false;
     let lastResponseBody = "";
 
@@ -414,12 +297,7 @@ async function synthesizeEdgeTtsMp3Once(
         settle(() =>
           resolve({
             data: audioData,
-            pauses: computePausePoints(
-              text,
-              words,
-              sentencePauseMs,
-              commaPauseMs,
-            ),
+            pauses: computePausePoints(text, words),
           }),
         );
       }
@@ -479,12 +357,7 @@ async function synthesizeEdgeTtsMp3Once(
         settle(() =>
           resolve({
             data: audioData,
-            pauses: computePausePoints(
-              text,
-              words,
-              sentencePauseMs,
-              commaPauseMs,
-            ),
+            pauses: computePausePoints(text, words),
           }),
         );
       }

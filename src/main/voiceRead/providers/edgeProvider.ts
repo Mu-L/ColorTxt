@@ -1,6 +1,7 @@
 import type { VoiceReadEdgeTtsRequest } from "@shared/voiceReadEdgeIpc";
 import { getVoiceReadEngineMeta } from "@shared/voiceReadEngines";
-import { arrayBufferForIpc } from "@shared/voiceReadIpcSerialize";import { synthesizeEdgeTtsMp3 } from "../../voiceReadEdgeTts";
+import { arrayBufferForIpc } from "@shared/voiceReadIpcSerialize";
+import { synthesizeEdgeTtsMp3 } from "../../voiceReadEdgeTts";
 import type { VoiceReadTtsProvider } from "./types";
 
 function inferLangFromEdgeVoiceId(voiceId: string): string {
@@ -22,8 +23,6 @@ function toEdgeRequest(
     lang: inferLangFromEdgeVoiceId(voice),
     rate: req.rate,
     pitch: req.pitch,
-    pauseSentenceMs: req.pauseSentenceMs,
-    pauseCommaMs: req.pauseCommaMs,
   };
 }
 

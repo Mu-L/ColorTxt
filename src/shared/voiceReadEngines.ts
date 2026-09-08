@@ -52,7 +52,12 @@ export type VoiceReadEngineMeta = {
   defaultVoiceId: string;
 };
 
-type VoiceReadEngineMetaBase = Omit<VoiceReadEngineMeta, "defaultVoiceId">;
+type VoiceReadEngineMetaBase = Omit<
+  VoiceReadEngineMeta,
+  "defaultVoiceId" | "supportsPunctuationPauses"
+> & {
+  supportsPunctuationPauses?: boolean;
+};
 
 const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
   {
@@ -76,7 +81,6 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
     auth: "none",
     supportsRate: true,
     supportsPitch: true,
-    supportsPunctuationPauses: false,
     voiceSource: "dynamic",
     audioFormat: "mp3",
     shortChunks: false,
@@ -89,7 +93,6 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
     auth: "none",
     supportsRate: true,
     supportsPitch: false,
-    supportsPunctuationPauses: false,
     voiceSource: "dynamic",
     audioFormat: "wav",
     shortChunks: false,
@@ -102,7 +105,6 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
     auth: "apiKey",
     supportsRate: true,
     supportsPitch: false,
-    supportsPunctuationPauses: false,
     voiceSource: "static",
     audioFormat: "pcm_s16le",
     shortChunks: false,
@@ -115,7 +117,6 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
     auth: "apiKey",
     supportsRate: true,
     supportsPitch: false,
-    supportsPunctuationPauses: false,
     voiceSource: "dynamic",
     audioFormat: "mp3",
     shortChunks: false,
@@ -128,7 +129,6 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
     auth: "apiKey",
     supportsRate: true,
     supportsPitch: false,
-    supportsPunctuationPauses: false,
     voiceSource: "static",
     audioFormat: "wav",
     shortChunks: false,
@@ -141,7 +141,6 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
     auth: "apiKey",
     supportsRate: true,
     supportsPitch: true,
-    supportsPunctuationPauses: false,
     voiceSource: "static",
     audioFormat: "pcm_s16le",
     shortChunks: false,
@@ -150,6 +149,7 @@ const ENGINE_LIST_BASE: VoiceReadEngineMetaBase[] = [
 
 const ENGINE_LIST: VoiceReadEngineMeta[] = ENGINE_LIST_BASE.map((meta) => ({
   ...meta,
+  supportsPunctuationPauses: meta.supportsPunctuationPauses === true,
   defaultVoiceId: defaultVoiceIdForEngine(meta.id),
 }));
 
